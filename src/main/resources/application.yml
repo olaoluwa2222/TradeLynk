@@ -1,0 +1,121 @@
+# ============================================
+# Server Configuration
+# ============================================
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+
+
+
+# ============================================
+# Spring Configuration
+# ============================================
+spring:
+  application:
+    name: tradeLynkApi
+
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${EMAIL_USERNAME}
+    password: ${EMAIL_APP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  config:
+    import: optional:file:.env[.properties]
+  
+  # PostgreSQL Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+# ============================================
+# JWT Configuration
+# ============================================
+# Generate a strong secret key: base64 encoded minimum 256 bits (32 bytes)
+# You can generate one with: echo $(head -c 32 /dev/urandom | base64)
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
+# ============================================
+# Firebase Configuration
+# ============================================
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH}
+  database-url: ${FIREBASE_DATABASE_URL}
+
+# ============================================
+# Cloudinary Configuration
+# ============================================
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+  upload-folder: tradelynk-markectplace
+
+# ============================================
+# Paystack Configuration
+# ============================================
+paystack:
+  secret-key: ${PAYSTACK_SECRET_KEY}
+  public-key: ${PAYSTACK_PUBLIC_KEY}
+  api-url: https://api.paystack.co
+  timeout: 30000  # 30 seconds in milliseconds
+
+# ============================================
+# Resend Configuration
+# ============================================
+resend:
+  api:
+    key: ${RESEND_API_KEY}
+
+# ============================================
+# Application Configuration
+# ============================================
+app:
+  name: Campus Marketplace
+  version: 1.0.0
+  university-domain: lmu.edu.ng
+  frontend:
+    url: http://localhost:3000
+
+# ============================================
+# Logging Configuration
+# ============================================
+logging:
+  level:
+    root: INFO
+    com.codewithola.tradelynkapi: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
