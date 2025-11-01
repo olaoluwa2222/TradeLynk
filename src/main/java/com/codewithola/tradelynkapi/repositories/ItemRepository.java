@@ -10,27 +10,33 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
-    // Fetch all items for a seller
     List<Item> findBySellerId(Long sellerId);
 
-    // Fetch all active items (homepage/feed)
+    Page<Item> findByStatus(Item.Status status, Pageable pageable);
+
+    Page<Item> findByCategory(Item.Category category, Pageable pageable);
+
+    Page<Item> findByPriceBetween(Long minPrice, Long maxPrice, Pageable pageable);
+
     @Query("SELECT i FROM Item i WHERE i.status = 'ACTIVE' ORDER BY i.createdAt DESC")
     Page<Item> findByStatusOrderByCreatedAtDesc(Pageable pageable);
 
-    // Search by keyword in title or description
-    @Query("""
-        SELECT i FROM Item i
-        WHERE i.status = 'ACTIVE'
-        AND (LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-        OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-    """)
+    @Query("SELECT i FROM Item i WHERE i.status = 'ACTIVE' AND " +
+            "(LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Item> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
-    // Fetch active items by category
+    Optional<Item> findByIdAndSellerId(Long id, Long sellerId);
+
     @Query("SELECT i FROM Item i WHERE i.status = 'ACTIVE' AND i.category = :category ORDER BY i.createdAt DESC")
     Page<Item> findActiveByCategoryOrderByCreatedAtDesc(@Param("category") Item.Category category, Pageable pageable);
+
+    boolean existsByIdAndSellerId(Long id, Long sellerId);
+
+    Page<Item> findBySellerIdAndStatus(Long sellerId, Item.Status status, Pageable pageable);
 }

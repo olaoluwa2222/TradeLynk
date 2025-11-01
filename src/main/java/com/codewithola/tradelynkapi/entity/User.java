@@ -123,4 +123,23 @@ public class User {
             throw new IllegalArgumentException("Email must be in @lmu.edu.ng format");
         }
     }
+
+    public String getFullName() {
+        return this.name;
+    }
+
+    public boolean isSeller() {
+        return this.role == UserRole.SELLER || this.role == UserRole.ADMIN;
+    }
+
+    public boolean isAdmin() {
+        return this.role == UserRole.ADMIN;
+    }
+
+    public void promoteToSeller() {
+        if (this.role == UserRole.BUYER) {
+            this.role = UserRole.SELLER;
+        }
+    }
+
 }

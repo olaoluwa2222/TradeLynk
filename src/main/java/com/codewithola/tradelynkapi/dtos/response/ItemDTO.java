@@ -31,6 +31,7 @@ public class ItemDTO {
     private Integer likeCount;
     private Integer viewCount;
     private Item.Status status;
+    private boolean isLikedByCurrentUser;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

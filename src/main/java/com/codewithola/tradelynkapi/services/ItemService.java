@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.services;
 
-
 import com.codewithola.tradelynkapi.dtos.requests.ItemCreateRequest;
 import com.codewithola.tradelynkapi.dtos.requests.ItemUpdateRequest;
 import com.codewithola.tradelynkapi.dtos.response.ItemDTO;
@@ -11,6 +10,7 @@ import com.codewithola.tradelynkapi.exception.ForbiddenException;
 import com.codewithola.tradelynkapi.exception.NotFoundException;
 import com.codewithola.tradelynkapi.repositories.ItemRepository;
 import com.codewithola.tradelynkapi.repositories.UserRepository;
+import com.codewithola.tradelynkapi.services.LikeService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +20,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +32,7 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final LikeService likeService;
     private final ObjectMapper objectMapper;
 
     // ---------------- CREATE ----------------
@@ -64,7 +65,7 @@ public class ItemService {
         Item savedItem = itemRepository.save(item);
         log.info("Item created successfully with ID: {}", savedItem.getId());
 
-        return convertToDTO(savedItem);
+        return convertToDTO(savedItem, seller, Collections.emptySet());
     }
 
     // ---------------- READ ----------------
@@ -73,7 +74,10 @@ public class ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found"));
 
-        return convertToDTO(item);
+        User seller = userRepository.findById(item.getSeller().getId())
+                .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+        return convertToDTO(item, seller, Collections.emptySet());
     }
 
     @Transactional
@@ -81,15 +85,16 @@ public class ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found"));
 
-        // Optional: Prevent self-views from incrementing
         if (!item.getSeller().getId().equals(viewerId)) {
             item.incrementViewCount();
             itemRepository.save(item);
         }
 
-        return convertToDTO(item);
-    }
+        User seller = userRepository.findById(item.getSeller().getId())
+                .orElseThrow(() -> new NotFoundException("Seller not found"));
 
+        return convertToDTO(item, seller, Collections.emptySet());
+    }
 
     // ---------------- UPDATE ----------------
     @Transactional
@@ -114,30 +119,29 @@ public class ItemService {
         if (request.getCategory() != null) {
             item.setCategory(request.getCategory());
             if (request.getCategory() == Item.Category.FOOD &&
-                    item.getExpiryDate() == null &&
-                    request.getExpiryDate() == null) {
+                    item.getExpiryDate() == null && request.getExpiryDate() == null) {
                 throw new BadRequestException("Expiry date is required for FOOD category");
             }
         }
 
         if (request.getCondition() != null) item.setCondition(request.getCondition());
-
         if (request.getQuantity() != null) {
             if (request.getQuantity() < 1) throw new BadRequestException("Quantity must be at least 1");
             item.setQuantity(request.getQuantity());
         }
 
         if (request.getExpiryDate() != null) item.setExpiryDate(request.getExpiryDate());
-
         if (request.getImageUrls() != null)
             item.setImageUrls(convertImageListToJson(request.getImageUrls()));
-
         if (request.getStatus() != null) item.setStatus(request.getStatus());
 
         Item updatedItem = itemRepository.save(item);
         log.info("Item updated successfully: {}", itemId);
 
-        return convertToDTO(updatedItem);
+        User seller = userRepository.findById(sellerId)
+                .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+        return convertToDTO(updatedItem, seller, Collections.emptySet());
     }
 
     // ---------------- DELETE ----------------
@@ -158,11 +162,27 @@ public class ItemService {
         log.info("Item soft deleted successfully: {}", itemId);
     }
 
-    // ---------------- LISTING METHODS ----------------
+    // ---------------- LIST METHODS ----------------
     @Transactional(readOnly = true)
     public Page<ItemDTO> getAllActiveItems(Pageable pageable) {
         Page<Item> items = itemRepository.findByStatusOrderByCreatedAtDesc(pageable);
-        return items.map(this::convertToDTO);
+        return items.map(item -> {
+            User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
+            return convertToDTO(item, seller, Collections.emptySet());
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ItemDTO> getAllActiveItemsWithLikeStatus(Pageable pageable, Long currentUserId) {
+        Page<Item> items = itemRepository.findByStatusOrderByCreatedAtDesc(pageable);
+        Set<Long> likedItemIds = currentUserId != null
+                ? likeService.getUserLikedItemIdsAsSet(currentUserId)
+                : Collections.emptySet();
+
+        return items.map(item -> {
+            User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
+            return convertToDTO(item, seller, likedItemIds);
+        });
     }
 
     @Transactional(readOnly = true)
@@ -172,19 +192,30 @@ public class ItemService {
         }
 
         Page<Item> items = itemRepository.searchByKeyword(keyword.trim(), pageable);
-        return items.map(this::convertToDTO);
+        return items.map(item -> {
+            User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
+            return convertToDTO(item, seller, Collections.emptySet());
+        });
     }
 
     @Transactional(readOnly = true)
     public Page<ItemDTO> getItemsByCategory(Item.Category category, Pageable pageable) {
         Page<Item> items = itemRepository.findActiveByCategoryOrderByCreatedAtDesc(category, pageable);
-        return items.map(this::convertToDTO);
+        return items.map(item -> {
+            User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
+            return convertToDTO(item, seller, Collections.emptySet());
+        });
     }
 
     @Transactional(readOnly = true)
     public List<ItemDTO> getItemsBySeller(Long sellerId) {
         List<Item> items = itemRepository.findBySellerId(sellerId);
-        return items.stream().map(this::convertToDTO).toList();
+        return items.stream()
+                .map(item -> {
+                    User seller = userRepository.findById(sellerId).orElse(null);
+                    return convertToDTO(item, seller, Collections.emptySet());
+                })
+                .toList();
     }
 
     // ---------------- HELPER METHODS ----------------
@@ -208,7 +239,7 @@ public class ItemService {
         }
     }
 
-    private ItemDTO convertToDTO(Item item) {
+    private ItemDTO convertToDTO(Item item, User seller, Set<Long> likedItemIds) {
         List<String> imageUrls = Collections.emptyList();
         if (item.getImageUrls() != null && !item.getImageUrls().isEmpty()) {
             try {
@@ -218,11 +249,13 @@ public class ItemService {
             }
         }
 
+        boolean isLiked = likedItemIds != null && likedItemIds.contains(item.getId());
+
         return ItemDTO.builder()
                 .id(item.getId())
                 .sellerId(item.getSeller().getId())
-                .sellerName(item.getSeller().getName())
-                .sellerEmail(item.getSeller().getEmail())
+                .sellerName(seller != null ? seller.getName() : "Unknown")
+                .sellerEmail(seller != null ? seller.getEmail() : null)
                 .title(item.getTitle())
                 .description(item.getDescription())
                 .price(item.getPrice())
@@ -234,9 +267,13 @@ public class ItemService {
                 .likeCount(item.getLikeCount())
                 .viewCount(item.getViewCount())
                 .status(item.getStatus())
+                .isLikedByCurrentUser(isLiked)
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .build();
     }
-}
 
+    public ItemDTO convertToDTOPublic(Item item, User seller, Set<Long> likedItemIds) {
+        return convertToDTO(item, seller, likedItemIds);
+    }
+}
