@@ -142,4 +142,8 @@ public class User {
         }
     }
 
+    public void promoteToAdmin() {
+        this.role = UserRole.ADMIN;
+    }
+
 }

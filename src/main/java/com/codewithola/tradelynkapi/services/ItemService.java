@@ -2,6 +2,7 @@ package com.codewithola.tradelynkapi.services;
 
 import com.codewithola.tradelynkapi.dtos.requests.ItemCreateRequest;
 import com.codewithola.tradelynkapi.dtos.requests.ItemUpdateRequest;
+import com.codewithola.tradelynkapi.dtos.response.ContentModerationResult;
 import com.codewithola.tradelynkapi.dtos.response.ItemDTO;
 import com.codewithola.tradelynkapi.entity.Item;
 import com.codewithola.tradelynkapi.entity.User;
@@ -34,19 +35,58 @@ public class ItemService {
     private final UserRepository userRepository;
     private final LikeService likeService;
     private final ObjectMapper objectMapper;
+    private final ContentModerationService contentModerationService;
 
     // ---------------- CREATE ----------------
     @Transactional
     public ItemDTO createItem(Long sellerId, ItemCreateRequest request) {
         log.info("Creating item for seller ID: {}", sellerId);
 
+        // Validate seller exists
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new NotFoundException("Seller not found"));
 
-        validateItemRequest(request);
+        // CONTENT MODERATION - Check for prohibited keywords
+        ContentModerationResult moderationResult = contentModerationService.validateItemContent(
+                request.getTitle(), request.getDescription());
 
-        String imageUrlsJson = convertImageListToJson(request.getImageUrls());
+        if (!moderationResult.getAllowed()) {
+            log.warn("Item content flagged. Flagged words: {}", moderationResult.getFlaggedWords());
+            throw new BadRequestException(
+                    "Item contains prohibited keywords: " + String.join(", ", moderationResult.getFlaggedWords()));
+        }
 
+        // Validate category is allowed
+        if (request.getCategory() == null) {
+            throw new BadRequestException("Category is required");
+        }
+
+        // Validate price > 0
+        if (request.getPrice() == null || request.getPrice() <= 0) {
+            throw new BadRequestException("Price must be greater than 0");
+        }
+
+        // If category is FOOD, require expiryDate
+        if (request.getCategory() == Item.Category.FOOD && request.getExpiryDate() == null) {
+            throw new BadRequestException("Expiry date is required for FOOD category");
+        }
+
+        // Validate quantity
+        if (request.getQuantity() == null || request.getQuantity() < 1) {
+            throw new BadRequestException("Quantity must be at least 1");
+        }
+
+        // Convert imageUrls list to JSON string
+        String imageUrlsJson = null;
+        if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
+            try {
+                imageUrlsJson = objectMapper.writeValueAsString(request.getImageUrls());
+            } catch (JsonProcessingException e) {
+                throw new BadRequestException("Invalid image URLs format");
+            }
+        }
+
+        // Create and save item
         Item item = Item.builder()
                 .seller(seller)
                 .title(request.getTitle().trim())
@@ -65,7 +105,7 @@ public class ItemService {
         Item savedItem = itemRepository.save(item);
         log.info("Item created successfully with ID: {}", savedItem.getId());
 
-        return convertToDTO(savedItem, seller, Collections.emptySet());
+        return convertToDTO(savedItem, seller,Collections.emptySet());
     }
 
     // ---------------- READ ----------------
@@ -101,48 +141,94 @@ public class ItemService {
     public ItemDTO updateItem(Long itemId, Long sellerId, ItemUpdateRequest request) {
         log.info("Updating item ID: {} by seller ID: {}", itemId, sellerId);
 
+        // 1️⃣ Fetch item
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found"));
 
+        // 2️⃣ Verify seller owns the item
         if (!item.getSeller().getId().equals(sellerId)) {
             throw new ForbiddenException("You are not authorized to update this item");
         }
 
-        if (request.getTitle() != null) item.setTitle(request.getTitle().trim());
-        if (request.getDescription() != null) item.setDescription(request.getDescription().trim());
+        // 3️⃣ Handle title & description updates with content moderation
+        if (request.getTitle() != null || request.getDescription() != null) {
+            // Use new values if provided, or fallback to existing ones
+            String newTitle = request.getTitle() != null ? request.getTitle().trim() : item.getTitle();
+            String newDescription = request.getDescription() != null ? request.getDescription().trim() : item.getDescription();
+
+            // 🔍 Run content moderation before saving
+            ContentModerationResult moderationResult = contentModerationService.validateItemContent(
+                    newTitle, newDescription);
+
+            if (!moderationResult.getAllowed()) {
+                log.warn("Item content flagged on update. Flagged words: {}", moderationResult.getFlaggedWords());
+                throw new BadRequestException(
+                        "Item update contains prohibited keywords: " + String.join(", ", moderationResult.getFlaggedWords()));
+            }
+
+            // ✅ Set new values if moderation passes
+            item.setTitle(newTitle);
+            item.setDescription(newDescription);
+        }
+
+        // 4️⃣ Validate and update other fields
 
         if (request.getPrice() != null) {
-            if (request.getPrice() <= 0) throw new BadRequestException("Price must be greater than 0");
+            if (request.getPrice() <= 0) {
+                throw new BadRequestException("Price must be greater than 0");
+            }
             item.setPrice(request.getPrice());
         }
 
         if (request.getCategory() != null) {
             item.setCategory(request.getCategory());
+            // If changing to FOOD, validate expiryDate
             if (request.getCategory() == Item.Category.FOOD &&
-                    item.getExpiryDate() == null && request.getExpiryDate() == null) {
+                    item.getExpiryDate() == null &&
+                    request.getExpiryDate() == null) {
                 throw new BadRequestException("Expiry date is required for FOOD category");
             }
         }
 
-        if (request.getCondition() != null) item.setCondition(request.getCondition());
+        if (request.getCondition() != null) {
+            item.setCondition(request.getCondition());
+        }
+
         if (request.getQuantity() != null) {
-            if (request.getQuantity() < 1) throw new BadRequestException("Quantity must be at least 1");
+            if (request.getQuantity() < 1) {
+                throw new BadRequestException("Quantity must be at least 1");
+            }
             item.setQuantity(request.getQuantity());
         }
 
-        if (request.getExpiryDate() != null) item.setExpiryDate(request.getExpiryDate());
-        if (request.getImageUrls() != null)
-            item.setImageUrls(convertImageListToJson(request.getImageUrls()));
-        if (request.getStatus() != null) item.setStatus(request.getStatus());
+        if (request.getExpiryDate() != null) {
+            item.setExpiryDate(request.getExpiryDate());
+        }
 
+        if (request.getImageUrls() != null) {
+            try {
+                String imageUrlsJson = objectMapper.writeValueAsString(request.getImageUrls());
+                item.setImageUrls(imageUrlsJson);
+            } catch (JsonProcessingException e) {
+                throw new BadRequestException("Invalid image URLs format");
+            }
+        }
+
+        if (request.getStatus() != null) {
+            item.setStatus(request.getStatus());
+        }
+
+        // 5️⃣ Save the updated item
         Item updatedItem = itemRepository.save(item);
         log.info("Item updated successfully: {}", itemId);
 
+        // 6️⃣ Fetch seller info and return updated DTO
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new NotFoundException("Seller not found"));
 
-        return convertToDTO(updatedItem, seller, Collections.emptySet());
+        return convertToDTO(updatedItem, seller,Collections.emptySet());
     }
+
 
     // ---------------- DELETE ----------------
     @Transactional
