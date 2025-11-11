@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -43,6 +44,22 @@ public class EmailService {
         } catch (Exception e) {
             log.error("❌ Failed to send verification email to {}: {}", toEmail, e.getMessage());
             throw new RuntimeException("Failed to send verification email", e);
+        }
+    }
+
+    public void sendEmail(String to, String subject, String body) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(body); // true = HTML support
+            message.setFrom("noreply@tradelynk.com"); // change this to your app email
+            mailSender.send(message);
+
+            log.info("Email sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send email to {}", to, e);
+            throw new RuntimeException("Failed to send email notification");
         }
     }
 }

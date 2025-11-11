@@ -44,6 +44,7 @@ public class PaystackService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository; // ADDED
+    private final NotificationService notificationService;
 
     private static final Double PLATFORM_FEE_PERCENTAGE = 3.0; // 10% platform fee
 
@@ -232,6 +233,13 @@ public class PaystackService {
                         item.setQuantity(item.getQuantity() - 1);
                         itemRepository.save(item);
                     }
+
+                    // ✅ NEW: Notify seller about payment
+                    notificationService.sendPaymentNotification(
+                            payment.getSellerId(),
+                            payment.getAmount(),
+                            item.getTitle()
+                    );
 
                 } else {
                     payment.markAsFailed();

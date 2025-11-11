@@ -47,6 +47,10 @@ public class JwtAuthenticationFilter extends org.springframework.web.filter.Once
                         .getContext()
                         .setAuthentication(authentication);
 
+                // *** NEW: Set userId as request attribute for rate limiting ***
+                // This allows RateLimitingFilter to identify requests by user
+                request.setAttribute("userId", username);
+
                 log.debug("JWT validated for user: {}", username);
             }
         } catch (Exception ex) {

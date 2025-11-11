@@ -1,8 +1,8 @@
 package com.codewithola.tradelynkapi.config;
 
-
 import com.codewithola.tradelynkapi.security.jwt.JwtAuthenticationEntryPoint;
 import com.codewithola.tradelynkapi.security.jwt.JwtAuthenticationFilter;
+import com.codewithola.tradelynkapi.security.RateLimitingFilter; // ✅ Import your rate limiting filter
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,19 +18,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Spring Security Configuration for JWT-based authentication
  * Configures:
  * - Password encoding with bcrypt
  * - JWT filter for token validation
+ * - Rate limiting filter for API protection
  * - HTTP security policy
  * - Session management (stateless)
  * - CORS settings for frontend integration
@@ -43,8 +38,8 @@ public class SecurityConfig {
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-
+    private final RateLimitingFilter rateLimitingFilter; // ✅ Inject rate limiting filter
+    private final CorsConfigurationSource corsConfigurationSource;
 
     /**
      * BCryptPasswordEncoder bean for secure password hashing
@@ -69,9 +64,16 @@ public class SecurityConfig {
 
     /**
      * Main security filter chain configuration
-     * Defines which endpoints require authentication and which are public
-     * Disables CSRF for API (uses JWT tokens instead)
-     * Configures stateless session management (no cookies)
+     *
+     * FILTER ORDER (VERY IMPORTANT!):
+     * 1. RateLimitingFilter - Checks rate limits FIRST (before authentication)
+     * 2. JwtAuthenticationFilter - Validates JWT and sets userId for rate limiting
+     * 3. UsernamePasswordAuthenticationFilter - Spring's default filter
+     *
+     * Why this order?
+     * - Rate limiting happens BEFORE authentication to prevent auth endpoint abuse
+     * - JWT filter sets userId attribute that rate limiter uses for per-user limits
+     *
      * @param http HttpSecurity configuration object
      * @return SecurityFilterChain
      * @throws Exception if security configuration fails
@@ -83,7 +85,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 // Enable CORS for frontend integration
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
                 // Configure exception handling for authentication errors
                 .exceptionHandling(exception ->
@@ -108,53 +110,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/sellers/banks").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/health/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
 
+                // ✅✅✅ ADD FILTERS IN THIS SPECIFIC ORDER ✅✅✅
+                // 1. Rate limiting filter FIRST (runs before JWT authentication)
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
 
-                // Add JWT authentication filter before UsernamePasswordAuthenticationFilter
-                // This filter validates JWT tokens on every request
+                // 2. JWT authentication filter SECOND (runs after rate limiting, before Spring's auth filter)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
-
-    /**
-     * CORS configuration for frontend integration
-     * Allows requests from localhost (development) and production domains
-     * Permits common HTTP methods and headers
-     * @return CorsConfigurationSource
-     */
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        // Allowed origins - update with your frontend URL in production
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",      // React dev server
-                "http://localhost:8080",      // Local backend
-                "https://yourdomain.com"      // Update with production domain
-        ));
-
-        // Allowed HTTP methods
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-
-        // Allowed headers
-        configuration.setAllowedHeaders(List.of("*"));
-
-        // Allow credentials (cookies, authorization headers)
-        configuration.setAllowCredentials(true);
-
-        // Maximum age of pre-flight requests (in seconds)
-        configuration.setMaxAge(3600L);
-
-        // Expose Authorization header so frontend can read it
-        configuration.setExposedHeaders(Collections.singletonList("Authorization"));
-
-        // Apply CORS configuration to all endpoints
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-
-        return source;
     }
 }

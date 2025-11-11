@@ -49,6 +49,12 @@ public class User {
     private String profilePictureUrl;
 
     /**
+     * Firebase Cloud Messaging device token
+     */
+    @Column(length = 500)
+    private String fcmToken;
+
+    /**
      * Hashed password using bcrypt
      */
     @Column(nullable = false)

@@ -2,12 +2,10 @@ package com.codewithola.tradelynkapi.security.jwt;
 
 
 
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,21 +19,21 @@ import java.util.Date;
 @Slf4j
 public class JwtTokenProvider {
 
-    @Value("${JWT_SECRET}")
+    @Value("${jwt.secret}")
     private String jwtSecretString;
 
-    @Value("${JWT_EXPIRATION}")
+    @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
-    @Value("${JWT_REFRESH_EXPIRATION}")
+    @Value("${jwt.refresh-expiration}")
     private long refreshTokenExpirationMs;
 
     private SecretKey secretKey;
 
     @PostConstruct
     public void init() {
-        // Convert secret string to a proper HMAC key
-        this.secretKey = Keys.hmacShaKeyFor(jwtSecretString.getBytes());
+        byte[] decodedKey = Decoders.BASE64.decode(jwtSecretString);
+        this.secretKey = Keys.hmacShaKeyFor(decodedKey);
     }
 
     /**
@@ -50,7 +48,7 @@ public class JwtTokenProvider {
                 .subject(username)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(secretKey)
+                .signWith(secretKey, Jwts.SIG.HS512)
                 .compact();
     }
 
@@ -65,7 +63,7 @@ public class JwtTokenProvider {
                 .subject(email)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(secretKey)
+                .signWith(secretKey, Jwts.SIG.HS512)
                 .compact();
     }
 
@@ -117,8 +115,20 @@ public class JwtTokenProvider {
             log.error("Unsupported JWT token: {}", ex.getMessage());
         } catch (IllegalArgumentException ex) {
             log.error("Empty or null JWT: {}", ex.getMessage());
+        } catch (Exception ex) {
+            log.error("JWT validation error: {}", ex.getMessage());
         }
         return false;
+    }
+
+    // Add safe extraction method
+    public String getUsernameFromTokenSafe(String token) {
+        try {
+            return getUsernameFromToken(token);
+        } catch (Exception e) {
+            log.error("Failed to extract username from token: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

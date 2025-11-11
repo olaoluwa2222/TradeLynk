@@ -244,8 +244,24 @@ public class AuthController {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            String email = jwtTokenProvider.getUsernameFromToken(token);
-            log.info("User logged out: {}", email);
+
+            try {
+                // Validate token first before extracting username
+                if (jwtTokenProvider.validateToken(token)) {
+                    String email = jwtTokenProvider.getUsernameFromToken(token);
+                    log.info("User logged out: {}", email);
+
+                    // TODO: Add token to blacklist if you're implementing that
+                    // tokenBlacklistService.blacklistToken(token);
+                } else {
+                    log.warn("Logout attempted with invalid token");
+                }
+            } catch (Exception e) {
+                // Token is invalid, expired, or malformed - that's okay for logout
+                log.warn("Logout attempted with problematic token: {}", e.getMessage());
+            }
+        } else {
+            log.info("Logout called without token");
         }
 
         return ResponseEntity

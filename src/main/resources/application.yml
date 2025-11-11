@@ -17,6 +17,13 @@ spring:
     name: tradeLynkApi
 
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -38,10 +45,22 @@ spring:
   
   # PostgreSQL Database Configuration
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
     username: ${DB_USER}
     password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
+
+    # HikariCP Connection Pool Configuration
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # SSL Configuration for Supabase (CRITICAL!)
+      data-source-properties:
+        ssl: true
+        sslmode: require
   
   # JPA/Hibernate Configuration
   jpa:
@@ -60,7 +79,10 @@ spring:
 # ============================================
 # JWT Configuration
 # ============================================
-# Generate a strong secret key: base64 encoded minimum 256 bits (32 bytes)
+# Generate a strong secret key: base64 ejwt:
+#  secret: ${JWT_SECRET}
+#  expiration: ${JWT_EXPIRATION}
+#  refresh-expiration: ${JWT_REFRESH_EXPIRATION}ncoded minimum 256 bits (32 bytes)
 # You can generate one with: echo $(head -c 32 /dev/urandom | base64)
 jwt:
   secret: ${JWT_SECRET}
@@ -119,3 +141,26 @@ logging:
     org.springframework.security: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+
+
+# ============================================
+# CORS Configuration
+# ============================================
+
+# PHASE 1: Postman Testing Only (Current Stage)
+cors:
+  allowed-origins: http://localhost:8080
+  allow-credentials: true
+  max-age: 3600
+
+# PHASE 2: When you start Next.js frontend (Uncomment this, comment Phase 1)
+# cors:
+#   allowed-origins: http://localhost:3000,http://localhost:8080
+#   allow-credentials: true
+#   max-age: 3600
+
+# PHASE 3: Production (Uncomment this, comment others)
+# cors:
+#   allowed-origins: https://yourdomain.com,https://api.yourdomain.com
+#   allow-credentials: true
+#   max-age: 86400
