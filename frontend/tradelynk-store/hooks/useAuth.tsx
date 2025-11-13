@@ -52,12 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await authApi.login({ email, password });
 
       setUser({
-        userId: response.userId,
-        email: response.email,
-        name: response.name,
-        role: response.role,
-        verified: response.verified, // ✅ NEW
-        profilePictureUrl: response.profilePictureUrl,
+        userId: response.data.userId,
+        email: response.data.email,
+        name: response.data.name,
+        role: response.data.role,
+        verified: response.data.isEmailVerified, // ✅ FIXED: Access from response.data
+        isEmailVerified: response.data.isEmailVerified, // ✅ NEW: Also store here
+        profilePictureUrl: response.data.profilePictureUrl,
       });
 
       router.push("/");

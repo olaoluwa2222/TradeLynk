@@ -125,18 +125,19 @@ api.interceptors.response.use(
           { refreshToken }
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const { token } = response.data.data;
+        const newRefreshToken = (response.data.data as any).refreshToken || "";
 
         // Store new tokens
-        tokenStorage.setTokens(accessToken, newRefreshToken);
+        tokenStorage.setTokens(token, newRefreshToken);
 
         // Update authorization header
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${token}`;
         }
 
         // Process queued requests
-        processQueue(null, accessToken);
+        processQueue(null, token);
 
         isRefreshing = false;
 
@@ -164,8 +165,10 @@ api.interceptors.response.use(
 export const authApi = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>("/auth/login", data);
-    const { accessToken, refreshToken } = response.data;
-    tokenStorage.setTokens(accessToken, refreshToken);
+    const { token, tokenType } = response.data.data;
+    // Extract refresh token if provided, otherwise use empty string
+    const refreshToken = (response.data.data as any).refreshToken || "";
+    tokenStorage.setTokens(token, refreshToken);
     return response.data;
   },
 
@@ -213,8 +216,9 @@ export const authApi = {
       refreshToken,
     });
 
-    const { accessToken, refreshToken: newRefreshToken } = response.data;
-    tokenStorage.setTokens(accessToken, newRefreshToken);
+    const { token } = response.data.data;
+    const newRefreshToken = (response.data.data as any).refreshToken || "";
+    tokenStorage.setTokens(token, newRefreshToken);
 
     return response.data;
   },
