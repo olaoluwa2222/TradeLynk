@@ -229,4 +229,54 @@ export const authApi = {
   },
 };
 
+// Items API methods
+export const itemsApi = {
+  getTrendingItems: async (days: number = 7, limit: number = 10) => {
+    const response = await api.get("/items/trending", {
+      params: { days, limit },
+    });
+    return response.data;
+  },
+
+  getSearchSuggestions: async (query: string) => {
+    const response = await api.get("/items/suggestions", {
+      params: { q: query },
+    });
+    return response.data;
+  },
+
+  getItemById: async (id: string | number) => {
+    const response = await api.get(`/items/${id}`);
+    return response.data;
+  },
+
+  getCategoryItems: async (
+    category: string,
+    page: number = 0,
+    limit: number = 20
+  ) => {
+    const response = await api.get("/items/category", {
+      params: { category, page, limit },
+    });
+    return response.data;
+  },
+
+  searchItems: async (query: string, page: number = 0, limit: number = 20) => {
+    const response = await api.get("/items/search", {
+      params: { q: query, page, limit },
+    });
+    return response.data;
+  },
+
+  likeItem: async (itemId: number | string) => {
+    const response = await api.post(`/items/${itemId}/like`);
+    return response.data;
+  },
+
+  unlikeItem: async (itemId: number | string) => {
+    const response = await api.delete(`/items/${itemId}/like`);
+    return response.data;
+  },
+};
+
 export default api;
