@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { itemsApi } from "@/lib/api";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -805,7 +806,7 @@ export default function Home() {
           <div className="text-center mt-16">
             <Link
               href="/register"
-              className="inline-block px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="inline-block px-8 py-3 bg-linear-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
               style={{
                 fontFamily: "Clash Display",
                 fontWeight: 700,
@@ -818,7 +819,7 @@ export default function Home() {
       </section>
 
       {/* How Landmark Marketplace Works Section */}
-      <section className="w-full py-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <section className="w-full py-20 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Title */}
           <div className="text-center mb-16">
@@ -839,9 +840,9 @@ export default function Home() {
             {/* Step 1: Browse */}
             <div className="flex flex-col items-center">
               {/* Step Number Circle */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-6 shadow-lg transform hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-6 shadow-lg transform hover:scale-110 transition-transform duration-300 hover:bg-white/20">
                 <span
-                  className="text-3xl font-bold text-white"
+                  className="text-3xl font-bold"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 700,
@@ -875,7 +876,7 @@ export default function Home() {
               </p>
 
               {/* Arrow to next step */}
-              <div className="hidden md:block absolute text-3xl text-blue-500 translate-x-96 -translate-y-4">
+              <div className="hidden md:block absolute text-3xl text-gray-400 translate-x-96 -translate-y-4">
                 →
               </div>
             </div>
@@ -883,9 +884,9 @@ export default function Home() {
             {/* Step 2: Chat */}
             <div className="flex flex-col items-center">
               {/* Step Number Circle */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg transform hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-6 shadow-lg transform hover:scale-110 transition-transform duration-300 hover:bg-white/20">
                 <span
-                  className="text-3xl font-bold text-white"
+                  className="text-3xl font-bold"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 700,
@@ -919,7 +920,7 @@ export default function Home() {
               </p>
 
               {/* Arrow to next step */}
-              <div className="hidden md:block absolute text-3xl text-purple-500 translate-x-96 -translate-y-4">
+              <div className="hidden md:block absolute text-3xl text-gray-400 translate-x-96 -translate-y-4">
                 →
               </div>
             </div>
@@ -927,9 +928,9 @@ export default function Home() {
             {/* Step 3: Meet */}
             <div className="flex flex-col items-center">
               {/* Step Number Circle */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center mb-6 shadow-lg transform hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-6 shadow-lg transform hover:scale-110 transition-transform duration-300 hover:bg-white/20">
                 <span
-                  className="text-3xl font-bold text-white"
+                  className="text-3xl font-bold"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 700,
@@ -980,9 +981,171 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Got Something to Sell Section */}
+      <section className="w-full py-24 relative overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage:
+              "url('/black-friday-assortment-with-shopping-carts.jpg')",
+          }}
+        >
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/70"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-8">
+            {/* Main Headline */}
+            <div>
+              <h2
+                className="text-5xl md:text-6xl font-bold text-white mb-4"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 700,
+                }}
+              >
+                Got something to sell?
+              </h2>
+              <p
+                className="text-xl text-white/90"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 400,
+                }}
+              >
+                List it in minutes!
+              </p>
+            </div>
+
+            {/* Subheading */}
+            <div>
+              <p
+                className="text-lg md:text-xl text-gray-200"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 500,
+                }}
+              >
+                Join <span className="text-white font-bold">200+</span> students
+                already buying and selling on campus
+              </p>
+            </div>
+
+            {/* Stats Row */}
+            <div className="flex flex-col sm:flex-row justify-center gap-6 pt-4">
+              <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div
+                  className="text-3xl font-bold text-white"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 700,
+                  }}
+                >
+                  200+
+                </div>
+                <div
+                  className="text-sm text-gray-300 mt-1"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Active Students
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div
+                  className="text-3xl font-bold text-white"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 700,
+                  }}
+                >
+                  1000+
+                </div>
+                <div
+                  className="text-sm text-gray-300 mt-1"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Items Listed
+                </div>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 hover:bg-white/20 transition-all duration-300">
+                <div
+                  className="text-3xl font-bold text-white"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 700,
+                  }}
+                >
+                  24/7
+                </div>
+                <div
+                  className="text-sm text-gray-300 mt-1"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Support
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8">
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 700,
+                }}
+              >
+                <span>Start Selling Now</span>
+                <span>→</span>
+              </Link>
+
+              <Link
+                href="/browse"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 700,
+                }}
+              >
+                <span>View All Items</span>
+                <span>→</span>
+              </Link>
+            </div>
+
+            {/* Additional Info */}
+            <div
+              className="text-sm text-gray-300 pt-4"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 400,
+              }}
+            >
+              No verification fee • Free listings • Secure transactions
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Additional sections will be added here */}
       {/* Services Section */}
-      {/* Footer Section */}
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

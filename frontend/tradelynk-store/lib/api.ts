@@ -279,4 +279,40 @@ export const itemsApi = {
   },
 };
 
+// Sellers API methods
+export const sellersApi = {
+  // Fetch list of supported banks
+  getBanks: async () => {
+    const response = await api.get("/sellers/banks");
+    return response.data;
+  },
+
+  // Validate bank account details
+  validateAccount: async (accountNumber: string, bankCode: string) => {
+    const response = await api.get("/sellers/validate-account", {
+      params: { accountNumber, bankCode },
+    });
+    return response.data;
+  },
+
+  // Activate seller account
+  activateSeller: async (data: {
+    businessName?: string;
+    campusAddress?: string;
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    agreedToTerms: boolean;
+  }) => {
+    const response = await api.post("/sellers/activate", data);
+    return response.data;
+  },
+
+  // Get seller status
+  getSellerStatus: async () => {
+    const response = await api.get("/sellers/me/status");
+    return response.data;
+  },
+};
+
 export default api;

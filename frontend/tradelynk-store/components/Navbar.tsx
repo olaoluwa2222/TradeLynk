@@ -212,7 +212,7 @@ export default function Navbar() {
 
             {/* Contact Us Button */}
             <Link
-              href="/contact"
+              href="/become-a-seller"
               className="flex items-center justify-between px-1 py-1 rounded-full bg-black"
             >
               <span

@@ -1,28 +1,46 @@
 // app/register/page.tsx
-'use client';
+"use client";
 
-import { useState, FormEvent } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useState, FormEvent, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false); // ✅ NEW
+  const [resendLoading, setResendLoading] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { register, isAuthenticated, resendVerification } = useAuth();
   const router = useRouter();
 
+  const images = [
+    "/2304.i203.047.S.m004.c13.keys locks realistic.jpg",
+    "/11190420.jpg",
+    "/cybersecurity-breach-concept-with-shattered-padlock (1).jpg",
+  ];
+
   // Redirect if already authenticated
-  if (isAuthenticated) {
-    router.push('/');
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
+
+  // Image carousel effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [images.length]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@lmu\.edu\.ng$/i;
@@ -31,16 +49,16 @@ export default function RegisterPage() {
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+      return "Password must be at least 8 characters";
     }
     if (!/[A-Z]/.test(password)) {
-      return 'Password must contain at least one uppercase letter';
+      return "Password must contain at least one uppercase letter";
     }
     if (!/[a-z]/.test(password)) {
-      return 'Password must contain at least one lowercase letter';
+      return "Password must contain at least one lowercase letter";
     }
     if (!/[0-9]/.test(password)) {
-      return 'Password must contain at least one number';
+      return "Password must contain at least one number";
     }
     return null;
   };
@@ -48,14 +66,14 @@ export default function RegisterPage() {
   // ✅ NEW: Handle resend verification
   const handleResendVerification = async () => {
     setResendLoading(true);
-    setError('');
+    setError("");
 
     try {
       await resendVerification();
-      setError('');
-      alert('Verification email sent! Please check your inbox.');
+      setError("");
+      alert("Verification email sent! Please check your inbox.");
     } catch (err: any) {
-      setError(err.message || 'Failed to resend verification email');
+      setError(err.message || "Failed to resend verification email");
     } finally {
       setResendLoading(false);
     }
@@ -63,22 +81,22 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSuccess(false);
 
     // Validation
     if (!email || !name || !password || !confirmPassword) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Email must be a valid @lmu.edu.ng address');
+      setError("Email must be a valid @lmu.edu.ng address");
       return;
     }
 
     if (name.trim().length < 2) {
-      setError('Name must be at least 2 characters');
+      setError("Name must be at least 2 characters");
       return;
     }
 
@@ -89,7 +107,7 @@ export default function RegisterPage() {
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
@@ -99,31 +117,61 @@ export default function RegisterPage() {
       await register(email, name, password);
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // If authenticated, don't render the form
+  if (isAuthenticated) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-4xl font-extrabold text-gray-900">
-            Create Account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Join the Campus Marketplace community
-          </p>
+    <div className="min-h-screen flex overflow-hidden bg-white">
+      {/* Left Side - Form */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-6 sm:px-12 py-12">
+        {/* Logo Icon - Top Right positioned */}
+        <div className="absolute top-6 right-6 lg:hidden">
+          <Image
+            src="/Logo Icon.png"
+            alt="TradeLynk Logo"
+            width={40}
+            height={40}
+            className="rounded-full"
+          />
         </div>
 
-        {/* Registration Form */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        {/* Form Container */}
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="mb-8">
+            <h2
+              className="text-4xl font-bold text-black mb-2"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 700,
+              }}
+            >
+              Create Account
+            </h2>
+            <p
+              className="text-gray-600 text-sm"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 400,
+              }}
+            >
+              Join Landmark University Marketplace
+            </p>
+          </div>
+
+          {/* Form */}
           {success ? (
-            // ✅ UPDATED: Success Message with better styling
+            // Success Message
             <div className="text-center py-8">
-              <div className="mb-6 bg-green-50 rounded-lg p-6">
+              <div className="mb-6 bg-green-50 rounded-lg p-6 border border-green-200">
                 <div className="mb-4">
                   <svg
                     className="mx-auto h-16 w-16 text-green-500"
@@ -139,52 +187,88 @@ export default function RegisterPage() {
                     />
                   </svg>
                 </div>
-                
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  ✅ Account Created Successfully!
+
+                <h3
+                  className="text-2xl font-bold text-gray-900 mb-3"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 700,
+                  }}
+                >
+                  ✅ Account Created!
                 </h3>
-                
+
                 <div className="bg-white rounded-lg p-4 mb-4 text-left">
-                  <p className="text-gray-700 mb-2">
-                    <span className="font-semibold">📧 Verification Email Sent</span>
+                  <p
+                    className="text-gray-700 mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 500,
+                    }}
+                  >
+                    📧 Verification Email Sent
                   </p>
-                  <p className="text-sm text-gray-600 mb-2">
+                  <p
+                    className="text-sm text-gray-600 mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
                     We've sent a verification link to:
                   </p>
-                  <p className="text-sm font-mono bg-gray-100 p-2 rounded">
+                  <p
+                    className="text-sm font-mono bg-gray-100 p-2 rounded"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
                     {email}
                   </p>
                 </div>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-gray-700">
-                    Please check your inbox and click the link to verify your account.
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    ⏱️ Note: The link expires in 24 hours.
+                  <p
+                    className="text-sm text-gray-700"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Please check your inbox and click the link to verify your
+                    account.
                   </p>
                 </div>
 
-                {/* ✅ NEW: Resend Verification Button */}
                 <button
                   onClick={handleResendVerification}
                   disabled={resendLoading}
                   className="w-full mb-3 py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg transition-colors disabled:bg-yellow-300 disabled:cursor-not-allowed"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 500,
+                  }}
                 >
-                  {resendLoading ? 'Sending...' : '📧 Resend Verification Email'}
+                  {resendLoading
+                    ? "Sending..."
+                    : "📧 Resend Verification Email"}
                 </button>
 
-                {/* Go to Login Button */}
                 <Link
                   href="/login"
-                  className="block w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-center"
+                  className="block w-full py-2 px-4 bg-black hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 500,
+                  }}
                 >
                   Go to Login
                 </Link>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -192,70 +276,67 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              {/* Email Input */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student@lmu.edu.ng"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  disabled={isLoading}
-                />
-              </div>
-
               {/* Name Input */}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
                 <input
-                  id="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Full Name"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white text-black placeholder-gray-500"
                   disabled={isLoading}
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                />
+              </div>
+
+              {/* Email Input */}
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white text-black placeholder-gray-500"
+                  disabled={isLoading}
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
                 />
               </div>
 
               {/* Password Input */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
                 <input
-                  id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white text-black placeholder-gray-500"
                   disabled={isLoading}
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Must be 8+ characters with uppercase, lowercase, and number
-                </p>
               </div>
 
               {/* Confirm Password Input */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password
-                </label>
                 <input
-                  id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Confirm Password"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white text-black placeholder-gray-500"
                   disabled={isLoading}
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
                 />
               </div>
 
@@ -263,7 +344,11 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full py-3 px-4 bg-black hover:bg-gray-900 text-white font-semibold rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 600,
+                }}
               >
                 {isLoading ? (
                   <>
@@ -290,29 +375,94 @@ export default function RegisterPage() {
                     Creating account...
                   </>
                 ) : (
-                  'Create Account'
+                  "Create Account"
                 )}
               </button>
+
+              {/* Continue Alternative */}
+              <div className="text-center text-sm text-gray-500 my-3">
+                or continue
+              </div>
             </form>
           )}
 
-          {/* Login Link */}
+          {/* Sign In Link */}
           {!success && (
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
-                  Sign in here
+            <div className="mt-8 text-center">
+              <p
+                className="text-sm text-gray-600"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 400,
+                }}
+              >
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="font-semibold text-black hover:text-gray-700"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 600,
+                  }}
+                >
+                  Sign in
                 </Link>
               </p>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Footer Note */}
-        <p className="text-center text-xs text-gray-500">
-          Only @lmu.edu.ng email addresses are accepted
-        </p>
+      {/* Right Side - Image Carousel */}
+      <div className="hidden lg:flex w-1/2 bg-gray-900 relative overflow-hidden items-center justify-center">
+        {/* Logo Icon - Top Right */}
+        <div className="absolute top-6 right-6 z-10">
+          <Image
+            src="/Logo Icon.png"
+            alt="TradeLynk Logo"
+            width={50}
+            height={50}
+            className="rounded-full"
+          />
+        </div>
+
+        {/* Image Carousel */}
+        <div className="relative w-full h-full">
+          {images.map((image, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ${
+                index === currentImageIndex ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <Image
+                src={image}
+                alt={`Carousel image ${index + 1}`}
+                fill
+                className="object-cover"
+                priority={index === 0}
+              />
+            </div>
+          ))}
+
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/40"></div>
+
+          {/* Carousel Indicators */}
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentImageIndex(index)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  index === currentImageIndex
+                    ? "bg-white w-8"
+                    : "bg-white/50 hover:bg-white/75"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
