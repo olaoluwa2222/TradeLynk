@@ -56,8 +56,8 @@ export default function Navbar() {
   const handleSuggestionClick = (suggestion: string) => {
     setSearchQuery(suggestion);
     setShowSuggestions(false);
-    // Redirect to search results or item page
-    router.push(`/search?q=${encodeURIComponent(suggestion)}`);
+    // Redirect to items page with search query
+    router.push(`/items?search=${encodeURIComponent(suggestion)}`);
   };
 
   // Handle search submission
@@ -65,7 +65,7 @@ export default function Navbar() {
     e.preventDefault();
     if (searchQuery.trim()) {
       setShowSuggestions(false);
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+      router.push(`/items?search=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -209,6 +209,29 @@ export default function Navbar() {
                 className="w-6 h-6"
               />
             </button>
+
+            {/* Chat Icon - Show only if logged in */}
+            {isAuthenticated && (
+              <Link
+                href="/chat"
+                className="hover:opacity-75 transition-opacity relative"
+                title="Messages"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-700"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+              </Link>
+            )}
 
             {/* Contact Us Button */}
             <Link

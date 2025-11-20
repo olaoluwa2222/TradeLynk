@@ -277,6 +277,38 @@ export const itemsApi = {
     const response = await api.delete(`/items/${itemId}/like`);
     return response.data;
   },
+
+  // Get all active items with pagination and filters
+  getAllItems: async (
+    page: number = 0,
+    size: number = 10,
+    category?: string,
+    minPrice?: number,
+    maxPrice?: number,
+    condition?: string,
+    sort: string = "RECENT"
+  ) => {
+    const params: any = { page, size, sort };
+    if (category) params.category = category;
+    if (minPrice) params.minPrice = minPrice;
+    if (maxPrice) params.maxPrice = maxPrice;
+    if (condition) params.condition = condition;
+
+    const response = await api.get("/items", { params });
+    return response.data;
+  },
+
+  // Get items by category
+  getItemsByCategory: async (
+    category: string,
+    page: number = 0,
+    size: number = 20
+  ) => {
+    const response = await api.get(`/items/category/${category}`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
 };
 
 // Sellers API methods
@@ -311,6 +343,103 @@ export const sellersApi = {
   // Get seller status
   getSellerStatus: async () => {
     const response = await api.get("/sellers/me/status");
+    return response.data;
+  },
+};
+
+// Chat API methods
+export const chatsApi = {
+  // Create new chat
+  createChat: async (data: {
+    itemId: number;
+    buyerId?: number;
+    sellerId?: number;
+  }) => {
+    const response = await api.post("/chats", data);
+    return response.data;
+  },
+
+  // Get all user chats
+  getChats: async () => {
+    const response = await api.get("/chats");
+    return response.data;
+  },
+
+  // Get specific chat
+  getChatDetails: async (chatId: string) => {
+    const response = await api.get(`/chats/${chatId}`);
+    return response.data;
+  },
+
+  // Get messages in a chat
+  getMessages: async (chatId: string, page: number = 0, size: number = 50) => {
+    const response = await api.get(`/chats/${chatId}/messages`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Send message
+  sendMessage: async (data: {
+    chatId: string;
+    content: string;
+    imageUrls?: string[];
+  }) => {
+    const response = await api.post("/chats/messages", data);
+    return response.data;
+  },
+
+  // Mark chat as read
+  markAsRead: async (chatId: string) => {
+    const response = await api.put(`/chats/${chatId}/mark-read`);
+    return response.data;
+  },
+
+  // Get unread count
+  getUnreadCount: async () => {
+    const response = await api.get("/chats/unread-count");
+    return response.data;
+  },
+
+  // Find chat by item
+  getChatByItem: async (itemId: number) => {
+    const response = await api.get(`/chats/by-item/${itemId}`);
+    return response.data;
+  },
+
+  // Upload image
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/chats/upload-image", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  // Delete chat
+  deleteChat: async (chatId: string) => {
+    const response = await api.delete(`/chats/${chatId}`);
+    return response.data;
+  },
+
+  // Save FCM token
+  saveDeviceToken: async (data: {
+    deviceToken: string;
+    deviceType: string;
+    deviceName: string;
+  }) => {
+    const response = await api.post("/chats/device-token", data);
+    return response.data;
+  },
+
+  // Remove FCM token
+  removeDeviceToken: async (deviceToken: string) => {
+    const response = await api.delete("/chats/device-token", {
+      data: { deviceToken },
+    });
     return response.data;
   },
 };

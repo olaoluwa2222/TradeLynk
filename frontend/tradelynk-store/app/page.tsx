@@ -413,7 +413,7 @@ export default function Home() {
               Trending Now
             </h2>
             <Link
-              href="/trending"
+              href="/items"
               className="flex items-center gap-2 px-6 py-2 rounded-full bg-white text-black hover:bg-gray-200 transition-colors"
               style={{
                 fontFamily: "Clash Display",
@@ -451,9 +451,11 @@ export default function Home() {
                 const isLoading = loadingLikes.has(item.id);
 
                 return (
-                  <div
-                    key={item.id}
-                    className="group relative h-80 rounded-xl overflow-hidden cursor-pointer bg-gray-800"
+                  <Link
+                    href={`/items?category=${encodeURIComponent(
+                      item.category
+                    )}`}
+                    className="group relative h-80 rounded-xl overflow-hidden cursor-pointer bg-gray-800 block"
                   >
                     {/* Item Image */}
                     {item.imageUrls && item.imageUrls.length > 0 ? (
@@ -606,7 +608,7 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
