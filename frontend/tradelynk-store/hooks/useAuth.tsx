@@ -11,6 +11,7 @@ import React, {
 import { useRouter } from "next/navigation";
 import { authApi, tokenStorage } from "@/lib/api";
 import { User, AuthContextType } from "@/types/auth";
+import { initializeFCM } from "@/lib/services/fcmService";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -47,28 +48,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [checkAuth]);
 
+  // ✅ FIXED LOGIN WITH FCM
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login({ email, password });
+      const token = response.data.token;
+      const userData = response.data as unknown as User;
 
-      setUser({
-        userId: response.data.userId,
-        email: response.data.email,
-        name: response.data.name,
-        role: response.data.role,
-        verified: response.data.isEmailVerified, // ✅ FIXED: Access from response.data
-        isEmailVerified: response.data.isEmailVerified, // ✅ NEW: Also store here
-        profilePictureUrl: response.data.profilePictureUrl,
-      });
+      // Save to state/context
+      setUser(userData);
 
+      // ✅ INITIALIZE FCM AFTER LOGIN
+      try {
+        console.log("🔔 Initializing FCM after login...");
+        await initializeFCM(token, (payload) => {
+          console.log("📬 New message notification:", payload);
+          // You can add a toast notification here if you want
+        });
+      } catch (fcmError) {
+        console.error("FCM initialization failed (non-critical):", fcmError);
+        // Don't block login if FCM fails
+      }
+
+      // Navigate to home
       router.push("/");
     } catch (error: any) {
-      // Check for unverified email error (403)
-      if (error.response?.status === 403) {
+      console.error("Login error:", error);
+
+      // Check for specific error messages
+      if (error.response?.data?.message === "EMAIL_NOT_VERIFIED") {
         throw new Error("EMAIL_NOT_VERIFIED");
       }
-      const message = error.response?.data?.message || "Login failed";
-      throw new Error(message);
+
+      throw error;
     }
   };
 
@@ -82,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ✅ NEW: Verify email with token
+  // ✅ Verify email with token
   const verifyEmail = async (token: string): Promise<string> => {
     try {
       const response = await authApi.verifyEmail(token);
@@ -93,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ✅ NEW: Resend verification email
+  // ✅ Resend verification email
   const resendVerification = async () => {
     try {
       const response = await authApi.resendVerification();
@@ -127,8 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         checkAuth,
-        verifyEmail, // ✅ NEW
-        resendVerification, // ✅ NEW
+        verifyEmail,
+        resendVerification,
       }}
     >
       {children}

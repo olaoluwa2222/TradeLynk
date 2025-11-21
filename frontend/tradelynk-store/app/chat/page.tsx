@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import ChatList from "@/components/chat/ChatList";
 import ConversationView from "@/components/chat/ConversationView";
 import ItemSidebar from "@/components/chat/ItemSidebar";
 import { fetchChats, Chat } from "@/lib/services/chatService";
-import { initializeFCM, cleanupFCM } from "@/lib/services/fcmService";
 import { useOnlineStatus } from "@/lib/hooks/useChat";
 
 export default function ChatPage() {
   const { user, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function ChatPage() {
   const [isMobileViewChat, setIsMobileViewChat] = useState(false);
   const [isMobileViewItem, setIsMobileViewItem] = useState(false);
 
-  // Set online status - always called (unconditionally)
+  // Set online status
   useOnlineStatus(user?.userId || 0);
 
   // Load chats on mount
@@ -32,33 +32,26 @@ export default function ChatPage() {
         setLoading(true);
         setError("");
         const data = await fetchChats();
-        setChats(data);
 
-        console.log("✅ Chats loaded:", data.length, "chats");
-        console.log("🔍 Looking for chatId in URL params...");
+        // ✅ TRANSFORM: Normalize chatId to id
+        const normalizedChats = data.map((chat) => ({
+          ...chat,
+          id: chat.chatId || chat.id, // Use chatId if exists, fallback to id
+        }));
+
+        setChats(normalizedChats);
+
+        console.log("✅ Chats loaded:", normalizedChats.length, "chats");
 
         // Check if chatId is provided in URL params
         const chatIdParam = searchParams.get("chatId");
         if (chatIdParam) {
           console.log("📌 Found chatId in URL:", chatIdParam);
-          // Try to find the chat in the list
-          const foundChat = data.find((c) => c.id === chatIdParam);
-          if (foundChat) {
-            console.log("✅ Chat found in list, selecting it");
-            setSelectedChatId(chatIdParam);
-            setIsMobileViewChat(true);
-          } else {
-            console.warn(
-              "⚠️ Chat not found in list, it might still be loading from server"
-            );
-            // Still set it - it might load in the next refresh
-            setSelectedChatId(chatIdParam);
-            setIsMobileViewChat(true);
-          }
-        } else if (data.length > 0 && !selectedChatId) {
+          setSelectedChatId(chatIdParam);
+          setIsMobileViewChat(true);
+        } else if (normalizedChats.length > 0 && !selectedChatId) {
           console.log("📌 No chatId param, selecting first chat");
-          // Select first chat if available and no chatId param
-          setSelectedChatId(data[0].id);
+          setSelectedChatId(normalizedChats[0].id);
         }
       } catch (err: any) {
         setError(err.message || "Failed to load chats");
@@ -69,37 +62,24 @@ export default function ChatPage() {
     };
 
     loadChats();
-
-    // Initialize FCM
-    const token = localStorage.getItem("token");
-    if (token) {
-      initializeFCM(token, (payload) => {
-        // Reload chats when new message arrives
-        loadChats();
-      });
-    }
-  }, [isAuthenticated, user, searchParams]);
-
-  // Cleanup FCM on logout
-  useEffect(() => {
-    return () => {
-      if (isAuthenticated && user) {
-        const token = localStorage.getItem("token");
-        if (token) {
-          cleanupFCM(token);
-        }
-      }
-    };
   }, [isAuthenticated, user]);
 
-  // If chatId is in URL but chat not found in list yet (newly created chat),
-  // refetch after a short delay
+  // Handle URL changes separately
   useEffect(() => {
-    if (!isAuthenticated || !selectedChatId) return;
+    const chatIdParam = searchParams.get("chatId");
+    if (chatIdParam && chatIdParam !== selectedChatId) {
+      console.log("🔄 URL changed, updating selected chat:", chatIdParam);
+      setSelectedChatId(chatIdParam);
+      setIsMobileViewChat(true);
+    }
+  }, [searchParams]);
 
-    // Find the selected chat
+  // Refetch if chat not found (newly created chat)
+  useEffect(() => {
+    if (!isAuthenticated || !selectedChatId || loading) return;
+
     const found = chats.find((c) => c.id === selectedChatId);
-    if (found || loading) {
+    if (found) {
       return;
     }
 
@@ -107,8 +87,16 @@ export default function ChatPage() {
     const timer = setTimeout(async () => {
       try {
         const data = await fetchChats();
-        setChats(data);
-        console.log("✅ Chats refetched, total:", data.length, "chats");
+        const normalizedChats = data.map((chat) => ({
+          ...chat,
+          id: chat.chatId || chat.id,
+        }));
+        setChats(normalizedChats);
+        console.log(
+          "✅ Chats refetched, total:",
+          normalizedChats.length,
+          "chats"
+        );
       } catch (err) {
         console.error("Error refetching chats:", err);
       }
@@ -117,7 +105,7 @@ export default function ChatPage() {
     return () => clearTimeout(timer);
   }, [isAuthenticated, selectedChatId, chats, loading]);
 
-  // Helper variables - computed after all hooks
+  // Early return for non-authenticated users
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -141,6 +129,26 @@ export default function ChatPage() {
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
   const isWaitingForNewChat = selectedChatId && !selectedChat;
+
+  // Create a placeholder chat object when waiting for new chat
+  const chatToDisplay =
+    selectedChat ||
+    (isWaitingForNewChat
+      ? {
+          id: selectedChatId,
+          itemId: 0,
+          itemTitle: "Loading...",
+          buyerId: 0,
+          buyerName: "Loading...",
+          sellerId: 0,
+          sellerName: "Loading...",
+          createdAt: Date.now(),
+          lastMessageAt: Date.now(),
+          lastMessage: "",
+          unreadCount: 0,
+          isFromCurrentUser: false,
+        }
+      : null);
 
   console.log("📋 ChatPage state:", {
     totalChats: chats.length,
@@ -167,9 +175,15 @@ export default function ChatPage() {
             <ChatList
               chats={chats}
               selectedChatId={selectedChatId}
-              onSelectChat={(chatId) => {
-                setSelectedChatId(chatId);
+              onSelectChat={(chat) => {
+                console.log("📌 Selecting chat:", chat);
+                if (!chat || !chat.id) {
+                  console.error("❌ Invalid chat object:", chat);
+                  return;
+                }
+                setSelectedChatId(chat.id);
                 setIsMobileViewChat(true);
+                router.push(`/chat?chatId=${chat.id}`, { scroll: false });
               }}
               loading={loading}
               error={error}
@@ -178,11 +192,11 @@ export default function ChatPage() {
         )}
 
         {/* Center - Conversation View */}
-        {(isMobileViewChat || !isMobileViewChat) && (
+        {(isMobileViewChat || !isMobileViewItem) && (
           <div className="hidden md:flex md:w-1/2 lg:w-1/2 flex-col border-r border-gray-200">
-            {selectedChat ? (
+            {chatToDisplay ? (
               <ConversationView
-                chat={selectedChat}
+                chat={chatToDisplay}
                 currentUserId={user?.userId || 0}
                 onBackClick={() => setIsMobileViewChat(false)}
                 onViewItem={() => setIsMobileViewItem(true)}
@@ -210,9 +224,9 @@ export default function ChatPage() {
         {/* Mobile: Full conversation view */}
         {isMobileViewChat && (
           <div className="w-full md:hidden flex flex-col">
-            {selectedChat ? (
+            {chatToDisplay ? (
               <ConversationView
-                chat={selectedChat}
+                chat={chatToDisplay}
                 currentUserId={user?.userId || 0}
                 onBackClick={() => setIsMobileViewChat(false)}
                 onViewItem={() => setIsMobileViewItem(true)}
@@ -224,9 +238,9 @@ export default function ChatPage() {
         {/* Right Sidebar - Item Details */}
         {(isMobileViewItem || !isMobileViewItem) && (
           <div className="hidden lg:block lg:w-1/4 border-l border-gray-200 bg-white overflow-y-auto">
-            {selectedChat ? (
+            {chatToDisplay ? (
               <ItemSidebar
-                chat={selectedChat}
+                chat={chatToDisplay}
                 onClose={() => setIsMobileViewItem(false)}
               />
             ) : (
@@ -240,9 +254,9 @@ export default function ChatPage() {
         {/* Mobile: Full item view */}
         {isMobileViewItem && (
           <div className="w-full md:hidden flex flex-col border-l border-gray-200">
-            {selectedChat ? (
+            {chatToDisplay ? (
               <ItemSidebar
-                chat={selectedChat}
+                chat={chatToDisplay}
                 onClose={() => setIsMobileViewItem(false)}
               />
             ) : null}

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { uploadChatImage } from "@/lib/services/chatService";
 
 interface ChatInputProps {
-  onSend: (message: string, imageUrls: string[]) => void;
+  onSend: (message: string, imageUrls: string[]) => Promise<boolean>;
   onTyping: () => void;
   sending: boolean;
   disabled: boolean;
@@ -33,48 +33,15 @@ export default function ChatInput({
   }, [message]);
 
   const handleSend = async () => {
-    if (!message.trim() && imageUrls.length === 0) {
-      console.log("❌ Cannot send empty message");
-      return;
-    }
-
-    console.log("📤 Attempting to send message:", {
-      message,
-      imageUrls,
-      sending,
-      disabled,
-    });
-
-    // Store values before clearing
-    const messageToSend = message;
-    const imagesToSend = [...imageUrls];
-
-    try {
-      setError(null);
-
-      console.log("🔄 Calling onSend...");
-      await onSend(messageToSend, imagesToSend);
-
+    const result = await onSend(message, imageUrls);
+    if (result) {
+      // actually sent
       console.log("✅ Message sent successfully");
-      // Only clear if successful
       setMessage("");
       setImageUrls([]);
-
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
-    } catch (error) {
-      console.error("❌ Error sending message:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to send message"
-      );
-
-      // Restore message if sending failed
-      setMessage(messageToSend);
-      setImageUrls(imagesToSend);
-
-      alert("Failed to send message. Please try again.");
+    } else {
+      console.warn("⚠️ Message not sent (no chatId or error)");
+      // show user error toast / keep message in input
     }
   };
 

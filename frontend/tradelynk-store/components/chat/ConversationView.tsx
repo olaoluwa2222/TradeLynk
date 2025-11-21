@@ -26,6 +26,25 @@ export default function ConversationView({
   onViewItem,
 }: ConversationViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Extract chatId - prefer chat.chatId (API) and fallback to chat.id
+  const effectiveChatId = chat?.chatId ?? chat?.id ?? null;
+  // ⚠️ Critical check for undefined chatId
+  if (!effectiveChatId) {
+    console.error(
+      "❌ CRITICAL ERROR: chatId is undefined!",
+      "chat object:",
+      chat
+    );
+  }
+
+  console.log(
+    "🎯 ConversationView - chat id to use:",
+    effectiveChatId,
+    "chat object:",
+    chat
+  );
+
   const {
     messages,
     loading,
@@ -34,13 +53,13 @@ export default function ConversationView({
     isOtherUserTyping,
     sendMessage,
     sendTypingIndicator,
-  } = useChat(chat.id, currentUserId);
+  } = useChat(effectiveChatId, currentUserId);
   const { isOnline, lastSeen } = useUserOnlineStatus(
     chat.sellerId === currentUserId ? chat.buyerId : chat.sellerId
   );
 
   console.log("🎯 ConversationView mounted/updated:", {
-    chatId: chat.id,
+    chatId: effectiveChatId,
     messagesCount: messages.length,
     loading,
     messages: messages.map((m) => ({
@@ -68,9 +87,9 @@ export default function ConversationView({
   const handleSendMessage = async (
     content: string,
     imageUrls: string[] = []
-  ) => {
-    if (!content.trim()) return;
-    await sendMessage(content, imageUrls);
+  ): Promise<boolean> => {
+    if (!content.trim()) return false;
+    return await sendMessage(content, imageUrls);
   };
 
   const handleInputChange = useCallback(() => {
@@ -94,7 +113,8 @@ export default function ConversationView({
     acc.push({
       type: "message",
       data: message,
-      key: message.id,
+      // Some messages may not have an id from the API; fall back to timestamp+index
+      key: message.id || `msg-${message.timestamp}-${index}`,
     });
 
     return acc;

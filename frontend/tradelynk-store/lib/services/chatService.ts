@@ -89,16 +89,39 @@ export const fetchMessages = async (
  * Send a message
  */
 export const sendMessage = async (
-  chatId: string,
-  content: string,
+  chatIdOrPayload:
+    | string
+    | { chatId: string; content: string; imageUrls?: string[] },
+  content?: string,
   imageUrls: string[] = []
 ): Promise<Message> => {
   try {
-    const response = await chatsApi.sendMessage({
-      chatId,
-      content,
-      imageUrls,
+    // Handle both calling conventions for backward compatibility
+    let payload: { chatId: string; content: string; imageUrls: string[] };
+
+    if (typeof chatIdOrPayload === "string") {
+      // Old style: sendMessage(chatId, content, imageUrls)
+      payload = {
+        chatId: chatIdOrPayload,
+        content: content || "",
+        imageUrls: imageUrls,
+      };
+    } else {
+      // New style: sendMessage({ chatId, content, imageUrls })
+      payload = {
+        chatId: chatIdOrPayload.chatId,
+        content: chatIdOrPayload.content,
+        imageUrls: chatIdOrPayload.imageUrls || [],
+      };
+    }
+
+    console.log("📤 Sending message with payload:", {
+      chatId: payload.chatId,
+      contentLength: payload.content.length,
+      imageCount: payload.imageUrls.length,
     });
+
+    const response = await chatsApi.sendMessage(payload);
     if (response.success) {
       return response.data;
     }
@@ -143,22 +166,41 @@ export const fetchUnreadCount = async (): Promise<number> => {
 /**
  * Find or create chat by item
  */
-export const findOrCreateChatByItem = async (itemId: number): Promise<Chat> => {
+/**
+ * Find or create chat by item
+ */
+export const findOrCreateChatByItem = async (
+  itemId: number,
+  sellerId: number
+): Promise<string> => {
   try {
-    let response = await chatsApi.getChatByItem(itemId);
-    if (response.success && response.data) {
-      return response.data;
+    console.log("🔍 Looking for existing chat for item:", itemId);
+
+    // Check if chat exists
+    const checkResponse = await chatsApi.getChatByItem(itemId);
+
+    if (checkResponse.success && checkResponse.exists && checkResponse.chatId) {
+      console.log("✅ Found existing chat:", checkResponse.chatId);
+      return checkResponse.chatId;
     }
 
-    // If chat doesn't exist, create one
-    response = await chatsApi.createChat({ itemId });
-    if (response.success) {
-      return response.data;
+    console.log("📝 Chat doesn't exist, creating new one...");
+
+    // Create new chat
+    const createResponse = await chatsApi.createChat({
+      itemId,
+      sellerId,
+    });
+
+    if (createResponse.success && createResponse.data) {
+      const chatId = createResponse.data.chatId;
+      console.log("✅ Chat created successfully:", chatId);
+      return chatId;
     }
 
-    throw new Error(response.message || "Failed to create chat");
+    throw new Error(createResponse.message || "Failed to create chat");
   } catch (error) {
-    console.error("Error finding or creating chat:", error);
+    console.error("❌ Error finding or creating chat:", error);
     throw error;
   }
 };

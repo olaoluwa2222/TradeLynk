@@ -8,7 +8,7 @@ import { formatRelativeTime } from "@/lib/utils/timeUtils";
 interface ChatListProps {
   chats: Chat[];
   selectedChatId: string | null;
-  onSelectChat: (chatId: string) => void;
+  onSelectChat: (chat: Chat) => void;
   loading: boolean;
   error: string;
 }
@@ -145,7 +145,7 @@ export default function ChatList({
         {filteredChats.map((chat) => (
           <button
             key={chat.id}
-            onClick={() => onSelectChat(chat.id)}
+            onClick={() => onSelectChat(chat)} // Pass the entire chat object
             className={`w-full flex items-start gap-3 p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
               selectedChatId === chat.id
                 ? "bg-indigo-50 border-l-4 border-l-indigo-600"

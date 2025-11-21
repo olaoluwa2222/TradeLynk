@@ -24,25 +24,51 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
-  const [lastMessageDate, setLastMessageDate] = useState<string | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const typingUnsubscribeRef = useRef<(() => void) | null>(null);
 
   // Fetch initial messages from API
   const loadMessages = useCallback(async () => {
-    if (!chatId) return;
+    if (!chatId) {
+      console.warn("⚠️ loadMessages called but chatId is null/undefined");
+      return;
+    }
 
     try {
       setLoading(true);
       setError("");
-      console.log("📥 Loading messages from API for chat:", chatId);
+      console.log("📥 [useChat] Loading messages from API for chat:", chatId);
+      console.log(
+        "📥 [useChat] Chat ID type:",
+        typeof chatId,
+        "value:",
+        chatId
+      );
+
       const data = await fetchMessages(chatId, 0, 50);
-      console.log("✅ Loaded messages from API:", data.length, "messages");
-      setMessages(data.sort((a, b) => a.timestamp - b.timestamp));
+
+      // Normalize messages from API: ensure every message has an `id`.
+      const normalized = data.map((m, idx) => ({
+        ...m,
+        id: m.id || (m as any).messageId || `api-msg-${m.timestamp}-${idx}`,
+      }));
+
+      console.log("✅ [useChat] API Response:", {
+        messageCount: normalized.length,
+        messages: normalized.map((m) => ({
+          id: m.id,
+          content: m.content.substring(0, 30),
+          senderId: m.senderId,
+          timestamp: m.timestamp,
+        })),
+      });
+
+      setMessages(normalized.sort((a, b) => a.timestamp - b.timestamp));
     } catch (err: any) {
+      console.error("❌ [useChat] Error loading messages:", err);
+      console.error("❌ [useChat] Error details:", err.message, err.stack);
       setError(err.message || "Failed to load messages");
-      console.error("❌ Error loading messages:", err);
     } finally {
       setLoading(false);
     }
@@ -50,26 +76,63 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
 
   // Setup real-time listener for new messages
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId) {
+      console.warn("⚠️ [useChat] useEffect skipped - chatId is null/undefined");
+      return;
+    }
 
+    console.log("🔧 [useChat] Setting up chat for chatId:", chatId);
+    console.log("🔧 [useChat] Current userId:", currentUserId);
+
+    // Load initial messages
     loadMessages();
 
     // Listen for new messages from Firebase
     const messagesRef = ref(database, `chats/${chatId}/messages`);
+    const firebasePath = `chats/${chatId}/messages`;
 
-    console.log("🔊 Setting up Firebase listener for chat:", chatId);
+    console.log(
+      "🔊 [useChat] Setting up Firebase listener at path:",
+      firebasePath
+    );
+
+    // Check if Firebase is connected
+    const connectedRef = ref(database, ".info/connected");
+    onValue(connectedRef, (snapshot) => {
+      const connected = snapshot.val();
+      console.log(
+        "🔌 [useChat] Firebase connection status:",
+        connected ? "CONNECTED" : "DISCONNECTED"
+      );
+    });
 
     const unsubscribe = onChildAdded(messagesRef, (snapshot: DataSnapshot) => {
       const messageData = snapshot.val();
       const messageId = snapshot.key;
 
-      console.log("📨 Received message from Firebase:", messageId, messageData);
+      console.log("📨 [useChat] Firebase message received:", {
+        messageId,
+        path: firebasePath,
+        data: messageData,
+        exists: snapshot.exists(),
+      });
+
+      if (!snapshot.exists()) {
+        console.warn(
+          "⚠️ [useChat] Snapshot doesn't exist for message:",
+          messageId
+        );
+        return;
+      }
 
       // Check if message already exists (avoid duplicates)
       setMessages((prev) => {
         const exists = prev.some((m) => m.id === messageId);
         if (exists) {
-          console.log("⚠️ Message already exists, skipping:", messageId);
+          console.log(
+            "⚠️ [useChat] Message already exists, skipping:",
+            messageId
+          );
           return prev;
         }
 
@@ -84,7 +147,14 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
           readAt: messageData.readAt,
         };
 
-        console.log("✅ Adding new message to UI:", newMessage);
+        console.log("✅ [useChat] Adding new message to UI:", {
+          id: newMessage.id,
+          content: newMessage.content.substring(0, 30),
+          senderId: newMessage.senderId,
+          currentCount: prev.length,
+          newCount: prev.length + 1,
+        });
+
         return [...prev, newMessage];
       });
     });
@@ -96,7 +166,7 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
         const messageData = snapshot.val();
         const messageId = snapshot.key;
 
-        console.log("🔄 Message updated:", messageId);
+        console.log("🔄 [useChat] Message updated:", messageId);
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -113,12 +183,16 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
     );
 
     unsubscribeRef.current = () => {
-      console.log("🔇 Unsubscribing from Firebase listeners");
+      console.log(
+        "🔇 [useChat] Unsubscribing from Firebase listeners for chat:",
+        chatId
+      );
       unsubscribe();
       updateUnsubscribe();
     };
 
     // Mark chat as read
+    console.log("📖 [useChat] Marking chat as read:", chatId);
     markChatAsRead(chatId);
 
     return () => {
@@ -126,7 +200,7 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
         unsubscribeRef.current();
       }
     };
-  }, [chatId, loadMessages]);
+  }, [chatId, loadMessages, currentUserId]);
 
   // Listen for typing indicator
   useEffect(() => {
@@ -171,39 +245,45 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
 
   // Send message
   const sendMessage = useCallback(
-    async (content: string, imageUrls: string[] = []) => {
-      if (!chatId || !content.trim()) {
-        console.log(
-          "❌ Cannot send message - chatId:",
-          chatId,
-          "content:",
-          content
+    async (content: string, imageUrls: string[] = []): Promise<boolean> => {
+      if (!chatId) {
+        console.error(
+          "❌ [useChat] Cannot send message - chatId is null/undefined"
         );
-        return;
+        return false;
+      }
+
+      if (!content.trim()) {
+        console.warn("⚠️ [useChat] Cannot send empty message");
+        return false;
       }
 
       try {
         setSending(true);
         setError("");
 
-        console.log("📤 Sending message via API:", {
+        console.log("📤 [useChat] Sending message via API:", {
           chatId,
-          content,
-          imageUrls: imageUrls.length,
+          contentLength: content.length,
+          imageCount: imageUrls.length,
+          currentUserId,
         });
 
-        await apiSendMessage(chatId, content, imageUrls);
+        const result = await apiSendMessage(chatId, content, imageUrls);
 
+        console.log("✅ [useChat] Message sent via API, result:", result);
         console.log(
-          "✅ Message sent via API, waiting for Firebase listener..."
+          "⏳ [useChat] Waiting for Firebase listener to receive message..."
         );
-        // Message will appear via Firebase listener
+
+        return true;
       } catch (err: any) {
+        console.error("❌ [useChat] Error sending message:", err);
+        console.error("❌ [useChat] Error details:", err.message, err.stack);
         setError(err.message || "Failed to send message");
-        console.error("❌ Error sending message:", err);
+        return false;
       } finally {
         setSending(false);
-        // Remove typing indicator
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
         }
@@ -233,7 +313,11 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
  */
 export const useOnlineStatus = (userId: number) => {
   useEffect(() => {
+    if (!userId) return;
+
     const statusRef = ref(database, `users/${userId}/status`);
+
+    console.log("🟢 [useOnlineStatus] Setting user online:", userId);
 
     // Set online
     set(statusRef, {
@@ -243,6 +327,7 @@ export const useOnlineStatus = (userId: number) => {
 
     // Set offline on unmount
     return () => {
+      console.log("🔴 [useOnlineStatus] Setting user offline:", userId);
       set(statusRef, {
         online: false,
         lastSeen: Date.now(),
@@ -259,6 +344,8 @@ export const useUserOnlineStatus = (userId: number) => {
   const [lastSeen, setLastSeen] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!userId) return;
+
     const statusRef = ref(database, `users/${userId}/status`);
 
     const unsubscribe = onValue(statusRef, (snapshot: DataSnapshot) => {
