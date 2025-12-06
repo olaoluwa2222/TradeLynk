@@ -23,45 +23,100 @@ export default function ChatPage() {
   // Set online status
   useOnlineStatus(user?.userId || 0);
 
+  // ✅ NEW: Listen for service worker navigation messages
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      console.log("📨 [ChatPage] Received service worker message:", event.data);
+
+      if (event.data?.type === "NAVIGATE_TO_CHAT" && event.data?.chatId) {
+        const targetChatId = event.data.chatId;
+        console.log(`🔗 [ChatPage] Navigating to chat: ${targetChatId}`);
+
+        // Find and select the chat
+        const targetChat = chats.find(
+          (c) => c.chatId === targetChatId || c.id === targetChatId
+        );
+
+        if (targetChat) {
+          setSelectedChatId(targetChat.id);
+          setIsMobileViewChat(true);
+          router.push(`/chat?chatId=${targetChat.id}`, { scroll: false });
+          console.log("✅ [ChatPage] Chat selected:", targetChatId);
+        } else {
+          console.warn("⚠️ [ChatPage] Chat not found, refetching chats...");
+          // Refetch chats in case it's a new chat
+          loadChatsData();
+        }
+      }
+    };
+
+    if ("serviceWorker" in navigator && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener(
+        "message",
+        handleServiceWorkerMessage
+      );
+      console.log("✅ [ChatPage] Service worker message listener registered");
+    }
+
+    return () => {
+      if ("serviceWorker" in navigator && navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener(
+          "message",
+          handleServiceWorkerMessage
+        );
+        console.log("🔇 [ChatPage] Service worker message listener removed");
+      }
+    };
+  }, [chats, isAuthenticated, user, router]);
+
+  // ✅ Extract loadChats logic to reusable function
+  const loadChatsData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const data = await fetchChats();
+
+      // ✅ TRANSFORM: Normalize chatId to id
+      const normalizedChats = data.map((chat) => ({
+        ...chat,
+        id: chat.chatId || chat.id,
+      }));
+
+      setChats(normalizedChats);
+      console.log("✅ Chats loaded:", normalizedChats.length, "chats");
+
+      return normalizedChats;
+    } catch (err: any) {
+      setError(err.message || "Failed to load chats");
+      console.error("Error loading chats:", err);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load chats on mount
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const loadChats = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await fetchChats();
+    const initializeChats = async () => {
+      const normalizedChats = await loadChatsData();
 
-        // ✅ TRANSFORM: Normalize chatId to id
-        const normalizedChats = data.map((chat) => ({
-          ...chat,
-          id: chat.chatId || chat.id, // Use chatId if exists, fallback to id
-        }));
-
-        setChats(normalizedChats);
-
-        console.log("✅ Chats loaded:", normalizedChats.length, "chats");
-
-        // Check if chatId is provided in URL params
-        const chatIdParam = searchParams.get("chatId");
-        if (chatIdParam) {
-          console.log("📌 Found chatId in URL:", chatIdParam);
-          setSelectedChatId(chatIdParam);
-          setIsMobileViewChat(true);
-        } else if (normalizedChats.length > 0 && !selectedChatId) {
-          console.log("📌 No chatId param, selecting first chat");
-          setSelectedChatId(normalizedChats[0].id);
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to load chats");
-        console.error("Error loading chats:", err);
-      } finally {
-        setLoading(false);
+      // Check if chatId is provided in URL params
+      const chatIdParam = searchParams.get("chatId");
+      if (chatIdParam) {
+        console.log("📌 Found chatId in URL:", chatIdParam);
+        setSelectedChatId(chatIdParam);
+        setIsMobileViewChat(true);
+      } else if (normalizedChats.length > 0 && !selectedChatId) {
+        console.log("📌 No chatId param, selecting first chat");
+        setSelectedChatId(normalizedChats[0].id);
       }
     };
 
-    loadChats();
+    initializeChats();
   }, [isAuthenticated, user]);
 
   // Handle URL changes separately
@@ -84,23 +139,7 @@ export default function ChatPage() {
     }
 
     console.log("🔄 Chat not found, refetching in 1 second...", selectedChatId);
-    const timer = setTimeout(async () => {
-      try {
-        const data = await fetchChats();
-        const normalizedChats = data.map((chat) => ({
-          ...chat,
-          id: chat.chatId || chat.id,
-        }));
-        setChats(normalizedChats);
-        console.log(
-          "✅ Chats refetched, total:",
-          normalizedChats.length,
-          "chats"
-        );
-      } catch (err) {
-        console.error("Error refetching chats:", err);
-      }
-    }, 1000);
+    const timer = setTimeout(() => loadChatsData(), 1000);
 
     return () => clearTimeout(timer);
   }, [isAuthenticated, selectedChatId, chats, loading]);

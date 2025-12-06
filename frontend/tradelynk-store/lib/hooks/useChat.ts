@@ -27,6 +27,10 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const typingUnsubscribeRef = useRef<(() => void) | null>(null);
+  const syncCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+  const lastSyncTimeRef = useRef<number>(0);
 
   // Fetch initial messages from API
   const loadMessages = useCallback(async () => {
@@ -98,12 +102,19 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
 
     // Check if Firebase is connected
     const connectedRef = ref(database, ".info/connected");
-    onValue(connectedRef, (snapshot) => {
+    const connectedUnsubscribe = onValue(connectedRef, (snapshot) => {
       const connected = snapshot.val();
       console.log(
         "🔌 [useChat] Firebase connection status:",
         connected ? "CONNECTED" : "DISCONNECTED"
       );
+
+      // If reconnected after being disconnected, reload messages
+      if (connected) {
+        console.log(
+          "🔄 [useChat] Firebase reconnected, checking for new messages"
+        );
+      }
     });
 
     const unsubscribe = onChildAdded(messagesRef, (snapshot: DataSnapshot) => {
@@ -117,10 +128,24 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
         exists: snapshot.exists(),
       });
 
-      if (!snapshot.exists()) {
+      if (!snapshot.exists() || !messageData) {
         console.warn(
-          "⚠️ [useChat] Snapshot doesn't exist for message:",
+          "⚠️ [useChat] Snapshot doesn't exist or has no data:",
           messageId
+        );
+        return;
+      }
+
+      // Ensure senderId, senderName, content exist
+      if (
+        !messageData.senderId ||
+        !messageData.senderName ||
+        !messageData.content
+      ) {
+        console.warn(
+          "⚠️ [useChat] Message missing required fields:",
+          messageId,
+          messageData
         );
         return;
       }
@@ -189,15 +214,78 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
       );
       unsubscribe();
       updateUnsubscribe();
+      connectedUnsubscribe();
     };
 
     // Mark chat as read
     console.log("📖 [useChat] Marking chat as read:", chatId);
     markChatAsRead(chatId);
 
+    // Periodic sync check to catch any missed messages (fallback mechanism)
+    const syncCheckInterval = setInterval(async () => {
+      console.log("🔄 [useChat] Periodic sync check triggered");
+      try {
+        const latestMessages = await fetchMessages(chatId, 0, 50); // ✅ Increased to 50
+
+        setMessages((prevMessages) => {
+          // ✅ FIX: Create a Set of existing message IDs for fast lookup
+          const existingIds = new Set(
+            prevMessages
+              .map((m) => m.id)
+              .filter((id) => id !== undefined && id !== null)
+          );
+
+          // ✅ FIX: Only add messages that don't exist AND have valid IDs
+          const newMessages = latestMessages.filter((apiMsg) => {
+            // Skip messages without valid IDs
+            if (!apiMsg.id || apiMsg.id === null || apiMsg.id === undefined) {
+              console.warn(
+                "⚠️ [useChat] Skipping message without valid ID:",
+                apiMsg
+              );
+              return false;
+            }
+
+            // Only include if not already in our state
+            return !existingIds.has(apiMsg.id);
+          });
+
+          if (newMessages.length === 0) {
+            console.log("✅ [useChat] All messages up to date, no sync needed");
+            return prevMessages;
+          }
+
+          console.log(
+            `✅ [useChat] Added ${newMessages.length} missed messages from sync check`,
+            newMessages.map((m) => ({
+              id: m.id,
+              content: m.content.substring(0, 20),
+            }))
+          );
+
+          // ✅ Merge and sort by timestamp
+          const merged = [...prevMessages, ...newMessages];
+          const sorted = merged.sort((a, b) => {
+            const timeA = a.timestamp || 0;
+            const timeB = b.timestamp || 0;
+            return timeA - timeB;
+          });
+
+          return sorted;
+        });
+      } catch (err) {
+        console.warn("⚠️ [useChat] Sync check failed:", err);
+      }
+    }, 5000); // Check every 5 seconds
+
+    syncCheckIntervalRef.current = syncCheckInterval;
+
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
+      }
+      if (syncCheckIntervalRef.current) {
+        clearInterval(syncCheckIntervalRef.current);
       }
     };
   }, [chatId, loadMessages, currentUserId]);

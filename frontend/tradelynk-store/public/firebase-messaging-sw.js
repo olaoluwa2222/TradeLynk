@@ -16,42 +16,79 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+console.log("🔧 Firebase Messaging Service Worker initialized");
+
 messaging.onBackgroundMessage((payload) => {
-  console.log("Background message received:", payload);
+  console.log("🔔 Background message received:", payload);
 
-  const notificationTitle = payload.notification.title || "TradeLynk";
-  const notificationOptions = {
-    body: payload.notification.body || "You have a new message",
-    icon: "/logo.png",
-    badge: "/badge.png",
-    tag: payload.data.chatId || "chat-notification",
-    requireInteraction: false,
-    data: payload.data,
-  };
+  try {
+    const notificationTitle =
+      payload.notification?.title || payload.data?.title || "TradeLynk";
+    const notificationBody =
+      payload.notification?.body ||
+      payload.data?.body ||
+      "You have a new message";
+    const chatId = payload.data?.chatId;
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+    const notificationOptions = {
+      body: notificationBody,
+      icon: "/favicon.ico",
+      badge: "/badge.png",
+      tag: chatId || "chat-notification",
+      requireInteraction: false,
+      data: payload.data || {},
+    };
+
+    console.log("📬 Showing notification:", {
+      title: notificationTitle,
+      body: notificationBody,
+      chatId,
+    });
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  } catch (error) {
+    console.error("❌ Error showing notification:", error);
+  }
 });
 
 // Handle notification click
 self.addEventListener("notificationclick", (event) => {
+  console.log("👆 Notification clicked:", event.notification);
   event.notification.close();
 
-  const chatId = event.notification.data.chatId;
+  const chatId = event.notification.data?.chatId;
+  const url = chatId ? `/chat?chatId=${chatId}` : "/chat";
+
   if (chatId) {
     event.waitUntil(
       clients.matchAll({ type: "window" }).then((clientList) => {
+        console.log("🔍 Found", clientList.length, "open windows");
+
         // Check if there's already a window/tab open
         for (let i = 0; i < clientList.length; i++) {
           const client = clientList[i];
-          if (client.url === `/chat/${chatId}` && "focus" in client) {
+          console.log("  Client URL:", client.url);
+          if (
+            client.url.includes("/chat") &&
+            client.url.includes(`chatId=${chatId}`) &&
+            "focus" in client
+          ) {
+            console.log("✅ Focusing existing window");
             return client.focus();
           }
         }
+
         // If not, open a new window/tab
+        console.log("📖 Opening new window:", url);
         if (clients.openWindow) {
-          return clients.openWindow(`/chat/${chatId}`);
+          return clients.openWindow(url);
         }
       })
     );
   }
+});
+
+// Handle notification close
+self.addEventListener("notificationclose", (event) => {
+  console.log("❌ Notification closed:", event.notification);
 });

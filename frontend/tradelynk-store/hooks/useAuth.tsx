@@ -12,6 +12,10 @@ import { useRouter } from "next/navigation";
 import { authApi, tokenStorage } from "@/lib/api";
 import { User, AuthContextType } from "@/types/auth";
 import { initializeFCM } from "@/lib/services/fcmService";
+import {
+  initializeNotifications,
+  showNotificationToast,
+} from "@/lib/services/notificationService";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -68,6 +72,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (fcmError) {
         console.error("FCM initialization failed (non-critical):", fcmError);
         // Don't block login if FCM fails
+      }
+
+      // ✅ INITIALIZE NOTIFICATIONS (REQUEST PERMISSION & SAVE FCM TOKEN)
+      try {
+        console.log("🔔 Initializing push notifications...");
+        await initializeNotifications((payload) => {
+          console.log("🔔 Foreground notification:", payload);
+          showNotificationToast(
+            payload.title,
+            payload.body,
+            payload.data?.chatId
+          );
+        });
+      } catch (notifError) {
+        console.warn(
+          "⚠️ Push notification setup failed (non-critical):",
+          notifError
+        );
+        // Don't block login if notifications fail
       }
 
       // Navigate to home

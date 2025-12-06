@@ -13,7 +13,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000, // 10 seconds
+  timeout: 20000, // 10 seconds
 });
 
 // Token storage utilities
@@ -155,6 +155,41 @@ api.interceptors.response.use(
         isRefreshing = false;
         return Promise.reject(refreshError);
       }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config;
+
+    // Initialize retry count
+    if (!config.__retryCount) {
+      config.__retryCount = 0;
+    }
+
+    // Retry on timeout or network errors
+    const shouldRetry =
+      (error.code === "ECONNABORTED" || // Timeout
+        error.code === "ERR_NETWORK" || // Network error
+        error.response?.status >= 500) && // Server error
+      config.__retryCount < 3; // Max 3 retries
+
+    if (shouldRetry) {
+      config.__retryCount += 1;
+
+      const delay = 1000 * config.__retryCount; // 1s, 2s, 3s
+      console.log(
+        `🔄 Retrying request (attempt ${config.__retryCount}/3) after ${delay}ms:`,
+        config.url
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      return api(config);
     }
 
     return Promise.reject(error);
@@ -427,11 +462,18 @@ export const chatsApi = {
 
   // Save FCM token
   saveDeviceToken: async (data: {
-    deviceToken: string;
+    token?: string;
+    deviceToken?: string;
     deviceType: string;
     deviceName: string;
   }) => {
-    const response = await api.post("/chats/device-token", data);
+    // Support both 'token' and 'deviceToken' field names for backend compatibility
+    const payload = {
+      deviceToken: data.token || data.deviceToken,
+      deviceType: data.deviceType,
+      deviceName: data.deviceName,
+    };
+    const response = await api.post("/chats/device-token", payload);
     return response.data;
   },
 

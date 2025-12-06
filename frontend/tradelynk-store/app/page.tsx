@@ -445,128 +445,71 @@ export default function Home() {
           ) : trendingItems.length > 0 ? (
             // Trending Items Grid
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              // Find this section in page.tsx (around line 448-580)
               {trendingItems.map((item) => {
                 const isItemLiked =
                   item.likedByCurrentUser || likedItems.has(item.id);
                 const isLoading = loadingLikes.has(item.id);
 
                 return (
-                  <Link
-                    href={`/items?category=${encodeURIComponent(
-                      item.category
-                    )}`}
-                    className="group relative h-80 rounded-xl overflow-hidden cursor-pointer bg-gray-800 block"
+                  // ✅ FIX 1: Add key prop
+                  <div
+                    key={item.id} // ✅ Add this
+                    className="group relative h-80 rounded-xl overflow-hidden cursor-pointer bg-gray-800"
                   >
-                    {/* Item Image */}
-                    {item.imageUrls && item.imageUrls.length > 0 ? (
-                      <Image
-                        src={item.imageUrls[0]}
-                        alt={item.title}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
-                        <svg
-                          className="w-16 h-16 text-gray-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-
-                    {/* Dark Overlay */}
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-all duration-300"></div>
-
-                    {/* Content Overlay */}
-                    <div className="absolute inset-0 flex flex-col justify-between p-4">
-                      {/* Like Button (Top Right) */}
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => handleLikeToggle(item.id)}
-                          disabled={isLoading}
-                          className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors backdrop-blur disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                    {/* ✅ FIX 2: Remove outer Link, make the whole card clickable with onClick */}
+                    <div
+                      onClick={() => {
+                        window.location.href = `/item/${item.id}`;
+                      }}
+                      className="cursor-pointer"
+                    >
+                      {/* Item Image */}
+                      {item.imageUrls && item.imageUrls.length > 0 ? (
+                        <Image
+                          src={item.imageUrls[0]}
+                          alt={item.title}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-700 flex items-center justify-center">
                           <svg
-                            className={`w-6 h-6 ${
-                              isItemLiked ? "text-red-500" : "text-white"
-                            } transition-colors drop-shadow-lg`}
-                            fill={isItemLiked ? "currentColor" : "none"}
+                            className="w-16 h-16 text-gray-600"
+                            fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                              strokeWidth={1}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                             />
                           </svg>
-                        </button>
-                      </div>
-
-                      {/* Bottom Section with gradient overlay */}
-                      <div className="space-y-3">
-                        {/* Item Info */}
-                        <div>
-                          <h3
-                            className="text-white font-semibold line-clamp-2 mb-1"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 600,
-                              fontSize: "14px",
-                            }}
-                          >
-                            {item.title}
-                          </h3>
-
-                          {/* Price */}
-                          <p
-                            className="text-xl font-bold text-white"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 700,
-                            }}
-                          >
-                            ₦{item.price?.toLocaleString()}
-                          </p>
                         </div>
+                      )}
 
-                        {/* Stats Row - Instagram Style */}
-                        <div className="flex items-center gap-4 pt-2 border-t border-white/20">
-                          {/* Likes */}
-                          <div className="flex items-center gap-1.5">
-                            <svg
-                              className="w-4 h-4 text-red-500"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
-                            <span
-                              className="text-xs text-white font-semibold"
-                              style={{
-                                fontFamily: "Clash Display",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {item.likeCount}
-                            </span>
-                          </div>
+                      {/* Dark Overlay */}
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-all duration-300"></div>
 
-                          {/* Views */}
-                          <div className="flex items-center gap-1.5">
+                      {/* Content Overlay */}
+                      <div className="absolute inset-0 flex flex-col justify-between p-4">
+                        {/* Like Button (Top Right) */}
+                        <div className="flex justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // ✅ Prevent card click when clicking like
+                              handleLikeToggle(item.id);
+                            }}
+                            disabled={isLoading}
+                            className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors backdrop-blur disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
                             <svg
-                              className="w-4 h-4 text-white"
-                              fill="none"
+                              className={`w-6 h-6 ${
+                                isItemLiked ? "text-red-500" : "text-white"
+                              } transition-colors drop-shadow-lg`}
+                              fill={isItemLiked ? "currentColor" : "none"}
                               stroke="currentColor"
                               viewBox="0 0 24 24"
                             >
@@ -574,41 +517,112 @@ export default function Home() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                               />
                             </svg>
-                            <span
-                              className="text-xs text-white font-semibold"
+                          </button>
+                        </div>
+
+                        {/* Bottom Section with gradient overlay */}
+                        <div className="space-y-3">
+                          {/* Item Info */}
+                          <div>
+                            <h3
+                              className="text-white font-semibold line-clamp-2 mb-1"
                               style={{
                                 fontFamily: "Clash Display",
                                 fontWeight: 600,
+                                fontSize: "14px",
                               }}
                             >
-                              {item.viewCount}
-                            </span>
+                              {item.title}
+                            </h3>
+
+                            {/* Price */}
+                            <p
+                              className="text-xl font-bold text-white"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 700,
+                              }}
+                            >
+                              ₦{item.price?.toLocaleString()}
+                            </p>
                           </div>
 
-                          {/* Buy Now Link */}
-                          <Link
-                            href={`/item/${item.id}`}
-                            className="ml-auto text-xs text-white font-bold hover:text-gray-200 transition-colors"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 700,
-                            }}
-                          >
-                            View →
-                          </Link>
+                          {/* Stats Row */}
+                          <div className="flex items-center gap-4 pt-2 border-t border-white/20">
+                            {/* Likes */}
+                            <div className="flex items-center gap-1.5">
+                              <svg
+                                className="w-4 h-4 text-red-500"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                              </svg>
+                              <span
+                                className="text-xs text-white font-semibold"
+                                style={{
+                                  fontFamily: "Clash Display",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {item.likeCount}
+                              </span>
+                            </div>
+
+                            {/* Views */}
+                            <div className="flex items-center gap-1.5">
+                              <svg
+                                className="w-4 h-4 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                              <span
+                                className="text-xs text-white font-semibold"
+                                style={{
+                                  fontFamily: "Clash Display",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {item.viewCount}
+                              </span>
+                            </div>
+
+                            {/* View Link */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation(); // ✅ Prevent card click
+                                window.location.href = `/item/${item.id}`;
+                              }}
+                              className="ml-auto text-xs text-white font-bold hover:text-gray-200 transition-colors"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 700,
+                              }}
+                            >
+                              View →
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>

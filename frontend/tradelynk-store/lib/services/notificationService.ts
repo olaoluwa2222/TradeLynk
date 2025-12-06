@@ -1,6 +1,6 @@
 import { messaging } from "@/config/firebase";
 import { getToken, onMessage } from "firebase/messaging";
-import { authApi } from "@/lib/api";
+import { chatsApi } from "@/lib/api";
 
 /**
  * Initialize FCM notifications
@@ -42,41 +42,126 @@ export const initializeNotifications = async (
 
     console.log("✅ FCM token obtained:", token.substring(0, 20) + "...");
 
-    // 4. Save token to backend
-    try {
-      await authApi.saveDeviceToken({
-        token,
-        deviceType: "web",
-        deviceName: `${navigator.userAgent.substring(0, 50)}`,
-      });
-      console.log("✅ Device token saved to backend");
-    } catch (err) {
-      console.error("❌ Failed to save device token:", err);
-      // Don't throw - notifications can still work from other devices
+    // 4. Save token to backend with retry logic and periodic refresh
+    const saveTokenToBackend = async (currentToken: string) => {
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        try {
+          await chatsApi.saveDeviceToken({
+            token: currentToken,
+            deviceType: "web",
+            deviceName: `${navigator.userAgent.substring(0, 50)}`,
+          });
+          console.log("✅ Device token saved to backend successfully");
+          return true;
+        } catch (err) {
+          attempts++;
+          console.warn(
+            `⚠️ Failed to save device token (attempt ${attempts}/${maxAttempts}):`,
+            err
+          );
+          if (attempts < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
+        }
+      }
+      return false;
+    };
+
+    let saveSuccess = await saveTokenToBackend(token);
+
+    if (!saveSuccess) {
+      console.error("❌ Failed to save device token after multiple attempts");
     }
+
+    // Setup token refresh every 24 hours to maintain notification capability
+    const tokenRefreshInterval = setInterval(async () => {
+      console.log("🔄 Refreshing FCM token...");
+      try {
+        const newToken = await getToken(messaging, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        });
+        if (newToken && newToken !== token) {
+          console.log("✅ New FCM token generated, saving...");
+          await saveTokenToBackend(newToken);
+        }
+      } catch (err) {
+        console.error("❌ Error refreshing FCM token:", err);
+      }
+    }, 24 * 60 * 60 * 1000); // 24 hours
+
+    // Store interval ID for cleanup if needed
+    (window as any).__fcmTokenRefreshInterval = tokenRefreshInterval;
 
     // 5. Setup foreground message handler
     onMessage(messaging, (payload) => {
       console.log("📬 Foreground FCM message received:", payload);
+      console.log("📋 Notification data:", {
+        title: payload.notification?.title,
+        body: payload.notification?.body,
+        chatId: payload.data?.chatId,
+      });
 
       const notificationData = {
-        title: payload.notification?.title || "New Message",
-        body: payload.notification?.body || payload.data?.body || "",
+        title: payload.notification?.title || "TradeLynk",
+        body: payload.notification?.body || payload.data?.body || "New message",
         data: payload.data || {},
       };
 
       // Call custom handler if provided (e.g., show toast)
       if (onForegroundMessage) {
+        console.log("🔔 Calling custom foreground handler");
         onForegroundMessage(notificationData);
       } else {
         // Default: show browser notification
-        new Notification(notificationData.title, {
-          body: notificationData.body,
-          icon: "/favicon.ico",
-          tag: notificationData.data?.chatId || "message",
-        });
+        try {
+          console.log("🔔 Attempting to show default browser notification...");
+          const notification = new Notification(notificationData.title, {
+            body: notificationData.body,
+            icon: "/favicon.ico",
+            badge: "/badge.png",
+            tag: notificationData.data?.chatId || "message",
+            requireInteraction: false,
+            data: notificationData.data,
+          });
+          console.log("✅ Browser notification shown successfully");
+
+          // Handle notification click
+          notification.onclick = () => {
+            console.log("👆 Notification clicked in foreground");
+            if (notificationData.data?.chatId) {
+              window.location.href = `/chat?chatId=${notificationData.data.chatId}`;
+            }
+          };
+        } catch (err) {
+          console.error("❌ Failed to show notification:", err);
+          // Fallback: show in console
+          console.warn(
+            "⚠️ Notification suppressed but message received:",
+            notificationData
+          );
+        }
       }
     });
+
+    // 6. Verify FCM is working by checking service worker
+    if ("serviceWorker" in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        console.log(
+          "📱 Service Worker registrations:",
+          registrations.length,
+          "active"
+        );
+        registrations.forEach((reg) => {
+          console.log("✅ Service Worker active at:", reg.scope);
+        });
+      } catch (err) {
+        console.error("Error checking service workers:", err);
+      }
+    }
 
     console.log("✅ Foreground message handler setup complete");
     return token;
@@ -91,7 +176,7 @@ export const initializeNotifications = async (
  */
 export const removeDeviceToken = async (token: string): Promise<void> => {
   try {
-    await authApi.removeDeviceToken({ token });
+    await chatsApi.removeDeviceToken(token);
     console.log("✅ Device token removed from backend");
   } catch (error) {
     console.error("❌ Error removing device token:", error);
