@@ -273,6 +273,29 @@ public class UserController {
         return ResponseEntity
                 .ok(ApiResponse.success("Email verified successfully", null));
     }
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getCurrentUser(
+            @RequestHeader("Authorization") String authHeader) {
+        log.info("GET /users/me request received");
+
+        // Extract token and email
+        String token = authHeader.substring(7);
+        String email = jwtTokenProvider.getUsernameFromToken(token);
+
+        // Get user from DB
+        User user = userService.getUserByEmail(email);
+
+        // Convert to response DTO
+        UserProfileResponse profileResponse = UserProfileResponse.fromUser(user);
+
+        log.info("Authenticated user retrieved successfully: {}", email);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Authenticated user retrieved successfully", profileResponse)
+        );
+    }
+
 }
 
 

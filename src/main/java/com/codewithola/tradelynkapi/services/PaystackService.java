@@ -6,10 +6,7 @@ import com.codewithola.tradelynkapi.config.PaystackConfig;
 import com.codewithola.tradelynkapi.dtos.requests.PaymentMetadata;
 import com.codewithola.tradelynkapi.dtos.requests.PaystackInitializeRequest;
 import com.codewithola.tradelynkapi.dtos.requests.PaystackSubaccountRequest;
-import com.codewithola.tradelynkapi.dtos.response.InitializePaymentResponse;
-import com.codewithola.tradelynkapi.dtos.response.PaystackInitializeResponse;
-import com.codewithola.tradelynkapi.dtos.response.PaystackSubaccountResponse;
-import com.codewithola.tradelynkapi.dtos.response.PaystackVerifyResponse;
+import com.codewithola.tradelynkapi.dtos.response.*;
 import com.codewithola.tradelynkapi.entity.Item;
 import com.codewithola.tradelynkapi.entity.Payment;
 import com.codewithola.tradelynkapi.entity.SellerProfile;
@@ -303,5 +300,59 @@ public class PaystackService {
         }
 
         return sellerProfile.getPayStackSubaccountId();
+    }
+
+    public String validateBankAccount(String accountNumber, String bankCode) {
+        log.info("Validating bank account: {} with bank code: {}", accountNumber, bankCode);
+
+        try {
+            // 1. Set headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", paystackConfig.getAuthorizationHeader());
+
+            HttpEntity<?> entity = new HttpEntity<>(headers);
+
+            // 2. Build URL with query parameters
+            String url = String.format(
+                    "%s/bank/resolve?account_number=%s&bank_code=%s",
+                    paystackConfig.getBaseUrl(),
+                    accountNumber,
+                    bankCode
+            );
+
+            // 3. Call Paystack API
+            ResponseEntity<PaystackAccountValidationResponse> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    PaystackAccountValidationResponse.class
+            );
+
+            // 4. Process response
+            if (response.getBody() != null && response.getBody().getStatus()) {
+                String accountName = response.getBody().getData().getAccountName();
+                String accountNumber2 = response.getBody().getData().getAccountNumber();
+
+                log.info("Account validated successfully: {} - {}", accountNumber2, accountName);
+                return accountName;
+
+            } else {
+                throw new BadRequestException("Unable to validate account: " +
+                        (response.getBody() != null ? response.getBody().getMessage() : "Invalid account details"));
+            }
+
+        } catch (HttpClientErrorException e) {
+            log.error("Paystack API error during account validation: {}", e.getResponseBodyAsString());
+
+            if (e.getStatusCode() == HttpStatus.UNPROCESSABLE_ENTITY) {
+                throw new BadRequestException("Invalid account number or bank code");
+            }
+
+            throw new RuntimeException("Failed to validate account: " + e.getMessage());
+
+        } catch (Exception e) {
+            log.error("Error validating bank account", e);
+            throw new RuntimeException("Failed to validate account: " + e.getMessage());
+        }
     }
 }

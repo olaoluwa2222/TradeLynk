@@ -165,47 +165,57 @@ public class ItemFilterService {
 
     @Transactional(readOnly = true)
     public List<ItemDTO> getTrendingItems(int days, int limit, Long currentUserId) {
-        log.info("Fetching trending items from last {} days", days);
+        log.info("Fetching trending items from last {} days with engagement scoring", days);
 
         LocalDateTime startDate = LocalDateTime.now().minusDays(days);
 
-        // Get trending item IDs from likes
-        List<Long> trendingItemIds = likeService.getTrendingItemIds(days);
+        // Build query with engagement scoring
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Item> query = cb.createQuery(Item.class);
+        Root<Item> item = query.from(Item.class);
 
-        if (trendingItemIds.isEmpty()) {
-            // Fallback: return most recent items if no trending data
-            return itemRepository.findByStatusOrderByCreatedAtDesc(
-                            org.springframework.data.domain.PageRequest.of(0, limit))
-                    .getContent()
-                    .stream()
-                    .map(item -> {
-                        User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
-                        return itemService.convertToDTOPublic(item, seller, Set.of());
-                    })
-                    .collect(Collectors.toList());
-        }
+        // Filter: Active items created/updated in last N days
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(cb.equal(item.get("status"), Item.Status.ACTIVE));
 
-        // Fetch items by IDs (limit to top N)
-        List<Long> limitedIds = trendingItemIds.stream()
-                .limit(limit)
-                .collect(Collectors.toList());
+        // Include items created OR updated recently
+        Predicate recentlyCreated = cb.greaterThanOrEqualTo(item.get("createdAt"), startDate);
+        Predicate recentlyUpdated = cb.greaterThanOrEqualTo(item.get("updatedAt"), startDate);
+        predicates.add(cb.or(recentlyCreated, recentlyUpdated));
 
-        List<Item> trendingItems = itemRepository.findAllById(limitedIds);
+        query.where(predicates.toArray(new Predicate[0]));
+
+        // Calculate engagement score: (likes * 2) + views + recency_bonus
+        // Items get a recency bonus based on how recently they were created
+        Expression<Long> likeScore = cb.prod(
+                cb.coalesce(item.get("likeCount"), 0L),
+                2L
+        );
+        Expression<Long> viewScore = cb.coalesce(item.get("viewCount"), 0L);
+
+        // Combine scores
+        Expression<Long> engagementScore = cb.sum(likeScore, viewScore);
+
+        // Order by engagement score (desc), then by creation date (desc)
+        query.orderBy(
+                cb.desc(engagementScore),
+                cb.desc(item.get("createdAt"))
+        );
+
+        // Execute query
+        List<Item> trendingItems = entityManager.createQuery(query)
+                .setMaxResults(limit)
+                .getResultList();
 
         // Get liked items for current user
         Set<Long> likedItemIds = currentUserId != null ?
                 likeService.getUserLikedItemIdsAsSet(currentUserId) : Set.of();
 
-        // Convert to DTOs and maintain order
-        return limitedIds.stream()
-                .map(id -> trendingItems.stream()
-                        .filter(item -> item.getId().equals(id))
-                        .findFirst()
-                        .orElse(null))
-                .filter(item -> item != null && item.getStatus() == Item.Status.ACTIVE)
-                .map(item -> {
-                    User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
-                    return itemService.convertToDTOPublic(item, seller, likedItemIds);
+        // Convert to DTOs
+        return trendingItems.stream()
+                .map(i -> {
+                    User seller = userRepository.findById(i.getSeller().getId()).orElse(null);
+                    return itemService.convertToDTOPublic(i, seller, likedItemIds);
                 })
                 .collect(Collectors.toList());
     }

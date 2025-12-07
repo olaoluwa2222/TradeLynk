@@ -108,6 +108,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/sellers/*/profile").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers/*/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers/banks").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/items/suggestions").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/health/**").hasRole("ADMIN")

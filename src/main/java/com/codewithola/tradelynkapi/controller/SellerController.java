@@ -4,7 +4,9 @@ package com.codewithola.tradelynkapi.controller;
 import com.codewithola.tradelynkapi.Enum.BankEnum;
 import com.codewithola.tradelynkapi.dtos.requests.BecomeSellerRequest;
 import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
+import com.codewithola.tradelynkapi.exception.BadRequestException;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
+import com.codewithola.tradelynkapi.services.PaystackService;
 import com.codewithola.tradelynkapi.services.SellerActivationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 public class SellerController {
 
     private final SellerActivationService sellerActivationService;
+    private final PaystackService paystackService;
 
     /**
      * POST /api/sellers/activate
@@ -99,22 +102,51 @@ public class SellerController {
      * GET /api/sellers/validate-account
      * Validate bank account (for future Paystack integration)
      */
+    /**
+     * GET /api/sellers/validate-account
+     * Validate bank account using Paystack API
+     * This allows frontend to verify account details before submission
+     */
     @GetMapping("/validate-account")
     public ResponseEntity<Map<String, Object>> validateBankAccount(
             @RequestParam String accountNumber,
             @RequestParam String bankCode) {
 
-        log.info("GET /api/sellers/validate-account - Validating account: {}", accountNumber);
+        log.info("GET /api/sellers/validate-account - Account: {}, Bank: {}",
+                accountNumber, bankCode);
 
-        // TODO: Integrate with Paystack API to validate account
-        // For now, return a placeholder response
+        try {
+            // Call Paystack to validate account
+            String accountName = paystackService.validateBankAccount(accountNumber, bankCode);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Account validation endpoint (Paystack integration pending)");
-        response.put("accountNumber", accountNumber);
-        response.put("bankCode", bankCode);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Account validated successfully");
+            response.put("data", Map.of(
+                    "accountNumber", accountNumber,
+                    "accountName", accountName,
+                    "bankCode", bankCode
+            ));
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+
+        } catch (BadRequestException e) {
+            log.error("Invalid account details: {}", e.getMessage());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+
+        } catch (Exception e) {
+            log.error("Error validating account", e);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to validate account. Please try again.");
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 }

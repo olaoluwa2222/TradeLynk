@@ -1,251 +1,230 @@
 package com.codewithola.tradelynkapi.services;
 
-
-import com.codewithola.tradelynkapi.entity.User;
+import com.codewithola.tradelynkapi.entity.DeviceToken;
 import com.codewithola.tradelynkapi.exception.NotFoundException;
-import com.codewithola.tradelynkapi.repositories.UserRepository;
+import com.codewithola.tradelynkapi.repositories.DeviceTokenRepository;
 import com.google.firebase.messaging.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
 
-    private final UserRepository userRepository;
-    private final EmailService emailService;
+    private final DeviceTokenRepository deviceTokenRepository;
+    private final FirebaseMessaging firebaseMessaging;
 
     /**
-     * Send push notification for new message
-     * Note: Requires user's FCM device token to be stored in database
+     * Save FCM device token
      */
-    public void sendMessageNotification(Long recipientId, Long senderId, String senderName, String messageContent) {
-        log.info("Sending message notification to user: {}", recipientId);
+    @Transactional
+    public void saveDeviceToken(Long userId, String deviceToken) {
+        saveDeviceToken(userId, deviceToken, "web", null);
+    }
 
-        try {
-            User recipient = userRepository.findById(recipientId).orElse(null);
-            if (recipient == null) {
-                log.warn("Recipient user not found: {}", recipientId);
-                return;
-            }
+    /**
+     * Save FCM device token with device type and name
+     */
+    @Transactional
+    public void saveDeviceToken(Long userId, String deviceToken, String deviceType, String deviceName) {
+        log.info("Saving device token for user: {}, type: {}", userId, deviceType);
 
-            // TODO: Get user's FCM device token from database
-            // For now, log the notification
-            String deviceToken = getUserDeviceToken(recipientId);
+        // Check if token already exists
+        Optional<DeviceToken> existing = deviceTokenRepository.findByDeviceToken(deviceToken);
 
-            if (deviceToken == null || deviceToken.isEmpty()) {
-                log.warn("No device token found for user: {}", recipientId);
-                // Fallback to email notification
-                sendEmailNotification(recipient.getEmail(),
-                        "New Message from " + senderName,
-                        messageContent);
-                return;
-            }
-
-            // Build notification
-            Notification notification = Notification.builder()
-                    .setTitle("New Message from " + senderName)
-                    .setBody(truncateMessage(messageContent, 100))
+        if (existing.isPresent()) {
+            // Update existing token
+            DeviceToken token = existing.get();
+            token.setLastUsedAt(LocalDateTime.now());
+            token.setIsActive(true);
+            token.setDeviceType(deviceType != null ? deviceType : token.getDeviceType());
+            token.setDeviceName(deviceName != null ? deviceName : token.getDeviceName());
+            deviceTokenRepository.save(token);
+            log.info("Updated existing device token for user: {}", userId);
+        } else {
+            // Create new token
+            DeviceToken newToken = DeviceToken.builder()
+                    .userId(userId)
+                    .deviceToken(deviceToken)
+                    .deviceType(deviceType != null ? deviceType : "web")
+                    .deviceName(deviceName)
+                    .isActive(true)
                     .build();
 
-            // Build data payload
-            Map<String, String> data = new HashMap<>();
-            data.put("type", "NEW_MESSAGE");
-            data.put("senderId", String.valueOf(senderId));
-            data.put("senderName", senderName);
-            data.put("messageContent", messageContent);
-
-            // Build message
-            Message message = Message.builder()
-                    .setToken(deviceToken)
-                    .setNotification(notification)
-                    .putAllData(data)
-                    .build();
-
-            // Send via FCM
-            String response = FirebaseMessaging.getInstance().send(message);
-            log.info("Message notification sent successfully: {}", response);
-
-        } catch (Exception e) {
-            log.error("Error sending message notification", e);
+            deviceTokenRepository.save(newToken);
+            log.info("Saved new device token for user: {}", userId);
         }
     }
 
     /**
-     * Send push notification for payment received
+     * Remove device token (on logout)
+     */
+    @Transactional
+    public void removeDeviceToken(String deviceToken) {
+        log.info("Removing device token: {}", deviceToken);
+
+        Optional<DeviceToken> token = deviceTokenRepository.findByDeviceToken(deviceToken);
+
+        if (token.isPresent()) {
+            token.get().setIsActive(false);
+            deviceTokenRepository.save(token.get());
+            log.info("Device token marked as inactive");
+        } else {
+            log.warn("Device token not found: {}", deviceToken);
+        }
+    }
+
+    /**
+     * Remove all device tokens for a user
+     */
+    @Transactional
+    public void removeAllDeviceTokens(Long userId) {
+        log.info("Removing all device tokens for user: {}", userId);
+
+        List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(userId);
+
+        for (DeviceToken token : tokens) {
+            token.setIsActive(false);
+        }
+
+        deviceTokenRepository.saveAll(tokens);
+        log.info("Removed {} device tokens for user: {}", tokens.size(), userId);
+    }
+
+    /**
+     * Send message notification to user
+     * ✅ FIXED: Corrected senderId parameter
+     */
+    public void sendMessageNotification(Long recipientId, Long actualSenderId, String senderName, String messageContent, String chatId) {
+        log.info("Sending message notification to user: {} for chat: {}", recipientId, chatId);
+
+        // Get all active device tokens for recipient
+        List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(recipientId);
+
+        if (tokens.isEmpty()) {
+            log.warn("No active device tokens found for user: {}", recipientId);
+            return;
+        }
+
+        log.info("Found {} active device(s) for user: {}", tokens.size(), recipientId);
+
+        // Send to all devices
+        int successCount = 0;
+        for (DeviceToken token : tokens) {
+            try {
+                Message message = Message.builder()
+                        .setToken(token.getDeviceToken())
+                        .setNotification(Notification.builder()
+                                .setTitle(senderName)
+                                .setBody(messageContent)
+                                .build())
+                        .putData("type", "message")
+                        .putData("senderId", String.valueOf(actualSenderId)) // ✅ FIXED: Use actual sender's ID
+                        .putData("senderName", senderName)
+                        .putData("chatId", chatId) // ✅ CRITICAL: Include chatId!
+                        .build();
+
+                String response = firebaseMessaging.send(message);
+                log.info("✅ Successfully sent FCM notification: {}", response);
+                successCount++;
+
+                // Update last used time
+                token.setLastUsedAt(LocalDateTime.now());
+                deviceTokenRepository.save(token);
+
+            } catch (FirebaseMessagingException e) {
+                handleFirebaseError(token, e);
+            }
+        }
+
+        log.info("Sent notifications to {}/{} devices for chat: {}", successCount, tokens.size(), chatId);
+    }
+
+    /**
+     * Send payment notification to seller
      */
     public void sendPaymentNotification(Long sellerId, Long amount, String itemTitle) {
         log.info("Sending payment notification to seller: {}", sellerId);
 
-        try {
-            User seller = userRepository.findById(sellerId).orElse(null);
-            if (seller == null) {
-                log.warn("Seller user not found: {}", sellerId);
-                return;
+        List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+
+        if (tokens.isEmpty()) {
+            log.warn("No active device tokens found for seller: {}", sellerId);
+            return;
+        }
+
+        String amountFormatted = String.format("₦%,d", amount);
+
+        for (DeviceToken token : tokens) {
+            try {
+                Message message = Message.builder()
+                        .setToken(token.getDeviceToken())
+                        .setNotification(Notification.builder()
+                                .setTitle("💰 You made a sale!")
+                                .setBody(itemTitle + " sold for " + amountFormatted)
+                                .build())
+                        .putData("type", "payment")
+                        .putData("amount", String.valueOf(amount))
+                        .putData("itemTitle", itemTitle)
+                        .build();
+
+                String response = firebaseMessaging.send(message);
+                log.info("Successfully sent payment notification: {}", response);
+
+                token.setLastUsedAt(LocalDateTime.now());
+                deviceTokenRepository.save(token);
+
+            } catch (FirebaseMessagingException e) {
+                handleFirebaseError(token, e);
             }
-
-            String deviceToken = getUserDeviceToken(sellerId);
-
-            if (deviceToken == null || deviceToken.isEmpty()) {
-                log.warn("No device token found for seller: {}", sellerId);
-                // Fallback to email notification
-                sendEmailNotification(seller.getEmail(),
-                        "Payment Received!",
-                        String.format("You received ₦%.2f for %s", amount / 100.0, itemTitle));
-                return;
-            }
-
-            // Build notification
-            Notification notification = Notification.builder()
-                    .setTitle("Payment Received!")
-                    .setBody(String.format("You received ₦%.2f for %s", amount / 100.0, itemTitle))
-                    .build();
-
-            // Build data payload
-            Map<String, String> data = new HashMap<>();
-            data.put("type", "PAYMENT_RECEIVED");
-            data.put("amount", String.valueOf(amount));
-            data.put("itemTitle", itemTitle);
-
-            // Build message
-            Message message = Message.builder()
-                    .setToken(deviceToken)
-                    .setNotification(notification)
-                    .putAllData(data)
-                    .setAndroidConfig(AndroidConfig.builder()
-                            .setPriority(AndroidConfig.Priority.HIGH)
-                            .build())
-                    .setApnsConfig(ApnsConfig.builder()
-                            .setAps(Aps.builder()
-                                    .setSound("default")
-                                    .build())
-                            .build())
-                    .build();
-
-            // Send via FCM
-            String response = FirebaseMessaging.getInstance().send(message);
-            log.info("Payment notification sent successfully: {}", response);
-
-        } catch (Exception e) {
-            log.error("Error sending payment notification", e);
         }
     }
 
     /**
-     * Send notification for order status update
+     * Handle Firebase messaging errors
      */
-    public void sendOrderStatusNotification(Long buyerId, String status, String itemTitle) {
-        log.info("Sending order status notification to buyer: {}", buyerId);
+    private void handleFirebaseError(DeviceToken token, FirebaseMessagingException e) {
+        log.error("Error sending notification to device {}: {}",
+                token.getDeviceToken(), e.getMessage());
 
-        try {
-            User buyer = userRepository.findById(buyerId).orElse(null);
-            if (buyer == null) {
-                return;
-            }
+        MessagingErrorCode errorCode = e.getMessagingErrorCode();
 
-            String deviceToken = getUserDeviceToken(buyerId);
-
-            if (deviceToken == null || deviceToken.isEmpty()) {
-                log.warn("No device token found for buyer: {}", buyerId);
-                return;
-            }
-
-            String title = "Order Update";
-            String body = String.format("Your order for %s is now %s", itemTitle, status);
-
-            Notification notification = Notification.builder()
-                    .setTitle(title)
-                    .setBody(body)
-                    .build();
-
-            Map<String, String> data = new HashMap<>();
-            data.put("type", "ORDER_STATUS");
-            data.put("status", status);
-            data.put("itemTitle", itemTitle);
-
-            Message message = Message.builder()
-                    .setToken(deviceToken)
-                    .setNotification(notification)
-                    .putAllData(data)
-                    .build();
-
-            String response = FirebaseMessaging.getInstance().send(message);
-            log.info("Order status notification sent successfully: {}", response);
-
-        } catch (Exception e) {
-            log.error("Error sending order status notification", e);
+        if (errorCode == MessagingErrorCode.UNREGISTERED ||
+                errorCode == MessagingErrorCode.INVALID_ARGUMENT) {
+            // Token is invalid, mark as inactive
+            token.setIsActive(false);
+            deviceTokenRepository.save(token);
+            log.warn("Invalid token for user {}, marked inactive", token.getUserId());
         }
     }
 
     /**
-     * Send email notification (fallback when push notification fails)
+     * Cleanup old inactive tokens (runs daily at 3 AM)
      */
-    private void sendEmailNotification(String recipientEmail, String subject, String body) {
-        log.info("Sending email notification to: {}", recipientEmail);
+    @Scheduled(cron = "0 0 3 * * *")
+    @Transactional
+    public void cleanupOldTokens() {
+        log.info("Starting cleanup of old device tokens");
 
-        log.info("Email: To={}, Subject={}, Body={}", recipientEmail, subject, body);
+        // Deactivate tokens not used in 90 days
+        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(90);
+        deviceTokenRepository.deactivateOldTokens(cutoffDate);
 
-        try {
-            emailService.sendEmail(recipientEmail, subject, body);
-        } catch (Exception e) {
-            log.error("Failed to send notification email to {}", recipientEmail, e);
-        }
-
-        /*
-         * SendGrid Integration Example:
-         *
-         * SendGrid sg = new SendGrid(SENDGRID_API_KEY);
-         * Email from = new Email("noreply@marketplace.com");
-         * Email to = new Email(recipientEmail);
-         * Content content = new Content("text/plain", body);
-         * Mail mail = new Mail(from, subject, to, content);
-         *
-         * Request request = new Request();
-         * request.setMethod(Method.POST);
-         * request.setEndpoint("mail/send");
-         * request.setBody(mail.build());
-         * Response response = sg.api(request);
-         */
+        log.info("Completed cleanup of old device tokens");
     }
 
     /**
-     * Get user's FCM device token from database
-     * TODO: Add fcm_token field to users table
+     * Get active device count for user
      */
-    private String getUserDeviceToken(Long userId) {
-        User user = userRepository.findById(userId).orElse(null);
-        return user != null ? user.getFcmToken() : null;
-    }
-
-    /**
-     * Save user's FCM device token to database
-     */
-    public void saveDeviceToken(Long userId, String deviceToken) {
-        log.info("Saving FCM device token for user: {}", userId);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
-
-        user.setFcmToken(deviceToken);
-        userRepository.save(user);
-
-        log.info("✅ Device token saved for user {}", userId);
-    }
-
-    private String truncateMessage(String message, int maxLength) {
-        if (message == null) {
-            return "";
-        }
-
-        if (message.length() <= maxLength) {
-            return message;
-        }
-
-        return message.substring(0, maxLength) + "...";
+    public long getActiveDeviceCount(Long userId) {
+        return deviceTokenRepository.countByUserIdAndIsActiveTrue(userId);
     }
 }

@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.messaging.FirebaseMessaging; // ✅ ADD THIS
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -53,7 +54,6 @@ public class FirebaseConfig {
 
             log.info("Firebase Admin SDK initialized successfully");
             return app;
-
         } catch (Exception e) {
             log.error("Failed to initialize Firebase", e);
             throw e;
@@ -62,57 +62,14 @@ public class FirebaseConfig {
 
     @Bean
     public FirebaseDatabase firebaseDatabase(FirebaseApp firebaseApp) {
+        log.info("Initializing Firebase Realtime Database");
         return FirebaseDatabase.getInstance(firebaseApp);
     }
-}
 
-/*
- * FIREBASE REALTIME DATABASE STRUCTURE:
- *
- * /chats
- *   /{chatId}
- *     itemId: 123
- *     buyerId: 456
- *     sellerId: 789
- *     itemTitle: "iPhone 14 Pro"
- *     itemImageUrl: "https://..."
- *     createdAt: 1698765432000
- *     lastMessageAt: 1698765500000
- *     lastMessage: "Is this still available?"
- *
- *     /messages
- *       /{messageId}
- *         senderId: 456
- *         senderName: "John Doe"
- *         content: "Hello, is this still available?"
- *         imageUrls: ["https://...", "https://..."]
- *         timestamp: 1698765432000
- *         read: false
- *
- * /userChats
- *   /{userId}
- *     /{chatId}: true
- *
- * FIREBASE SECURITY RULES (Add to Firebase Console):
- *
- * {
- *   "rules": {
- *     "chats": {
- *       "$chatId": {
- *         ".read": "auth != null && (data.child('buyerId').val() == auth.uid || data.child('sellerId').val() == auth.uid)",
- *         ".write": "auth != null && (data.child('buyerId').val() == auth.uid || data.child('sellerId').val() == auth.uid)",
- *         "messages": {
- *           ".read": "auth != null",
- *           ".write": "auth != null"
- *         }
- *       }
- *     },
- *     "userChats": {
- *       "$userId": {
- *         ".read": "auth != null && auth.uid == $userId",
- *         ".write": "auth != null && auth.uid == $userId"
- *       }
- *     }
- *   }
- * }
- */
+    // ✅ ADD THIS NEW BEAN
+    @Bean
+    public FirebaseMessaging firebaseMessaging(FirebaseApp firebaseApp) {
+        log.info("Initializing Firebase Cloud Messaging");
+        return FirebaseMessaging.getInstance(firebaseApp);
+    }
+}
