@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { itemsApi } from "@/lib/api";
+import { itemsApi, ordersApi, chatsApi } from "@/lib/api";
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -19,6 +19,11 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  // Notification counts
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
   // ✅ Show verification badge if user is not verified
   const showVerificationBadge = isAuthenticated && user && !user.verified;
 
@@ -26,7 +31,88 @@ export default function Navbar() {
   const isSeller =
     user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
 
-  // Close dropdown when clicking outside
+  // Fetch notification counts
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+
+        // Fetch unread messages count
+        const messagesResponse = await chatsApi.getChats();
+        if (messagesResponse.success && Array.isArray(messagesResponse.data)) {
+          const unreadCount = messagesResponse.data.filter(
+            (chat: any) => (chat.unreadCount || 0) > 0
+          ).length;
+          setUnreadMessages(unreadCount);
+        }
+
+        // Fetch pending orders count
+        const ordersResponse = await ordersApi.getMyPurchases(0, 100);
+        if (ordersResponse.success && Array.isArray(ordersResponse.data)) {
+          const pendingCount = ordersResponse.data.filter(
+            (order: any) => order.status === "PENDING_DELIVERY"
+          ).length;
+          setPendingOrders(pendingCount);
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+    // Poll for new messages every 5 seconds for real-time feel
+    const interval = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/items?search=${encodeURIComponent(searchQuery)}`);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
+    router.push(`/items?search=${encodeURIComponent(suggestion)}`);
+  };
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!searchQuery.trim()) {
+        setSuggestions([]);
+        return;
+      }
+
+      try {
+        setIsLoadingSuggestions(true);
+        const response = await itemsApi.searchItems(searchQuery, 0, 5);
+        const items = response.data;
+
+        if (items) {
+          const names = items.map(
+            (item: any) => item.name || item.title
+          ) as string[];
+          setSuggestions(names);
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  // Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -35,67 +121,6 @@ export default function Navbar() {
       ) {
         setShowProfileDropdown(false);
       }
-    };
-
-    if (showProfileDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [showProfileDropdown]);
-
-  // Fetch suggestions when user types
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (searchQuery.trim().length > 0) {
-        fetchSuggestions(searchQuery);
-      } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
-    }, 300); // Debounce 300ms
-
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery]);
-
-  // Fetch suggestions from API
-  const fetchSuggestions = async (query: string) => {
-    try {
-      setIsLoadingSuggestions(true);
-      const data = await itemsApi.getSearchSuggestions(query);
-
-      if (data.success && Array.isArray(data.suggestions)) {
-        setSuggestions(data.suggestions);
-        setShowSuggestions(true);
-      }
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
-      setSuggestions([]);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  };
-
-  // Handle suggestion click
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    // Redirect to items page with search query
-    router.push(`/items?search=${encodeURIComponent(suggestion)}`);
-  };
-
-  // Handle search submission
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setShowSuggestions(false);
-      router.push(`/items?search=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
-  // Close suggestions when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
       if (
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
@@ -105,15 +130,20 @@ export default function Navbar() {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex justify-between items-center">
+    <nav className="bg-white border-b border-gray-300 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex justify-between items-center gap-4 sm:gap-6">
           {/* Logo Section */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
+          >
             <Image
               src="/Logo Icon.png"
               alt="Campus Marketplace Logo"
@@ -122,39 +152,44 @@ export default function Navbar() {
               className="h-8 w-8"
             />
             <span
-              className="text-lg font-normal"
+              className="text-lg font-bold hidden sm:inline"
               style={{
                 color: "#0C0A09",
                 fontFamily: "Clash Display",
-                fontWeight: 400,
+                fontWeight: 600,
               }}
             >
               Campus
             </span>
           </Link>
 
-          {/* Center Navigation Links */}
-          <div className="flex items-center flex-1 mx-8">
-            <div className="relative w-full" ref={searchRef}>
-              {/* Clean search bar with subtle shadow and light border */}
+          {/* Search Bar - Center */}
+          <div className="flex-1 max-w-md hidden sm:block" ref={searchRef}>
+            <div className="relative">
               <form onSubmit={handleSearch} className="relative">
-                <div className="flex items-center bg-white border border-gray-200 rounded-xl px-5 py-3 shadow-sm hover:shadow-md hover:border-gray-300 transition-all">
-                  <Image
-                    src="/search 01.png"
-                    alt="Search"
-                    width={20}
-                    height={20}
-                    className="w-5 h-5 text-gray-400 shrink-0"
-                  />
+                <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 hover:border-gray-400 focus-within:border-black focus-within:bg-white transition-all">
+                  <svg
+                    className="w-5 h-5 text-gray-400 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
                   <input
                     type="text"
-                    placeholder="What are you looking for?"
+                    placeholder="Search items..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() =>
                       searchQuery.trim().length > 0 && setShowSuggestions(true)
                     }
-                    className="w-full bg-transparent outline-none text-sm placeholder-gray-400 ml-4"
+                    className="w-full bg-transparent outline-none text-sm placeholder-gray-500 ml-3"
                     style={{
                       color: "#0C0A09",
                       fontFamily: "Clash Display",
@@ -166,10 +201,10 @@ export default function Navbar() {
                 {/* Suggestions Dropdown */}
                 {showSuggestions &&
                   (suggestions.length > 0 || isLoadingSuggestions) && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                       {isLoadingSuggestions ? (
-                        <div className="px-5 py-4 text-center text-sm text-gray-500">
-                          Loading suggestions...
+                        <div className="px-4 py-3 text-center text-sm text-gray-500">
+                          Loading...
                         </div>
                       ) : suggestions.length > 0 ? (
                         <ul>
@@ -177,28 +212,35 @@ export default function Navbar() {
                             <li key={index}>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleSuggestionClick(suggestion)
-                                }
-                                className="w-full text-left px-5 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center gap-2"
+                                onClick={() => {
+                                  setSearchQuery(suggestion);
+                                  setShowSuggestions(false);
+                                  router.push(
+                                    `/items?search=${encodeURIComponent(
+                                      suggestion
+                                    )}`
+                                  );
+                                }}
+                                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center gap-2 text-sm"
+                                style={{
+                                  fontFamily: "Clash Display",
+                                  fontWeight: 400,
+                                }}
                               >
-                                <Image
-                                  src="/search 01.png"
-                                  alt="Search"
-                                  width={16}
-                                  height={16}
-                                  className="w-4 h-4 text-gray-400"
-                                />
-                                <span
-                                  className="text-sm"
-                                  style={{
-                                    color: "#0C0A09",
-                                    fontFamily: "Clash Display",
-                                    fontWeight: 400,
-                                  }}
+                                <svg
+                                  className="w-4 h-4 text-gray-400 flex-shrink-0"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
                                 >
-                                  {suggestion}
-                                </span>
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                  />
+                                </svg>
+                                {suggestion}
                               </button>
                             </li>
                           ))}
@@ -211,38 +253,16 @@ export default function Navbar() {
           </div>
 
           {/* Right Section - Icons & Auth */}
-          <div className="flex items-center gap-6">
-            {/* Cart/Bag Icon */}
-            <button className="hover:opacity-75 transition-opacity">
-              <Image
-                src="/search 2.png"
-                alt="Cart"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </button>
-
-            {/* Profile/User Icon */}
-            <button className="hover:opacity-75 transition-opacity">
-              <Image
-                src="/shopping bag.png"
-                alt="Profile"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </button>
-
-            {/* Chat Icon - Show only if logged in */}
+          <div className="flex items-center gap-1 sm:gap-4">
+            {/* Messages Icon with Badge */}
             {isAuthenticated && (
               <Link
                 href="/chat"
-                className="hover:opacity-75 transition-opacity relative"
+                className="relative p-2 hover:bg-gray-100 rounded-lg transition-all group"
                 title="Messages"
               >
                 <svg
-                  className="w-6 h-6 text-gray-700"
+                  className="w-6 h-6 text-gray-700 group-hover:text-black transition-colors"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -254,93 +274,63 @@ export default function Navbar() {
                     d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
+                {unreadMessages > 0 && (
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full scale-100 hover:scale-110 transition-transform">
+                    {unreadMessages > 9 ? "9+" : unreadMessages}
+                  </span>
+                )}
               </Link>
             )}
 
-            {/* Sell Item Button - Show only if user is seller */}
+            {/* Orders Icon with Badge */}
+            {isAuthenticated && (
+              <Link
+                href="/orders/purchases"
+                className="relative p-2 hover:bg-gray-100 rounded-lg transition-all group"
+                title="My Orders"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-700 group-hover:text-black transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                  />
+                </svg>
+                {pendingOrders > 0 && (
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-orange-500 text-white text-xs font-bold rounded-full scale-100 hover:scale-110 transition-transform">
+                    {pendingOrders > 9 ? "9+" : pendingOrders}
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {/* Sell Item Button */}
             {isAuthenticated && isSeller && (
               <Link
                 href="/create-item"
-                className="flex items-center justify-between px-1 py-1 rounded-full bg-black hover:bg-opacity-90 transition-all"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-all"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                <span
-                  className="text-sm font-normal mr-4 pl-3"
-                  style={{
-                    color: "white",
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  Sell Item
-                </span>
-                <div className="bg-white rounded-full p-2 flex items-center justify-center">
-                  <Image
-                    src="/arrow-right.png"
-                    alt="Arrow"
-                    width={16}
-                    height={16}
-                    className="w-5 h-5"
-                    color="#0C0A09"
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
                   />
-                </div>
-              </Link>
-            )}
-
-            {/* Become a Seller Button - Show only if user is NOT a seller */}
-            {isAuthenticated && !isSeller && (
-              <Link
-                href="/become-a-seller"
-                className="flex items-center justify-between px-1 py-1 rounded-full bg-black hover:bg-opacity-90 transition-all"
-              >
-                <span
-                  className="text-sm font-normal mr-4 pl-3"
-                  style={{
-                    color: "white",
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Become a Seller
-                </span>
-                <div className="bg-white rounded-full p-2 flex items-center justify-center">
-                  <Image
-                    src="/arrow-right.png"
-                    alt="Arrow"
-                    width={16}
-                    height={16}
-                    className="w-5 h-5"
-                    color="#0C0A09"
-                  />
-                </div>
-              </Link>
-            )}
-
-            {/* Contact Us Button - Show only if not logged in */}
-            {!isAuthenticated && (
-              <Link
-                href="/become-a-seller"
-                className="flex items-center justify-between px-1 py-1 rounded-full bg-black hover:bg-opacity-90 transition-all"
-              >
-                <span
-                  className="text-sm font-normal mr-4 pl-3"
-                  style={{
-                    color: "white",
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Become a Seller
-                </span>
-                <div className="bg-white rounded-full p-2 flex items-center justify-center">
-                  <Image
-                    src="/arrow-right.png"
-                    alt="Arrow"
-                    width={16}
-                    height={16}
-                    className="w-5 h-5"
-                    color="#0C0A09"
-                  />
-                </div>
+                </svg>
+                <span className="text-sm">Sell</span>
               </Link>
             )}
 
@@ -348,28 +338,32 @@ export default function Navbar() {
             {isAuthenticated ? (
               <div
                 ref={profileRef}
-                className="relative flex items-center gap-3 ml-4 pl-4 border-l border-gray-300"
+                className="relative flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-gray-300"
+                onMouseEnter={() => setShowProfileDropdown(true)}
+                onMouseLeave={() => setShowProfileDropdown(false)}
               >
                 {/* Profile Button */}
-                <button
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  className="flex items-center gap-2 hover:opacity-75 transition-opacity cursor-pointer"
-                >
-                  <span
-                    className="text-sm font-medium"
-                    style={{ color: "#0C0A09" }}
-                  >
-                    {user?.name}
-                  </span>
-                  {/* ✅ Verification Badge */}
-                  {showVerificationBadge && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
-                      ⚠️
+                <button className="flex items-center gap-2 hover:opacity-75 transition-opacity py-2">
+                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-sm">
+                      {user?.name?.charAt(0).toUpperCase()}
                     </span>
-                  )}
-                  {/* Dropdown Arrow */}
+                  </div>
+                  <div className="hidden sm:flex flex-col items-start">
+                    <span
+                      className="text-sm font-semibold leading-none"
+                      style={{ color: "#0C0A09", fontFamily: "Clash Display" }}
+                    >
+                      {user?.name?.split(" ")[0]}
+                    </span>
+                    {showVerificationBadge && (
+                      <span className="text-xs text-yellow-600 font-medium">
+                        ⚠️ Verify
+                      </span>
+                    )}
+                  </div>
                   <svg
-                    className={`w-4 h-4 transition-transform ${
+                    className={`w-4 h-4 hidden sm:block transition-transform ${
                       showProfileDropdown ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -387,13 +381,14 @@ export default function Navbar() {
 
                 {/* Profile Dropdown Menu */}
                 {showProfileDropdown && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-300 rounded-lg shadow-xl z-50 overflow-hidden">
                     {/* My Profile */}
                     <Link
                       href="/profile"
                       onClick={() => setShowProfileDropdown(false)}
-                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100 first:rounded-t-lg"
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
                       style={{
+                        color: "#0C0A09",
                         fontFamily: "Clash Display",
                         fontWeight: 400,
                       }}
@@ -401,12 +396,13 @@ export default function Navbar() {
                       👤 My Profile
                     </Link>
 
-                    {/* My Orders - Always visible */}
+                    {/* My Orders */}
                     <Link
-                      href="/orders"
+                      href="/orders/purchases"
                       onClick={() => setShowProfileDropdown(false)}
-                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
                       style={{
+                        color: "#0C0A09",
                         fontFamily: "Clash Display",
                         fontWeight: 400,
                       }}
@@ -417,10 +413,11 @@ export default function Navbar() {
                     {/* My Sales - Only for sellers */}
                     {isSeller && (
                       <Link
-                        href="/sales"
+                        href="/orders/sales"
                         onClick={() => setShowProfileDropdown(false)}
-                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
                         style={{
+                          color: "#0C0A09",
                           fontFamily: "Clash Display",
                           fontWeight: 400,
                         }}
@@ -432,27 +429,26 @@ export default function Navbar() {
                     {/* Seller Dashboard - Only for sellers */}
                     {isSeller && (
                       <Link
-                        href="/seller-dashboard"
+                        href="/dashboard/seller"
                         onClick={() => setShowProfileDropdown(false)}
-                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
                         style={{
+                          color: "#0C0A09",
                           fontFamily: "Clash Display",
                           fontWeight: 400,
                         }}
                       >
-                        📊 Seller Dashboard
+                        📊 Dashboard
                       </Link>
                     )}
-
-                    {/* Divider */}
-                    <div className="border-b border-gray-100" />
 
                     {/* Settings */}
                     <Link
                       href="/settings"
                       onClick={() => setShowProfileDropdown(false)}
-                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
                       style={{
+                        color: "#0C0A09",
                         fontFamily: "Clash Display",
                         fontWeight: 400,
                       }}
@@ -478,24 +474,110 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-300">
+              <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-gray-300">
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-sm font-medium transition-colors"
-                  style={{ color: "#0C0A09" }}
+                  className="px-2 sm:px-3 py-2 text-sm transition-colors hover:opacity-75"
+                  style={{
+                    color: "#0C0A09",
+                    fontFamily: "Clash Display",
+                    fontWeight: 500,
+                  }}
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: "#0C0A09" }}
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-gray-900 transition-colors"
+                  style={{
+                    backgroundColor: "#0C0A09",
+                    fontFamily: "Clash Display",
+                  }}
                 >
                   Sign Up
                 </Link>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Mobile Search Bar - Below navbar on mobile */}
+        <div className="block sm:hidden mt-3" ref={searchRef}>
+          <form onSubmit={handleSearch} className="relative">
+            <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5">
+              <svg
+                className="w-5 h-5 text-gray-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() =>
+                  searchQuery.trim().length > 0 && setShowSuggestions(true)
+                }
+                className="w-full bg-transparent outline-none text-sm placeholder-gray-500 ml-3"
+                style={{
+                  color: "#0C0A09",
+                  fontFamily: "Clash Display",
+                  fontWeight: 400,
+                }}
+              />
+            </div>
+
+            {/* Mobile Suggestions Dropdown */}
+            {showSuggestions &&
+              (suggestions.length > 0 || isLoadingSuggestions) && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                  {isLoadingSuggestions ? (
+                    <div className="px-4 py-3 text-center text-sm text-gray-500">
+                      Loading...
+                    </div>
+                  ) : suggestions.length > 0 ? (
+                    <ul>
+                      {suggestions.map((suggestion, index) => (
+                        <li key={index}>
+                          <button
+                            type="button"
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center gap-2 text-sm"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            <svg
+                              className="w-4 h-4 text-gray-400 flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                              />
+                            </svg>
+                            {suggestion}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              )}
+          </form>
         </div>
       </div>
     </nav>
