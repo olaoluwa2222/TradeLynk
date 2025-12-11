@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ordersApi } from "@/lib/api";
+import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Order {
@@ -55,6 +56,7 @@ export default function MyOrdersPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [chatLoading, setChatLoading] = useState<number | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -409,16 +411,41 @@ export default function MyOrdersPage() {
                         >
                           View Details →
                         </Link>
-                        <Link
-                          href={`/chat?sellerId=${order.seller.id}&itemId=${order.item.id}`}
-                          className="px-6 py-2 border-2 border-black text-black rounded-lg hover:bg-gray-50 transition-colors text-sm font-semibold"
+                        <button
+                          onClick={async () => {
+                            try {
+                              setChatLoading(order.id);
+                              await startChatWithSeller(
+                                order.item.id,
+                                order.seller.id,
+                                router
+                              );
+                            } catch (err: any) {
+                              console.error("Error starting chat:", err);
+                              alert(
+                                err.message ||
+                                  "Failed to start chat. Please try again."
+                              );
+                            } finally {
+                              setChatLoading(null);
+                            }
+                          }}
+                          disabled={chatLoading === order.id}
+                          className="px-6 py-2 border-2 border-black text-black rounded-lg hover:bg-gray-50 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           style={{
                             fontFamily: "Clash Display",
                             fontWeight: 600,
                           }}
                         >
-                          💬 Message Seller
-                        </Link>
+                          {chatLoading === order.id ? (
+                            <>
+                              <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full inline-block mr-2"></div>
+                              Loading...
+                            </>
+                          ) : (
+                            <>💬 Message Seller</>
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>

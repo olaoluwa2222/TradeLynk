@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ordersApi } from "@/lib/api";
+import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
 
 interface OrderDetail {
@@ -56,6 +57,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const isBuyer = user && order && user.userId === order.buyer.id;
   const isSeller = user && order && user.userId === order.seller.id;
@@ -133,7 +135,7 @@ export default function OrderDetailPage() {
 
     try {
       setActionLoading(true);
-      const response = await ordersApi.cancelOrder(order.orderId, reason);
+      const response = await ordersApi.cancelOrder(order.id, reason);
 
       if (response.success) {
         setOrder({ ...order, status: "CANCELLED" });
@@ -245,7 +247,7 @@ export default function OrderDetailPage() {
                 className="text-3xl font-bold"
                 style={{ fontFamily: "Clash Display", fontWeight: 700 }}
               >
-                Order #{order.orderId}
+                Order #{order.id}
               </h1>
               <p
                 className="text-gray-300 mt-2"
@@ -399,17 +401,37 @@ export default function OrderDetailPage() {
                   </p>
                 </div>
               </div>
-              <Link
-                href={`/chat?${
-                  isBuyer
-                    ? `sellerId=${order.seller.id}`
-                    : `buyerId=${order.buyer.id}`
-                }&itemId=${order.item.id}`}
-                className="w-full py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center justify-center gap-2 font-semibold"
+              <button
+                onClick={async () => {
+                  try {
+                    setChatLoading(true);
+                    await startChatWithSeller(
+                      order.item.id,
+                      isBuyer ? order.seller.id : order.buyer.id,
+                      router
+                    );
+                  } catch (err: any) {
+                    console.error("Error starting chat:", err);
+                    alert(
+                      err.message || "Failed to start chat. Please try again."
+                    );
+                  } finally {
+                    setChatLoading(false);
+                  }
+                }}
+                disabled={chatLoading}
+                className="w-full py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors flex items-center justify-center gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                💬 Send Message
-              </Link>
+                {chatLoading ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Starting chat...
+                  </>
+                ) : (
+                  <>💬 Send Message</>
+                )}
+              </button>
             </div>
           </div>
 

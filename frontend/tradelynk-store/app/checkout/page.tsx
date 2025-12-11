@@ -431,7 +431,7 @@ export default function CheckoutPage() {
                     setValidationError("");
                   }}
                   placeholder="e.g., Male Hostel Block B, Room 205"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all text-gray-700"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 400,
@@ -465,7 +465,7 @@ export default function CheckoutPage() {
                   onChange={(e) => setInstructions(e.target.value)}
                   placeholder="Any special instructions for the seller..."
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all resize-none text-gray-700"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 400,

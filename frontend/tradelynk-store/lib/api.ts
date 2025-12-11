@@ -624,4 +624,12 @@ export const ordersApi = {
   },
 };
 
+// Analytics API - Seller dashboard analytics
+export const analyticsApi = {
+  getSellerAnalytics: async () => {
+    const response = await api.get("/sellers/me/analytics");
+    return response.data;
+  },
+};
+
 export default api;

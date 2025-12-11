@@ -159,7 +159,7 @@ export default function ChatInput({
             placeholder="Type a message..."
             disabled={disabled || sending}
             rows={1}
-            className="flex-1 resize-none rounded-2xl border-2 border-gray-300 px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-black disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 transition-all placeholder:text-gray-400"
+            className="flex-1 resize-none rounded-2xl border-2 border-gray-300 px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-black disabled:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400 transition-all placeholder:text-gray-400 text-gray-700"
             style={{ maxHeight: "96px" }}
           />
 
