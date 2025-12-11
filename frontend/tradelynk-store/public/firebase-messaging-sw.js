@@ -5,6 +5,8 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"
 );
 
+console.log("🔧 [SW] Service Worker script loaded");
+
 firebase.initializeApp({
   apiKey: "AIzaSyDYBdzWNsEFdpLMuGG5GFaEEFbOeWWzkRk",
   authDomain: "tradelynk-c8ddc.firebaseapp.com",
@@ -15,80 +17,182 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+console.log("🔧 [SW] Firebase Messaging initialized");
 
-console.log("🔧 Firebase Messaging Service Worker initialized");
-
+// ✅ Handle background messages (when tab is not active)
 messaging.onBackgroundMessage((payload) => {
-  console.log("🔔 Background message received:", payload);
+  console.log("🔔 [SW] Background message received:", payload);
 
-  try {
-    const notificationTitle =
-      payload.notification?.title || payload.data?.title || "TradeLynk";
-    const notificationBody =
-      payload.notification?.body ||
-      payload.data?.body ||
-      "You have a new message";
-    const chatId = payload.data?.chatId;
+  const notificationTitle = payload.notification?.title || "TradeLynk";
+  const notificationBody = payload.notification?.body || "New message";
+  const chatId = payload.data?.chatId;
 
-    const notificationOptions = {
-      body: notificationBody,
-      icon: "/favicon.ico",
-      badge: "/badge.png",
-      tag: chatId || "chat-notification",
-      requireInteraction: false,
-      data: payload.data || {},
-    };
+  console.log("📬 [SW] Preparing notification:", {
+    title: notificationTitle,
+    body: notificationBody,
+    chatId: chatId,
+  });
 
-    console.log("📬 Showing notification:", {
-      title: notificationTitle,
-      body: notificationBody,
-      chatId,
+  const notificationOptions = {
+    body: notificationBody,
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: chatId || "message",
+    requireInteraction: false,
+    silent: false,
+    data: {
+      chatId: chatId,
+      url: chatId ? `/chat?chatId=${chatId}` : "/chat",
+    },
+    timestamp: Date.now(),
+  };
+
+  console.log(
+    "🔔 [SW] Calling showNotification with options:",
+    notificationOptions
+  );
+
+  // ✅ Notify all open tabs about the new message
+  self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((clients) => {
+      console.log("📢 [SW] Broadcasting to", clients.length, "client(s)");
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "SHOW_IN_APP_NOTIFICATION",
+          title: notificationTitle,
+          body: notificationBody,
+          chatId: chatId,
+        });
+      });
     });
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  } catch (error) {
-    console.error("❌ Error showing notification:", error);
-  }
+  // ✅ CRITICAL: Return the promise to keep service worker alive
+  return self.registration
+    .showNotification(notificationTitle, notificationOptions)
+    .then(() => {
+      console.log("✅ [SW] Notification shown successfully");
+    })
+    .catch((error) => {
+      console.error("❌ [SW] Failed to show notification:", error);
+      // ✅ Try a simpler notification as fallback
+      return self.registration.showNotification(notificationTitle, {
+        body: notificationBody,
+        icon: "/favicon.ico",
+        tag: "fallback",
+      });
+    });
 });
 
-// Handle notification click
+// ✅ Handle notification click
 self.addEventListener("notificationclick", (event) => {
-  console.log("👆 Notification clicked:", event.notification);
+  console.log("👆 [SW] Notification clicked:", event.notification);
+  console.log("👆 [SW] Action clicked:", event.action);
+
   event.notification.close();
 
+  // Handle action buttons
+  if (event.action === "dismiss") {
+    console.log("❌ [SW] User dismissed notification");
+    return;
+  }
+
   const chatId = event.notification.data?.chatId;
-  const url = chatId ? `/chat?chatId=${chatId}` : "/chat";
+  const urlToOpen = chatId
+    ? `${self.location.origin}/chat?chatId=${chatId}`
+    : `${self.location.origin}/chat`;
 
-  if (chatId) {
-    event.waitUntil(
-      clients.matchAll({ type: "window" }).then((clientList) => {
-        console.log("🔍 Found", clientList.length, "open windows");
+  console.log("🔗 [SW] Opening URL:", urlToOpen);
 
-        // Check if there's already a window/tab open
-        for (let i = 0; i < clientList.length; i++) {
-          const client = clientList[i];
-          console.log("  Client URL:", client.url);
-          if (
-            client.url.includes("/chat") &&
-            client.url.includes(`chatId=${chatId}`) &&
-            "focus" in client
-          ) {
-            console.log("✅ Focusing existing window");
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        console.log("🔍 [SW] Found", clientList.length, "open windows");
+
+        // Check if a window is already open
+        for (const client of clientList) {
+          if (client.url.includes("/chat") && "focus" in client) {
+            console.log("🔍 [SW] Found existing chat window, focusing");
+            if (chatId) {
+              client.postMessage({
+                type: "NAVIGATE_TO_CHAT",
+                chatId: chatId,
+              });
+            }
             return client.focus();
           }
         }
 
-        // If not, open a new window/tab
-        console.log("📖 Opening new window:", url);
+        // No chat window open, check for any window
+        if (clientList.length > 0) {
+          console.log("🔍 [SW] Found existing window, navigating");
+          return clientList[0].focus().then(() => {
+            clientList[0].navigate(urlToOpen);
+          });
+        }
+
+        // No window open, open a new one
+        console.log("🆕 [SW] Opening new window");
         if (clients.openWindow) {
-          return clients.openWindow(url);
+          return clients.openWindow(urlToOpen);
         }
       })
+      .catch((error) => {
+        console.error("❌ [SW] Error handling notification click:", error);
+      })
+  );
+});
+
+// ✅ Handle notification close
+self.addEventListener("notificationclose", (event) => {
+  console.log("❌ [SW] Notification closed:", event.notification.tag);
+});
+
+// ✅ Add push event listener as backup
+self.addEventListener("push", (event) => {
+  console.log("📨 [SW] Push event received:", event);
+
+  if (!event.data) {
+    console.log("⚠️ [SW] Push event has no data");
+    return;
+  }
+
+  try {
+    const payload = event.data.json();
+    console.log("📦 [SW] Push payload:", payload);
+
+    const title = payload.notification?.title || "TradeLynk";
+    const options = {
+      body: payload.notification?.body || "New message",
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      data: payload.data || {},
+      tag: payload.data?.chatId || "message",
+      requireInteraction: false,
+      silent: false,
+      vibrate: [200, 100, 200],
+    };
+
+    event.waitUntil(
+      self.registration
+        .showNotification(title, options)
+        .then(() => console.log("✅ [SW] Push notification shown"))
+        .catch((err) => console.error("❌ [SW] Push notification failed:", err))
     );
+  } catch (error) {
+    console.error("❌ [SW] Error parsing push data:", error);
   }
 });
 
-// Handle notification close
-self.addEventListener("notificationclose", (event) => {
-  console.log("❌ Notification closed:", event.notification);
+// ✅ Service Worker activation
+self.addEventListener("activate", (event) => {
+  console.log("🔄 [SW] Service Worker activated");
+  event.waitUntil(self.clients.claim());
+});
+
+// ✅ Service Worker installation
+self.addEventListener("install", (event) => {
+  console.log("📥 [SW] Service Worker installed");
+  self.skipWaiting();
 });

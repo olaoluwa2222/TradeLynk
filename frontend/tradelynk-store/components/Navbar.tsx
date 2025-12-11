@@ -15,10 +15,34 @@ export default function Navbar() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   // ✅ Show verification badge if user is not verified
   const showVerificationBadge = isAuthenticated && user && !user.verified;
+
+  // ✅ Check if user is a seller
+  const isSeller =
+    user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    if (showProfileDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showProfileDropdown]);
 
   // Fetch suggestions when user types
   useEffect(() => {
@@ -233,37 +257,104 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Contact Us Button */}
-            <Link
-              href="/become-a-seller"
-              className="flex items-center justify-between px-1 py-1 rounded-full bg-black"
-            >
-              <span
-                className="text-sm font-normal mr-4 pl-3"
-                style={{
-                  color: "white",
-                  fontFamily: "Clash Display",
-                  fontWeight: 400,
-                }}
+            {/* Sell Item Button - Show only if user is seller */}
+            {isAuthenticated && isSeller && (
+              <Link
+                href="/create-item"
+                className="flex items-center justify-between px-1 py-1 rounded-full bg-black hover:bg-opacity-90 transition-all"
               >
-                Become a Seller
-              </span>
-              <div className="bg-white rounded-full p-2 flex items-center justify-center">
-                <Image
-                  src="/arrow-right.png"
-                  alt="Arrow"
-                  width={16}
-                  height={16}
-                  className="w-5 h-5"
-                  color="#0C0A09"
-                />
-              </div>
-            </Link>
+                <span
+                  className="text-sm font-normal mr-4 pl-3"
+                  style={{
+                    color: "white",
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Sell Item
+                </span>
+                <div className="bg-white rounded-full p-2 flex items-center justify-center">
+                  <Image
+                    src="/arrow-right.png"
+                    alt="Arrow"
+                    width={16}
+                    height={16}
+                    className="w-5 h-5"
+                    color="#0C0A09"
+                  />
+                </div>
+              </Link>
+            )}
+
+            {/* Become a Seller Button - Show only if user is NOT a seller */}
+            {isAuthenticated && !isSeller && (
+              <Link
+                href="/become-a-seller"
+                className="flex items-center justify-between px-1 py-1 rounded-full bg-black hover:bg-opacity-90 transition-all"
+              >
+                <span
+                  className="text-sm font-normal mr-4 pl-3"
+                  style={{
+                    color: "white",
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Become a Seller
+                </span>
+                <div className="bg-white rounded-full p-2 flex items-center justify-center">
+                  <Image
+                    src="/arrow-right.png"
+                    alt="Arrow"
+                    width={16}
+                    height={16}
+                    className="w-5 h-5"
+                    color="#0C0A09"
+                  />
+                </div>
+              </Link>
+            )}
+
+            {/* Contact Us Button - Show only if not logged in */}
+            {!isAuthenticated && (
+              <Link
+                href="/become-a-seller"
+                className="flex items-center justify-between px-1 py-1 rounded-full bg-black hover:bg-opacity-90 transition-all"
+              >
+                <span
+                  className="text-sm font-normal mr-4 pl-3"
+                  style={{
+                    color: "white",
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Become a Seller
+                </span>
+                <div className="bg-white rounded-full p-2 flex items-center justify-center">
+                  <Image
+                    src="/arrow-right.png"
+                    alt="Arrow"
+                    width={16}
+                    height={16}
+                    className="w-5 h-5"
+                    color="#0C0A09"
+                  />
+                </div>
+              </Link>
+            )}
 
             {/* Auth Section */}
             {isAuthenticated ? (
-              <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-300">
-                <div className="flex items-center gap-2">
+              <div
+                ref={profileRef}
+                className="relative flex items-center gap-3 ml-4 pl-4 border-l border-gray-300"
+              >
+                {/* Profile Button */}
+                <button
+                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                  className="flex items-center gap-2 hover:opacity-75 transition-opacity cursor-pointer"
+                >
                   <span
                     className="text-sm font-medium"
                     style={{ color: "#0C0A09" }}
@@ -276,14 +367,115 @@ export default function Navbar() {
                       ⚠️
                     </span>
                   )}
-                </div>
-                <button
-                  onClick={logout}
-                  className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: "#0C0A09" }}
-                >
-                  Logout
+                  {/* Dropdown Arrow */}
+                  <svg
+                    className={`w-4 h-4 transition-transform ${
+                      showProfileDropdown ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                    />
+                  </svg>
                 </button>
+
+                {/* Profile Dropdown Menu */}
+                {showProfileDropdown && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    {/* My Profile */}
+                    <Link
+                      href="/profile"
+                      onClick={() => setShowProfileDropdown(false)}
+                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100 first:rounded-t-lg"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      👤 My Profile
+                    </Link>
+
+                    {/* My Orders - Always visible */}
+                    <Link
+                      href="/orders"
+                      onClick={() => setShowProfileDropdown(false)}
+                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      📦 My Orders
+                    </Link>
+
+                    {/* My Sales - Only for sellers */}
+                    {isSeller && (
+                      <Link
+                        href="/sales"
+                        onClick={() => setShowProfileDropdown(false)}
+                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        💰 My Sales
+                      </Link>
+                    )}
+
+                    {/* Seller Dashboard - Only for sellers */}
+                    {isSeller && (
+                      <Link
+                        href="/seller-dashboard"
+                        onClick={() => setShowProfileDropdown(false)}
+                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        📊 Seller Dashboard
+                      </Link>
+                    )}
+
+                    {/* Divider */}
+                    <div className="border-b border-gray-100" />
+
+                    {/* Settings */}
+                    <Link
+                      href="/settings"
+                      onClick={() => setShowProfileDropdown(false)}
+                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      ⚙️ Settings
+                    </Link>
+
+                    {/* Logout */}
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-gray-50 transition-colors rounded-b-lg"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-300">

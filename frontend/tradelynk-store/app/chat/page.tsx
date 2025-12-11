@@ -10,20 +10,31 @@ import { fetchChats, Chat } from "@/lib/services/chatService";
 import { useOnlineStatus } from "@/lib/hooks/useChat";
 
 export default function ChatPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [isMobileViewChat, setIsMobileViewChat] = useState(false);
-  const [isMobileViewItem, setIsMobileViewItem] = useState(false);
+  const [showItemSidebar, setShowItemSidebar] = useState(false); // ✅ NEW: Control right sidebar
+  const [isMobile, setIsMobile] = useState(false); // ✅ NEW: Track screen size
 
-  // Set online status
+  // ✅ Set online status (only when user is available)
   useOnlineStatus(user?.userId || 0);
 
-  // ✅ NEW: Listen for service worker navigation messages
+  // ✅ NEW: Detect screen size for responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Service worker message listener
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
@@ -34,19 +45,16 @@ export default function ChatPage() {
         const targetChatId = event.data.chatId;
         console.log(`🔗 [ChatPage] Navigating to chat: ${targetChatId}`);
 
-        // Find and select the chat
         const targetChat = chats.find(
           (c) => c.chatId === targetChatId || c.id === targetChatId
         );
 
         if (targetChat) {
           setSelectedChatId(targetChat.id);
-          setIsMobileViewChat(true);
           router.push(`/chat?chatId=${targetChat.id}`, { scroll: false });
           console.log("✅ [ChatPage] Chat selected:", targetChatId);
         } else {
           console.warn("⚠️ [ChatPage] Chat not found, refetching chats...");
-          // Refetch chats in case it's a new chat
           loadChatsData();
         }
       }
@@ -66,19 +74,18 @@ export default function ChatPage() {
           "message",
           handleServiceWorkerMessage
         );
-        console.log("🔇 [ChatPage] Service worker message listener removed");
       }
     };
   }, [chats, isAuthenticated, user, router]);
 
-  // ✅ Extract loadChats logic to reusable function
+  // Load chats function
   const loadChatsData = async () => {
     try {
       setLoading(true);
       setError("");
       const data = await fetchChats();
 
-      // ✅ TRANSFORM: Normalize chatId to id
+      // Normalize chatId to id
       const normalizedChats = data.map((chat) => ({
         ...chat,
         id: chat.chatId || chat.id,
@@ -109,7 +116,6 @@ export default function ChatPage() {
       if (chatIdParam) {
         console.log("📌 Found chatId in URL:", chatIdParam);
         setSelectedChatId(chatIdParam);
-        setIsMobileViewChat(true);
       } else if (normalizedChats.length > 0 && !selectedChatId) {
         console.log("📌 No chatId param, selecting first chat");
         setSelectedChatId(normalizedChats[0].id);
@@ -119,24 +125,21 @@ export default function ChatPage() {
     initializeChats();
   }, [isAuthenticated, user]);
 
-  // Handle URL changes separately
+  // Handle URL changes
   useEffect(() => {
     const chatIdParam = searchParams.get("chatId");
     if (chatIdParam && chatIdParam !== selectedChatId) {
       console.log("🔄 URL changed, updating selected chat:", chatIdParam);
       setSelectedChatId(chatIdParam);
-      setIsMobileViewChat(true);
     }
   }, [searchParams]);
 
-  // Refetch if chat not found (newly created chat)
+  // Refetch if chat not found
   useEffect(() => {
     if (!isAuthenticated || !selectedChatId || loading) return;
 
     const found = chats.find((c) => c.id === selectedChatId);
-    if (found) {
-      return;
-    }
+    if (found) return;
 
     console.log("🔄 Chat not found, refetching in 1 second...", selectedChatId);
     const timer = setTimeout(() => loadChatsData(), 1000);
@@ -144,7 +147,19 @@ export default function ChatPage() {
     return () => clearTimeout(timer);
   }, [isAuthenticated, selectedChatId, chats, loading]);
 
-  // Early return for non-authenticated users
+  // ✅ CRITICAL: Wait for both auth and user to be ready
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -169,7 +184,7 @@ export default function ChatPage() {
   const selectedChat = chats.find((c) => c.id === selectedChatId);
   const isWaitingForNewChat = selectedChatId && !selectedChat;
 
-  // Create a placeholder chat object when waiting for new chat
+  // Placeholder for loading chat
   const chatToDisplay =
     selectedChat ||
     (isWaitingForNewChat
@@ -189,6 +204,23 @@ export default function ChatPage() {
         }
       : null);
 
+  // ✅ NEW: Handle chat selection with responsive behavior
+  const handleSelectChat = (chat: Chat) => {
+    console.log("📌 Selecting chat:", chat);
+    if (!chat || !chat.id) {
+      console.error("❌ Invalid chat object:", chat);
+      return;
+    }
+    setSelectedChatId(chat.id);
+    router.push(`/chat?chatId=${chat.id}`, { scroll: false });
+  };
+
+  // ✅ NEW: Handle back click
+  const handleBackClick = () => {
+    setSelectedChatId(null);
+    router.push("/chat", { scroll: false });
+  };
+
   console.log("📋 ChatPage state:", {
     totalChats: chats.length,
     selectedChatId,
@@ -197,6 +229,9 @@ export default function ChatPage() {
       : null,
     loading,
     isWaitingForNewChat,
+    userId: user?.userId,
+    isMobile,
+    showItemSidebar,
   });
 
   return (
@@ -206,99 +241,77 @@ export default function ChatPage() {
         <h1 className="text-2xl font-bold text-gray-900">💬 Messages</h1>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Responsive Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Chat List */}
-        {!isMobileViewChat && !isMobileViewItem && (
-          <div className="w-full md:w-1/4 lg:w-1/4 border-r border-gray-200 bg-white overflow-y-auto">
-            <ChatList
-              chats={chats}
-              selectedChatId={selectedChatId}
-              onSelectChat={(chat) => {
-                console.log("📌 Selecting chat:", chat);
-                if (!chat || !chat.id) {
-                  console.error("❌ Invalid chat object:", chat);
-                  return;
-                }
-                setSelectedChatId(chat.id);
-                setIsMobileViewChat(true);
-                router.push(`/chat?chatId=${chat.id}`, { scroll: false });
-              }}
-              loading={loading}
-              error={error}
+        {/* ✅ LEFT SIDEBAR - Chat List (Always visible on desktop) */}
+        <div
+          className={`
+            ${isMobile && selectedChatId ? "hidden" : "block"}
+            w-full md:w-96 border-r border-gray-200 bg-white overflow-y-auto
+          `}
+        >
+          <ChatList
+            chats={chats}
+            selectedChatId={selectedChatId}
+            onSelectChat={handleSelectChat}
+            loading={loading}
+            error={error}
+          />
+        </div>
+
+        {/* ✅ CENTER - Conversation View */}
+        <div
+          className={`
+            ${isMobile && !selectedChatId ? "hidden" : "flex-1"}
+            ${
+              !selectedChatId && !isMobile
+                ? "flex items-center justify-center"
+                : ""
+            }
+            bg-white border-r border-gray-200
+          `}
+        >
+          {chatToDisplay && user ? (
+            <ConversationView
+              chat={chatToDisplay}
+              currentUserId={user.userId} // ✅ GUARANTEED to be a number
+              onBackClick={handleBackClick}
+              onViewItem={() => setShowItemSidebar(!showItemSidebar)}
             />
-          </div>
-        )}
-
-        {/* Center - Conversation View */}
-        {(isMobileViewChat || !isMobileViewItem) && (
-          <div className="hidden md:flex md:w-1/2 lg:w-1/2 flex-col border-r border-gray-200">
-            {chatToDisplay ? (
-              <ConversationView
-                chat={chatToDisplay}
-                currentUserId={user?.userId || 0}
-                onBackClick={() => setIsMobileViewChat(false)}
-                onViewItem={() => setIsMobileViewItem(true)}
-              />
-            ) : isWaitingForNewChat ? (
-              <div className="flex-1 flex items-center justify-center bg-white">
-                <div className="text-center">
-                  <div className="animate-spin h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading chat...</p>
-                </div>
+          ) : isWaitingForNewChat ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin h-12 w-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading chat...</p>
               </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center bg-white">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">💬</div>
-                  <p className="text-gray-600">
-                    Select a conversation to start
-                  </p>
-                </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-6xl mb-4">💬</div>
+                <p className="text-gray-600 text-lg font-semibold">
+                  Select a conversation to start
+                </p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Choose from your chats on the left
+                </p>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        {/* Mobile: Full conversation view */}
-        {isMobileViewChat && (
-          <div className="w-full md:hidden flex flex-col">
-            {chatToDisplay ? (
-              <ConversationView
-                chat={chatToDisplay}
-                currentUserId={user?.userId || 0}
-                onBackClick={() => setIsMobileViewChat(false)}
-                onViewItem={() => setIsMobileViewItem(true)}
-              />
-            ) : null}
-          </div>
-        )}
-
-        {/* Right Sidebar - Item Details */}
-        {(isMobileViewItem || !isMobileViewItem) && (
-          <div className="hidden lg:block lg:w-1/4 border-l border-gray-200 bg-white overflow-y-auto">
-            {chatToDisplay ? (
-              <ItemSidebar
-                chat={chatToDisplay}
-                onClose={() => setIsMobileViewItem(false)}
-              />
-            ) : (
-              <div className="p-6 text-center text-gray-500">
-                <p>No item selected</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Mobile: Full item view */}
-        {isMobileViewItem && (
-          <div className="w-full md:hidden flex flex-col border-l border-gray-200">
-            {chatToDisplay ? (
-              <ItemSidebar
-                chat={chatToDisplay}
-                onClose={() => setIsMobileViewItem(false)}
-              />
-            ) : null}
+        {/* ✅ RIGHT SIDEBAR - Item Details (Desktop only, toggleable) */}
+        {showItemSidebar && chatToDisplay && (
+          <div
+            className={`
+              ${isMobile ? "absolute inset-0 z-50" : "w-80"}
+              border-l border-gray-200 bg-white overflow-y-auto
+            `}
+          >
+            <ItemSidebar
+              chat={chatToDisplay}
+              onClose={() => setShowItemSidebar(false)}
+            />
           </div>
         )}
       </div>

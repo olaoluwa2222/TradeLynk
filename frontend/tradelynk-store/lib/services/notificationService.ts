@@ -13,160 +13,185 @@ export const initializeNotifications = async (
   onForegroundMessage?: (payload: any) => void
 ): Promise<string | null> => {
   try {
-    // 1. Check if notifications are supported
+    console.log("🔔 [NOTIF] Step 1: Checking notification support");
+
     if (!("Notification" in window)) {
-      console.warn("🔔 Notifications not supported in this browser");
+      console.warn("🔔 [NOTIF] Notifications not supported");
       return null;
     }
 
-    // 2. Request permission
-    const permission = await Notification.requestPermission();
+    if (!("serviceWorker" in navigator)) {
+      console.warn("🔔 [NOTIF] Service Worker not supported");
+      return null;
+    }
+
+    console.log(
+      "🔔 [NOTIF] Step 2: Current permission:",
+      Notification.permission
+    );
+
+    // Request permission
+    let permission = Notification.permission;
+
+    if (permission === "default") {
+      console.log("🔔 [NOTIF] Requesting permission...");
+      permission = await Notification.requestPermission();
+    }
+
+    console.log("🔔 [NOTIF] Step 3: Permission result:", permission);
+
     if (permission !== "granted") {
-      console.warn(
-        "🔔 User denied notification permission. Notifications disabled."
+      console.warn("🔔 [NOTIF] Permission denied or dismissed");
+      return null;
+    }
+
+    // ✅ Verify service worker is registered and active
+    console.log("🔔 [NOTIF] Step 4: Checking service worker");
+    const registration = await navigator.serviceWorker.ready;
+    console.log("🔔 [NOTIF] Service worker state:", registration.active?.state);
+
+    if (!registration.active) {
+      console.error("🔔 [NOTIF] Service worker not active!");
+      return null;
+    }
+
+    // ✅ Test notification capability
+    console.log("🔔 [NOTIF] Step 5: Testing notification display");
+    try {
+      await registration.showNotification("TradeLynk", {
+        body: "Notifications are working!",
+        icon: "/favicon.ico",
+        tag: "test",
+        requireInteraction: false,
+      });
+      console.log("✅ [NOTIF] Test notification shown successfully");
+
+      // Close test notification after 2 seconds
+      setTimeout(async () => {
+        const notifications = await registration.getNotifications({
+          tag: "test",
+        });
+        notifications.forEach((n) => n.close());
+      }, 2000);
+    } catch (testError) {
+      console.error("❌ [NOTIF] Test notification failed:", testError);
+      // Continue anyway - might still work for FCM
+    }
+
+    console.log("🔔 [NOTIF] Step 6: Getting FCM token");
+    const token = await getToken(messaging, {
+      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration, // ✅ Pass service worker explicitly
+    });
+
+    console.log(
+      "🔔 [NOTIF] Step 7: Token result:",
+      token ? `✅ Got token (${token.substring(0, 20)}...)` : "❌ No token"
+    );
+
+    if (!token) {
+      console.error("🔔 [NOTIF] Failed to get FCM token!");
+      console.error(
+        "🔔 [NOTIF] Check VAPID key:",
+        process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.substring(0, 20)
       );
       return null;
     }
 
-    console.log("✅ Notification permission granted");
-
-    // 3. Get FCM token
-    const token = await getToken(messaging, {
-      vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+    console.log("🔔 [NOTIF] Step 8: Saving to backend");
+    await chatsApi.saveDeviceToken({
+      token: token,
+      deviceType: "web",
+      deviceName: navigator.userAgent.substring(0, 50),
     });
 
-    if (!token) {
-      console.warn("🔔 Failed to get FCM token");
-      return null;
-    }
+    console.log("🔔 [NOTIF] Step 9: Setup foreground listener");
 
-    console.log("✅ FCM token obtained:", token.substring(0, 20) + "...");
-
-    // 4. Save token to backend with retry logic and periodic refresh
-    const saveTokenToBackend = async (currentToken: string) => {
-      let attempts = 0;
-      const maxAttempts = 3;
-
-      while (attempts < maxAttempts) {
-        try {
-          await chatsApi.saveDeviceToken({
-            token: currentToken,
-            deviceType: "web",
-            deviceName: `${navigator.userAgent.substring(0, 50)}`,
-          });
-          console.log("✅ Device token saved to backend successfully");
-          return true;
-        } catch (err) {
-          attempts++;
-          console.warn(
-            `⚠️ Failed to save device token (attempt ${attempts}/${maxAttempts}):`,
-            err
-          );
-          if (attempts < maxAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          }
-        }
-      }
-      return false;
-    };
-
-    let saveSuccess = await saveTokenToBackend(token);
-
-    if (!saveSuccess) {
-      console.error("❌ Failed to save device token after multiple attempts");
-    }
-
-    // Setup token refresh every 24 hours to maintain notification capability
-    const tokenRefreshInterval = setInterval(async () => {
-      console.log("🔄 Refreshing FCM token...");
-      try {
-        const newToken = await getToken(messaging, {
-          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-        });
-        if (newToken && newToken !== token) {
-          console.log("✅ New FCM token generated, saving...");
-          await saveTokenToBackend(newToken);
-        }
-      } catch (err) {
-        console.error("❌ Error refreshing FCM token:", err);
-      }
-    }, 24 * 60 * 60 * 1000); // 24 hours
-
-    // Store interval ID for cleanup if needed
-    (window as any).__fcmTokenRefreshInterval = tokenRefreshInterval;
-
-    // 5. Setup foreground message handler
+    // ✅ Setup foreground message handler
     onMessage(messaging, (payload) => {
-      console.log("📬 Foreground FCM message received:", payload);
-      console.log("📋 Notification data:", {
-        title: payload.notification?.title,
-        body: payload.notification?.body,
-        chatId: payload.data?.chatId,
-      });
+      console.log("📬 [NOTIF] FOREGROUND message received:", payload);
 
       const notificationData = {
         title: payload.notification?.title || "TradeLynk",
-        body: payload.notification?.body || payload.data?.body || "New message",
+        body: payload.notification?.body || "New message",
         data: payload.data || {},
       };
 
-      // Call custom handler if provided (e.g., show toast)
-      if (onForegroundMessage) {
-        console.log("🔔 Calling custom foreground handler");
-        onForegroundMessage(notificationData);
-      } else {
-        // Default: show browser notification
-        try {
-          console.log("🔔 Attempting to show default browser notification...");
-          const notification = new Notification(notificationData.title, {
-            body: notificationData.body,
-            icon: "/favicon.ico",
-            badge: "/badge.png",
-            tag: notificationData.data?.chatId || "message",
-            requireInteraction: false,
-            data: notificationData.data,
-          });
-          console.log("✅ Browser notification shown successfully");
+      // ✅ Check if user is currently on the chat page for this message
+      const isOnChatPage = window.location.pathname.includes("/chat");
+      const currentChatId = new URLSearchParams(window.location.search).get(
+        "chatId"
+      );
+      const messageChatId = notificationData.data?.chatId;
+      const isOnSameChat = isOnChatPage && currentChatId === messageChatId;
 
-          // Handle notification click
-          notification.onclick = () => {
-            console.log("👆 Notification clicked in foreground");
-            if (notificationData.data?.chatId) {
-              window.location.href = `/chat?chatId=${notificationData.data.chatId}`;
-            }
-          };
-        } catch (err) {
-          console.error("❌ Failed to show notification:", err);
-          // Fallback: show in console
-          console.warn(
-            "⚠️ Notification suppressed but message received:",
-            notificationData
-          );
+      console.log("🔍 [NOTIF] User location check:", {
+        isOnChatPage,
+        currentChatId,
+        messageChatId,
+        isOnSameChat,
+      });
+
+      // ✅ Only show notification if NOT on the same chat
+      if (!isOnSameChat) {
+        console.log("🔔 [NOTIF] User not on same chat, showing notification");
+
+        // Show browser notification
+        if (registration && registration.active) {
+          console.log("🔔 [NOTIF] Showing foreground notification via SW");
+          registration
+            .showNotification(notificationData.title, {
+              body: notificationData.body,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              tag: notificationData.data?.chatId || "message",
+              requireInteraction: false,
+              silent: false,
+              data: notificationData.data,
+              timestamp: Date.now(),
+            })
+            .then(() => {
+              console.log("✅ [NOTIF] Foreground notification shown");
+            })
+            .catch((err) => {
+              console.error(
+                "❌ [NOTIF] Failed to show foreground notification:",
+                err
+              );
+            });
         }
+
+        // ✅ Also show in-app toast notification
+        window.postMessage(
+          {
+            type: "FOREGROUND_MESSAGE",
+            payload: {
+              title: notificationData.title,
+              body: notificationData.body,
+              chatId: notificationData.data?.chatId,
+            },
+          },
+          "*"
+        );
+      } else {
+        console.log(
+          "✅ [NOTIF] User is on the same chat, skipping notification"
+        );
+      }
+
+      // ✅ Always call custom handler if provided
+      if (onForegroundMessage) {
+        onForegroundMessage(notificationData);
       }
     });
 
-    // 6. Verify FCM is working by checking service worker
-    if ("serviceWorker" in navigator) {
-      try {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        console.log(
-          "📱 Service Worker registrations:",
-          registrations.length,
-          "active"
-        );
-        registrations.forEach((reg) => {
-          console.log("✅ Service Worker active at:", reg.scope);
-        });
-      } catch (err) {
-        console.error("Error checking service workers:", err);
-      }
-    }
-
-    console.log("✅ Foreground message handler setup complete");
+    console.log("✅ [NOTIF] All steps completed successfully");
     return token;
   } catch (error) {
-    console.error("❌ Error initializing notifications:", error);
+    console.error("❌ [NOTIF] Error:", error);
+    if (error instanceof Error) {
+      console.error("❌ [NOTIF] Error details:", error.message, error.stack);
+    }
     return null;
   }
 };
@@ -206,6 +231,7 @@ export const showNotificationToast = (
     z-index: 9999;
     cursor: pointer;
     max-width: 400px;
+    animation: slideIn 0.3s ease-out;
   `;
 
   toast.innerHTML = `
@@ -224,5 +250,27 @@ export const showNotificationToast = (
 
   // Auto-dismiss after 5 seconds
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 5000);
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.3s ease-out";
+    setTimeout(() => toast.remove(), 300);
+  }, 5000);
+};
+
+/**
+ * Check if notifications are enabled
+ */
+export const areNotificationsEnabled = (): boolean => {
+  return (
+    "Notification" in window &&
+    Notification.permission === "granted" &&
+    "serviceWorker" in navigator
+  );
+};
+
+/**
+ * Get current notification permission status
+ */
+export const getNotificationPermission = (): NotificationPermission => {
+  return "Notification" in window ? Notification.permission : "denied";
 };

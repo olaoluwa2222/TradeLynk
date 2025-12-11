@@ -411,10 +411,32 @@ export default function ItemDetailPage() {
 
             {/* CTA Buttons */}
             <div className="space-y-3">
+              {/* Buy Now Button */}
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    alert("Please login to purchase items");
+                    router.push(`/login?redirect=/items/${itemId}`);
+                    return;
+                  }
+                  // Redirect to checkout
+                  router.push(`/checkout?itemId=${itemId}`);
+                }}
+                className="w-full py-4 bg-black text-white font-bold rounded-lg hover:bg-gray-900 transition-colors flex items-center justify-center gap-2"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 700,
+                }}
+              >
+                🛒 Buy Now
+                <span>→</span>
+              </button>
+
+              {/* Chat with Seller Button */}
               <button
                 onClick={handleChatSeller}
                 disabled={chatLoading}
-                className="w-full py-4 bg-black text-white font-bold rounded-lg hover:bg-gray-900 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 border-2 border-black text-black font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{
                   fontFamily: "Clash Display",
                   fontWeight: 700,
@@ -422,24 +444,22 @@ export default function ItemDetailPage() {
               >
                 {chatLoading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                     Starting Chat...
                   </>
                 ) : (
-                  <>
-                    💬 Chat with Seller
-                    <span>→</span>
-                  </>
+                  <>💬 Chat with Seller</>
                 )}
               </button>
+
               <button
-                className="w-full py-4 border-2 border-black text-black font-bold rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors"
                 style={{
                   fontFamily: "Clash Display",
                   fontWeight: 700,
                 }}
               >
-                Report Item
+                ⚠️ Report Item
               </button>
             </div>
 

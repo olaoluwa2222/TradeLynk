@@ -445,7 +445,6 @@ export default function Home() {
           ) : trendingItems.length > 0 ? (
             // Trending Items Grid
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              // Find this section in page.tsx (around line 448-580)
               {trendingItems.map((item) => {
                 const isItemLiked =
                   item.likedByCurrentUser || likedItems.has(item.id);
@@ -460,7 +459,7 @@ export default function Home() {
                     {/* ✅ FIX 2: Remove outer Link, make the whole card clickable with onClick */}
                     <div
                       onClick={() => {
-                        window.location.href = `/item/${item.id}`;
+                        window.location.href = `/items/${item.id}`;
                       }}
                       className="cursor-pointer"
                     >
@@ -608,7 +607,7 @@ export default function Home() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation(); // ✅ Prevent card click
-                                window.location.href = `/item/${item.id}`;
+                                window.location.href = `/items/${item.id}`;
                               }}
                               className="ml-auto text-xs text-white font-bold hover:text-gray-200 transition-colors"
                               style={{

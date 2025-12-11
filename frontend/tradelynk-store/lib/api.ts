@@ -258,9 +258,44 @@ export const authApi = {
     return response.data;
   },
 
+  // Add this to your authApi object in lib/api.ts
+
   getCurrentUser: async () => {
     const response = await api.get("/users/me");
-    return response.data;
+    const apiResponse = response.data;
+
+    console.log("🔍 [API] Raw /users/me response:", apiResponse);
+
+    if (!apiResponse.success || !apiResponse.data) {
+      throw new Error("Failed to get user data");
+    }
+
+    const rawData = apiResponse.data;
+
+    // ✅ Backend returns "id" not "userId"
+    const userId = rawData.id;
+
+    if (!userId) {
+      console.error("❌ [API] No userId found in response:", rawData);
+      throw new Error("Invalid user data: missing userId");
+    }
+
+    const normalizedUser = {
+      userId: Number(userId), // ✅ Convert to number
+      email: rawData.email,
+      name: rawData.name,
+      role: rawData.role,
+      verified: rawData.isEmailVerified || false,
+      profilePictureUrl: rawData.profilePictureUrl,
+      isEmailVerified: rawData.isEmailVerified || false,
+    };
+
+    console.log("✅ [API] Normalized user:", {
+      userId: normalizedUser.userId,
+      userIdType: typeof normalizedUser.userId,
+    });
+
+    return normalizedUser;
   },
 };
 
@@ -342,6 +377,21 @@ export const itemsApi = {
     const response = await api.get(`/items/category/${category}`, {
       params: { page, size },
     });
+    return response.data;
+  },
+
+  // Create new item
+  createItem: async (data: {
+    title: string;
+    description: string;
+    category: string;
+    price: number;
+    condition: string;
+    quantity: number;
+    expiryDate?: string;
+    imageUrls?: string[];
+  }) => {
+    const response = await api.post("/items", data);
     return response.data;
   },
 };
@@ -482,6 +532,94 @@ export const chatsApi = {
     const response = await api.delete("/chats/device-token", {
       data: { deviceToken },
     });
+    return response.data;
+  },
+};
+
+export const paymentsApi = {
+  // Initialize payment for an item
+  initializePayment: async (data: {
+    itemId: number;
+    amount: number;
+    deliveryAddress: string;
+  }) => {
+    const response = await api.post("/payments/initialize", data);
+    return response.data;
+  },
+
+  // Verify payment status
+  verifyPayment: async (reference: string) => {
+    const response = await api.get(`/payments/verify/${reference}`);
+    return response.data;
+  },
+
+  // Get user's payment history
+  getMyPayments: async (page: number = 0, size: number = 10) => {
+    const response = await api.get("/payments/my-payments", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get seller's received payments
+  getSellerPayments: async (page: number = 0, size: number = 10) => {
+    const response = await api.get("/payments/seller/payments", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get payment details by ID
+  getPaymentById: async (paymentId: number) => {
+    const response = await api.get(`/payments/${paymentId}`);
+    return response.data;
+  },
+};
+
+export const ordersApi = {
+  // Create order (usually auto-created by webhook, but can be manual)
+  createOrder: async (data: { itemId: number; deliveryAddress: string }) => {
+    const response = await api.post("/orders", data);
+    return response.data;
+  },
+
+  // Get buyer's orders (purchases)
+  getMyPurchases: async (page: number = 0, size: number = 10) => {
+    const response = await api.get("/orders/my-purchases", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get seller's orders (sales)
+  getMySales: async (page: number = 0, size: number = 10) => {
+    const response = await api.get("/orders/my-sales", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get single order details
+  getOrderById: async (orderId: number) => {
+    const response = await api.get(`/orders/${orderId}`);
+    return response.data;
+  },
+
+  // Mark order as delivered (buyer only)
+  markAsDelivered: async (orderId: number) => {
+    const response = await api.put(`/orders/${orderId}/mark-delivered`);
+    return response.data;
+  },
+
+  // Cancel order (buyer or seller)
+  cancelOrder: async (orderId: number, reason: string) => {
+    const response = await api.put(`/orders/${orderId}/cancel`, { reason });
+    return response.data;
+  },
+
+  // Get order statistics (for dashboard)
+  getOrderStatistics: async () => {
+    const response = await api.get("/orders/statistics");
     return response.data;
   },
 };

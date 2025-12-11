@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import UnverifiedBanner from "@/components/UnverifiedBanner";
+import InAppNotifications from "@/components/InAppNotifications";
 
 export const metadata: Metadata = {
   title: "TradeLynk - Campus Marketplace",
@@ -20,6 +21,7 @@ export default function RootLayout({
         <AuthProvider>
           <Navbar />
           <UnverifiedBanner /> {/* ✅ NEW: Show banner if user is unverified */}
+          <InAppNotifications />
           <main>{children}</main>
         </AuthProvider>
       </body>

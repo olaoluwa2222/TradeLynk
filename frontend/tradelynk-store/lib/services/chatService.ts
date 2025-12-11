@@ -1,7 +1,8 @@
 import { chatsApi } from "@/lib/api";
 
 export interface Chat {
-  id: string;
+  id: string; // ✅ Primary field (normalized)
+  chatId?: string; // ✅ Optional (from backend)
   itemId: number;
   itemTitle: string;
   itemImageUrl?: string;
@@ -12,8 +13,8 @@ export interface Chat {
   createdAt: number;
   lastMessageAt: number;
   lastMessage: string;
-  unreadCount: number;
-  isFromCurrentUser: boolean;
+  unreadCount?: number;
+  isFromCurrentUser?: boolean;
 }
 
 export interface Message {
