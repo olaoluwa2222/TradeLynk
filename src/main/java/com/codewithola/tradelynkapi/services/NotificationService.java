@@ -1,11 +1,14 @@
 package com.codewithola.tradelynkapi.services;
 
 import com.codewithola.tradelynkapi.entity.DeviceToken;
+import com.codewithola.tradelynkapi.entity.User;
 import com.codewithola.tradelynkapi.exception.NotFoundException;
 import com.codewithola.tradelynkapi.repositories.DeviceTokenRepository;
+import com.codewithola.tradelynkapi.repositories.UserRepository;
 import com.google.firebase.messaging.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,11 @@ public class NotificationService {
 
     private final DeviceTokenRepository deviceTokenRepository;
     private final FirebaseMessaging firebaseMessaging;
+    private final UserRepository userRepository; // ✅ ADDED
+    private final EmailService emailService; // ✅ ADDED
+
+    @Value("${app.frontend.url:https://tradelynk.com}") // ✅ ADDED with default
+    private String frontendUrl;
 
     /**
      * Save FCM device token
@@ -101,7 +109,6 @@ public class NotificationService {
 
     /**
      * Send message notification to user
-     * ✅ FIXED: Corrected senderId parameter
      */
     public void sendMessageNotification(Long recipientId, Long actualSenderId, String senderName, String messageContent, String chatId) {
         log.info("Sending message notification to user: {} for chat: {}", recipientId, chatId);
@@ -127,9 +134,9 @@ public class NotificationService {
                                 .setBody(messageContent)
                                 .build())
                         .putData("type", "message")
-                        .putData("senderId", String.valueOf(actualSenderId)) // ✅ FIXED: Use actual sender's ID
+                        .putData("senderId", String.valueOf(actualSenderId))
                         .putData("senderName", senderName)
-                        .putData("chatId", chatId) // ✅ CRITICAL: Include chatId!
+                        .putData("chatId", chatId)
                         .build();
 
                 String response = firebaseMessaging.send(message);
@@ -226,5 +233,353 @@ public class NotificationService {
      */
     public long getActiveDeviceCount(Long userId) {
         return deviceTokenRepository.countByUserIdAndIsActiveTrue(userId);
+    }
+
+    /**
+     * ✅ UPDATED: Send notification to seller about a new order
+     * Now includes EMAIL notification
+     */
+    public void sendNewOrderNotification(Long sellerId, String itemTitle, Long amount) {
+        log.info("Sending new order notification to seller: {}", sellerId);
+
+        try {
+            // Fetch seller details
+            User seller = userRepository.findById(sellerId)
+                    .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+
+            if (tokens.isEmpty()) {
+                log.warn("No active device tokens found for seller: {}", sellerId);
+            } else {
+                String amountFormatted = String.format("₦%,d", amount);
+
+                for (DeviceToken token : tokens) {
+                    try {
+                        Message message = Message.builder()
+                                .setToken(token.getDeviceToken())
+                                .setNotification(Notification.builder()
+                                        .setTitle("🎉 New Order Received!")
+                                        .setBody("Order for '" + itemTitle + "' - " + amountFormatted)
+                                        .build())
+                                .putData("type", "new_order")
+                                .putData("itemTitle", itemTitle)
+                                .putData("amount", String.valueOf(amount))
+                                .build();
+
+                        String response = firebaseMessaging.send(message);
+                        log.info("Successfully sent new order push notification: {}", response);
+
+                        token.setLastUsedAt(LocalDateTime.now());
+                        deviceTokenRepository.save(token);
+
+                    } catch (FirebaseMessagingException e) {
+                        handleFirebaseError(token, e);
+                    }
+                }
+            }
+
+            // 2. ✅ NEW: Send email notification
+            String subject = "New Order Received - " + itemTitle;
+            String body = String.format("""
+                    Hello %s,
+                    
+                    Great news! You have received a new order on TradeLynk.
+                    
+                    📦 Item: %s
+                    💰 Amount: ₦%,d
+                    
+                    Please log in to your TradeLynk account to view the order details and arrange delivery with the buyer.
+                    
+                    Login here: %s/dashboard/sales
+                    
+                    Thank you for being a valued seller on our platform!
+                    
+                    Best regards,
+                    The TradeLynk Team
+                    """,
+                    seller.getFullName(),
+                    itemTitle,
+                    amount,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(seller.getEmail(), subject, body);
+            log.info("✅ Order email sent to seller: {}", seller.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send new order notification to seller {}", sellerId, e);
+            // Don't throw - we don't want order creation to fail if notification fails
+        }
+    }
+
+    /**
+     * ✅ UPDATED: Send notification to seller when buyer confirms delivery
+     * Now includes EMAIL notification
+     */
+    public void sendDeliveryConfirmationNotification(Long sellerId, String itemTitle) {
+        log.info("Sending delivery confirmation notification to seller: {}", sellerId);
+
+        try {
+            // Fetch seller details
+            User seller = userRepository.findById(sellerId)
+                    .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+
+            if (tokens.isEmpty()) {
+                log.warn("No active device tokens found for seller: {}", sellerId);
+            } else {
+                for (DeviceToken token : tokens) {
+                    try {
+                        Message message = Message.builder()
+                                .setToken(token.getDeviceToken())
+                                .setNotification(Notification.builder()
+                                        .setTitle("✅ Order Delivered!")
+                                        .setBody("Buyer confirmed delivery of '" + itemTitle + "'")
+                                        .build())
+                                .putData("type", "delivery_confirmed")
+                                .putData("itemTitle", itemTitle)
+                                .build();
+
+                        String response = firebaseMessaging.send(message);
+                        log.info("Successfully sent delivery confirmation push notification: {}", response);
+
+                        token.setLastUsedAt(LocalDateTime.now());
+                        deviceTokenRepository.save(token);
+
+                    } catch (FirebaseMessagingException e) {
+                        handleFirebaseError(token, e);
+                    }
+                }
+            }
+
+            // 2. ✅ NEW: Send email notification
+            String subject = "Order Delivered - " + itemTitle;
+            String body = String.format("""
+                    Hello %s,
+                    
+                    Good news! The buyer has confirmed delivery of your item.
+                    
+                    📦 Item: %s
+                    ✅ Status: Delivered
+                    
+                    The transaction is now complete. Your payment will be processed according to our settlement schedule.
+                    
+                    View your sales: %s/dashboard/sales
+                    
+                    Thank you for using TradeLynk!
+                    
+                    Best regards,
+                    The TradeLynk Team
+                    """,
+                    seller.getFullName(),
+                    itemTitle,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(seller.getEmail(), subject, body);
+            log.info("✅ Delivery confirmation email sent to seller: {}", seller.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send delivery confirmation to seller {}", sellerId, e);
+        }
+    }
+
+    /**
+     * ✅ UPDATED: Send notification about order cancellation
+     * Now includes EMAIL notification
+     */
+    public void sendOrderCancellationNotification(Long userId, String itemTitle, String reason) {
+        log.info("Sending order cancellation notification to user: {}", userId);
+
+        try {
+            // Fetch user details
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("User not found"));
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(userId);
+
+            if (tokens.isEmpty()) {
+                log.warn("No active device tokens found for user: {}", userId);
+            } else {
+                for (DeviceToken token : tokens) {
+                    try {
+                        Message message = Message.builder()
+                                .setToken(token.getDeviceToken())
+                                .setNotification(Notification.builder()
+                                        .setTitle("❌ Order Cancelled")
+                                        .setBody("Order for '" + itemTitle + "' was cancelled. Reason: " + reason)
+                                        .build())
+                                .putData("type", "order_cancelled")
+                                .putData("itemTitle", itemTitle)
+                                .putData("reason", reason)
+                                .build();
+
+                        String response = firebaseMessaging.send(message);
+                        log.info("Successfully sent order cancellation push notification: {}", response);
+
+                        token.setLastUsedAt(LocalDateTime.now());
+                        deviceTokenRepository.save(token);
+
+                    } catch (FirebaseMessagingException e) {
+                        handleFirebaseError(token, e);
+                    }
+                }
+            }
+
+            // 2. ✅ NEW: Send email notification
+            String subject = "Order Cancelled - " + itemTitle;
+            String body = String.format("""
+                    Hello %s,
+                    
+                    An order has been cancelled.
+                    
+                    📦 Item: %s
+                    ❌ Status: Cancelled
+                    📝 Reason: %s
+                    
+                    If this cancellation is unexpected or you have any questions, please contact our support team.
+                    
+                    View your orders: %s/dashboard
+                    
+                    Best regards,
+                    The TradeLynk Team
+                    """,
+                    user.getFullName(),
+                    itemTitle,
+                    reason,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(user.getEmail(), subject, body);
+            log.info("✅ Cancellation email sent to user: {}", user.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send cancellation notification to user {}", userId, e);
+        }
+    }
+
+    /**
+     * ✅ UPDATED: Send notification about auto-completion to both buyer and seller
+     * Now includes EMAIL notifications
+     */
+    public void sendAutoCompletionNotification(Long buyerId, Long sellerId, String itemTitle) {
+        log.info("Sending auto-completion notifications for item: {}", itemTitle);
+
+        try {
+            // Fetch buyer and seller details
+            User buyer = userRepository.findById(buyerId)
+                    .orElseThrow(() -> new NotFoundException("Buyer not found"));
+            User seller = userRepository.findById(sellerId)
+                    .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+            // ========== NOTIFY BUYER ==========
+            List<DeviceToken> buyerTokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(buyerId);
+            for (DeviceToken token : buyerTokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("📦 Order Auto-Completed")
+                                    .setBody("Your order for '" + itemTitle + "' has been automatically marked as delivered")
+                                    .build())
+                            .putData("type", "order_auto_completed")
+                            .putData("itemTitle", itemTitle)
+                            .putData("userRole", "buyer")
+                            .build();
+
+                    String response = firebaseMessaging.send(message);
+                    log.info("Successfully sent auto-completion push notification to buyer: {}", response);
+
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // ✅ NEW: Send email to buyer
+            String buyerSubject = "Order Auto-Completed - " + itemTitle;
+            String buyerBody = String.format("""
+                    Hello %s,
+                    
+                    Your order has been automatically marked as completed.
+                    
+                    📦 Item: %s
+                    ✅ Status: Delivered (Auto-completed after 48 hours)
+                    
+                    This order was automatically completed as we didn't receive a delivery confirmation within 48 hours. 
+                    If there are any issues with this order, please contact our support team immediately.
+                    
+                    View your orders: %s/dashboard/purchases
+                    
+                    Best regards,
+                    The TradeLynk Team
+                    """,
+                    buyer.getFullName(),
+                    itemTitle,
+                    frontendUrl
+            );
+            emailService.sendEmail(buyer.getEmail(), buyerSubject, buyerBody);
+            log.info("✅ Auto-completion email sent to buyer: {}", buyer.getEmail());
+
+            // ========== NOTIFY SELLER ==========
+            List<DeviceToken> sellerTokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+            for (DeviceToken token : sellerTokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("✅ Order Completed")
+                                    .setBody("Order for '" + itemTitle + "' has been automatically completed")
+                                    .build())
+                            .putData("type", "order_auto_completed")
+                            .putData("itemTitle", itemTitle)
+                            .putData("userRole", "seller")
+                            .build();
+
+                    String response = firebaseMessaging.send(message);
+                    log.info("Successfully sent auto-completion push notification to seller: {}", response);
+
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // ✅ NEW: Send email to seller
+            String sellerSubject = "Order Completed - " + itemTitle;
+            String sellerBody = String.format("""
+                    Hello %s,
+                    
+                    Your order has been automatically marked as completed.
+                    
+                    📦 Item: %s
+                    ✅ Status: Completed (Auto-completed after 48 hours)
+                    
+                    Your payment will be processed according to our settlement schedule.
+                    
+                    View your sales: %s/dashboard/sales
+                    
+                    Best regards,
+                    The TradeLynk Team
+                    """,
+                    seller.getFullName(),
+                    itemTitle,
+                    frontendUrl
+            );
+            emailService.sendEmail(seller.getEmail(), sellerSubject, sellerBody);
+            log.info("✅ Auto-completion email sent to seller: {}", seller.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send auto-completion notifications", e);
+        }
     }
 }

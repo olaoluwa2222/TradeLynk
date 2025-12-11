@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
 
@@ -47,7 +45,8 @@ public class CorsConfig {
                 "Cache-Control",
                 "Origin",
                 "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
+                "Access-Control-Request-Headers",
+                "ngrok-skip-browser-warning" // ✅ For ngrok warning bypass
         ));
 
         configuration.setExposedHeaders(Arrays.asList(
@@ -66,20 +65,4 @@ public class CorsConfig {
 
         return source;
     }
-
-//    @Bean
-//    public WebMvcConfigurer corsConfigurer() {
-//        return new WebMvcConfigurer() {
-//            @Override
-//            public void addCorsMappings(CorsRegistry registry) {
-//                registry.addMapping("/**")
-//                        .allowedOriginPatterns(allowedOrigins)
-//                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-//                        .allowedHeaders("*")
-//                        .exposedHeaders("Authorization", "X-Total-Count", "X-Page-Number", "Content-Disposition")
-//                        .allowCredentials(allowCredentials)
-//                        .maxAge(maxAge);
-//            }
-//        };
-//    }
 }

@@ -18,37 +18,44 @@ public class JwtAuthenticationFilter extends org.springframework.web.filter.Once
         this.userDetailsService = userDetailsService;
     }
 
+    /**
+     * Skip JWT authentication for webhook endpoints
+     */
+    @Override
+    protected boolean shouldNotFilter(jakarta.servlet.http.HttpServletRequest request) {
+        String path = request.getRequestURI();
+        // Handle both with and without context-path
+        boolean shouldSkip = path.contains("/payments/webhook");
+        if (shouldSkip) {
+            log.info("Skipping JWT filter for webhook: {}", path);
+        }
+        return shouldSkip;
+    }
+
     @Override
     protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest request,
                                     jakarta.servlet.http.HttpServletResponse response,
                                     jakarta.servlet.FilterChain filterChain)
             throws jakarta.servlet.ServletException, java.io.IOException {
         try {
-            // Extract JWT token from Authorization header
             String jwt = getJwtFromRequest(request);
 
-            // Validate token and set authentication
             if (jwt != null && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
 
-                // Load user details
                 org.springframework.security.core.userdetails.UserDetails userDetails =
                         userDetailsService.loadUserByUsername(username);
 
-                // Create authentication token
                 org.springframework.security.authentication.UsernamePasswordAuthenticationToken authentication =
                         new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new org.springframework.security.web.authentication.WebAuthenticationDetailsSource()
                         .buildDetails(request));
 
-                // Set authentication in security context
                 org.springframework.security.core.context.SecurityContextHolder
                         .getContext()
                         .setAuthentication(authentication);
 
-                // *** NEW: Set userId as request attribute for rate limiting ***
-                // This allows RateLimitingFilter to identify requests by user
                 request.setAttribute("userId", username);
 
                 log.debug("JWT validated for user: {}", username);
@@ -60,12 +67,6 @@ public class JwtAuthenticationFilter extends org.springframework.web.filter.Once
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Extract JWT token from Authorization header
-     * Expected format: "Bearer <token>"
-     * @param request HTTP request
-     * @return JWT token or null if not found
-     */
     private String getJwtFromRequest(jakarta.servlet.http.HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {

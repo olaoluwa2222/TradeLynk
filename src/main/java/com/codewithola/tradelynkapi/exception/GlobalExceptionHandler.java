@@ -356,4 +356,84 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    /**
+     * Handle Order Not Found Exception
+     * HTTP Status: 404 NOT FOUND
+     */
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOrderNotFoundException(
+            OrderNotFoundException ex, HttpServletRequest request) {
+        log.error("Order not found: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Order Not Found")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    /**
+     * Handle Order Access Denied Exception
+     * HTTP Status: 403 FORBIDDEN
+     */
+    @ExceptionHandler(OrderAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleOrderAccessDeniedException(
+            OrderAccessDeniedException ex, HttpServletRequest request) {
+        log.error("Order access denied: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Access Denied")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * Handle Order Already Delivered Exception
+     * HTTP Status: 400 BAD REQUEST
+     */
+    @ExceptionHandler(OrderAlreadyDeliveredException.class)
+    public ResponseEntity<ErrorResponse> handleOrderAlreadyDeliveredException(
+            OrderAlreadyDeliveredException ex, HttpServletRequest request) {
+        log.error("Order already delivered: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Order Already Delivered")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Handle Order Already Exists Exception
+     * HTTP Status: 409 CONFLICT
+     */
+    @ExceptionHandler(OrderAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleOrderAlreadyExistsException(
+            OrderAlreadyExistsException ex, HttpServletRequest request) {
+        log.error("Order already exists: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("Order Already Exists")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
 }

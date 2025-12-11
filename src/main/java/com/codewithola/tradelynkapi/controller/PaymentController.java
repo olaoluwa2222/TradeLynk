@@ -2,14 +2,20 @@ package com.codewithola.tradelynkapi.controller;
 
 
 import com.codewithola.tradelynkapi.dtos.requests.InitializePaymentRequest;
+import com.codewithola.tradelynkapi.dtos.requests.PaymentMetadata;
 import com.codewithola.tradelynkapi.dtos.response.InitializePaymentResponse;
+import com.codewithola.tradelynkapi.dtos.response.OrderDTO;
 import com.codewithola.tradelynkapi.dtos.response.PaystackVerifyResponse;
+import com.codewithola.tradelynkapi.entity.Order;
 import com.codewithola.tradelynkapi.entity.Payment;
+import com.codewithola.tradelynkapi.repositories.OrderRepository;
 import com.codewithola.tradelynkapi.repositories.PaymentRepository;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
+import com.codewithola.tradelynkapi.services.OrderService;
 import com.codewithola.tradelynkapi.services.PaystackService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/payments")
@@ -31,6 +38,8 @@ public class PaymentController {
     private final PaystackService paystackService;
     private final PaymentRepository paymentRepository;
     private final ObjectMapper objectMapper;
+    private final OrderService orderService; // Add this to constructor injection
+    private final OrderRepository orderRepository; // Add this to constructor injection
 
     /**
      * POST /api/payments/initialize
@@ -47,7 +56,8 @@ public class PaymentController {
         InitializePaymentResponse response = paystackService.initializePayment(
                 request.getItemId(),
                 userPrincipal.getId(),
-                request.getAmount()
+                request.getAmount(),
+                request.getDeliveryAddress() // ✅ NEW: Pass delivery address
         );
 
         Map<String, Object> result = new HashMap<>();
@@ -67,65 +77,152 @@ public class PaymentController {
      * Paystack webhook endpoint (called by Paystack after payment)
      * Public endpoint - no authentication
      */
+    /**
+     * FINAL WEBHOOK IMPLEMENTATION
+     * This version extracts deliveryAddress from payment metadata
+     */
+
     @PostMapping("/webhook")
     public ResponseEntity<String> paystackWebhook(
-            @RequestBody String payload,
-            @RequestHeader("x-paystack-signature") String signature) {
+            @RequestBody(required = false) String payload,
+            @RequestHeader(value = "x-paystack-signature", required = false) String signature,
+            HttpServletRequest request
+    ) {
+        log.info("========== PAYSTACK WEBHOOK RECEIVED ==========");
+        log.info("Request Method: {}", request.getMethod());
+        log.info("Request URI: {}", request.getRequestURI());
+        log.info("Remote Address: {}", request.getRemoteAddr());
 
-        log.info("POST /api/payments/webhook - Received Paystack webhook");
+        // Log ALL headers
+        log.info("========== HEADERS ==========");
+        request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
+            log.info("Header: {} = {}", headerName, request.getHeader(headerName));
+        });
 
-        // 1. Verify webhook signature (SECURITY)
-        boolean isValid = paystackService.verifyWebhookSignature(payload, signature);
-
-        if (!isValid) {
-            log.error("Invalid webhook signature. Rejecting webhook.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
+        log.info("========== SIGNATURE ==========");
+        if (signature != null) {
+            log.info("x-paystack-signature: {}", signature);
+        } else {
+            log.warn("No signature header found! Webhook will fail signature validation.");
         }
 
+        log.info("========== RAW PAYLOAD ==========");
+        if (payload == null || payload.isEmpty()) {
+            log.error("Webhook payload is NULL or EMPTY!");
+            return ResponseEntity.badRequest().body("No payload received");
+        }
+
+        log.info("Payload ({} bytes): {}", payload.length(), payload);
+
         try {
-            // 2. Parse webhook payload
+            // Parse webhook payload
             JsonNode jsonPayload = objectMapper.readTree(payload);
-            String event = jsonPayload.get("event").asText();
+            String event = jsonPayload.path("event").asText("unknown");
+            JsonNode data = jsonPayload.path("data");
+            String reference = data.path("reference").asText("unknown");
 
-            log.info("Webhook event: {}", event);
+            log.info("Event Type: {}", event);
+            log.info("Reference: {}", reference);
 
-            // 3. Handle different webhook events
+            // 1. VERIFY SIGNATURE
+            log.info("Verifying webhook signature...");
+            boolean isValid = paystackService.verifyWebhookSignature(payload, signature);
+
+            if (!isValid) {
+                log.error("❌ Invalid webhook signature — possible spoof or MITM attack");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
+            }
+            log.info("✔ Webhook signature verified");
+
+            // 2. PROCESS EVENT
             if ("charge.success".equals(event)) {
-                // Payment successful
-                JsonNode data = jsonPayload.get("data");
-                String reference = data.get("reference").asText();
-                String status = data.get("status").asText();
+                log.info("Processing charge.success event for reference {}", reference);
 
-                log.info("Payment successful. Reference: {}, Status: {}", reference, status);
+                // Verify with Paystack
+                log.info("Verifying payment via Paystack API...");
+                PaystackVerifyResponse verifyResponse = paystackService.verifyPayment(reference);
 
-                // 4. Verify payment with Paystack API (double-check)
-                paystackService.verifyPayment(reference);
+                if (!verifyResponse.getData().getStatus().equalsIgnoreCase("success")) {
+                    log.warn("❌ Paystack verification FAILED even though webhook said success!");
+                    return ResponseEntity.ok("Verification failed");
+                }
+                log.info("✔ Payment verified successfully via Paystack API");
 
-                // Note: verifyPayment() already updates database and decrements stock
-
-            } else if ("charge.failed".equals(event)) {
-                // Payment failed
-                JsonNode data = jsonPayload.get("data");
-                String reference = data.get("reference").asText();
-
-                log.warn("Payment failed. Reference: {}", reference);
-
-                // Update payment status to FAILED
+                // Fetch payment in DB
                 Payment payment = paymentRepository.findByPaystackReference(reference)
                         .orElse(null);
 
-                if (payment != null) {
-                    payment.markAsFailed();
-                    paymentRepository.save(payment);
+                if (payment == null) {
+                    log.error("❌ Payment not found in database for reference {}", reference);
+                    return ResponseEntity.ok("Payment not found");
+                }
+
+                log.info("✔ Payment found in database. ID: {}", payment.getId());
+
+                // Check if order already exists
+                Optional<Order> existingOrder = orderRepository.findByPaymentId(payment.getId());
+
+                if (existingOrder.isPresent()) {
+                    log.info("⚠ Order already exists for payment {}. Order ID: {}",
+                            payment.getId(), existingOrder.get().getId());
+                } else {
+                    try {
+                        // Extract delivery address
+                        String deliveryAddress = extractDeliveryAddressFromMetadata(data);
+                        log.info("Delivery address extracted: {}", deliveryAddress);
+
+                        // Create order
+                        log.info("Attempting to create order...");
+                        OrderDTO order = orderService.createOrder(
+                                payment.getItemId(),
+                                payment.getBuyerId(),
+                                payment.getSellerId(),
+                                payment.getId(),
+                                payment.getAmount(),
+                                deliveryAddress
+                        );
+
+                        log.info("✔ ORDER CREATED SUCCESSFULLY! Order ID: {}", order.getId());
+
+                    } catch (Exception e) {
+                        log.error("❌ Failed to create order for payment {}", payment.getId(), e);
+                    }
+                }
+
+            } else if ("charge.failed".equals(event)) {
+                log.warn("Charge FAILED for reference {}", reference);
+            }
+
+        } catch (Exception e) {
+            log.error("❌ ERROR PROCESSING WEBHOOK", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing webhook");
+        }
+
+        log.info("========== WEBHOOK PROCESSING COMPLETE ==========");
+        return ResponseEntity.ok("Webhook received");
+    }
+
+
+    /**
+     * Helper method to extract delivery address from Paystack webhook metadata
+     */
+    private String extractDeliveryAddressFromMetadata(JsonNode data) {
+        try {
+            // Check if metadata exists and contains delivery_address
+            if (data.has("metadata")) {
+                JsonNode metadata = data.get("metadata");
+
+                if (metadata.has("delivery_address")) {
+                    return metadata.get("delivery_address").asText();
                 }
             }
 
-            return ResponseEntity.ok("Webhook received");
+            // Default fallback
+            return "Campus Location (Not Specified)";
 
         } catch (Exception e) {
-            log.error("Error processing webhook", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error processing webhook");
+            log.error("Error extracting delivery address from metadata", e);
+            return "Campus Location (Not Specified)";
         }
     }
 
@@ -142,11 +239,64 @@ public class PaymentController {
 
         PaystackVerifyResponse verifyResponse = paystackService.verifyPayment(reference);
 
+        // ✅ Only create order if payment was successful AND order doesn't exist
+        if (verifyResponse.getData().getStatus().equalsIgnoreCase("success")) {
+
+            Payment payment = paymentRepository.findByPaystackReference(reference)
+                    .orElseThrow(() -> new RuntimeException("Payment not found"));
+
+            // CHECK if order already exists BEFORE calling createOrder
+            Optional<Order> existingOrder = orderRepository.findByPaymentId(payment.getId());
+
+            if (existingOrder.isEmpty()) {
+                // Order doesn't exist, create it
+                try {
+                    // Extract delivery address from metadata
+                    String deliveryAddress = extractDeliveryAddressFromVerifyResponse(verifyResponse);
+
+                    orderService.createOrder(
+                            payment.getItemId(),
+                            payment.getBuyerId(),
+                            payment.getSellerId(),
+                            payment.getId(),
+                            payment.getAmount(),
+                            deliveryAddress
+                    );
+                    log.info("✔ Order created via manual verify for payment {}", payment.getId());
+                } catch (Exception e) {
+                    log.error("Failed to create order during verify", e);
+                    // Don't fail the entire request
+                }
+            } else {
+                log.info("⚠ Order already exists for payment {}, skipping creation", payment.getId());
+            }
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", verifyResponse.getData());
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Helper method to extract delivery address from Paystack verify response
+     */
+    private String extractDeliveryAddressFromVerifyResponse(PaystackVerifyResponse verifyResponse) {
+        try {
+            PaymentMetadata metadata = verifyResponse.getData().getMetadata();
+
+            if (metadata != null && metadata.getDeliveryAddress() != null) {
+                return metadata.getDeliveryAddress();
+            }
+
+            // Default fallback
+            return "Campus Location (Not Specified)";
+
+        } catch (Exception e) {
+            log.error("Error extracting delivery address from verify response", e);
+            return "Campus Location (Not Specified)";
+        }
     }
 
     /**

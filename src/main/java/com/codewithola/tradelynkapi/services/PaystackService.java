@@ -100,8 +100,9 @@ public class PaystackService {
      * Creates a payment record and gets authorization URL from Paystack
      */
     @Transactional
-    public InitializePaymentResponse initializePayment(Long itemId, Long buyerId, Long amount) {
-        log.info("Initializing payment for item: {}, buyer: {}, amount: {}", itemId, buyerId, amount);
+    public InitializePaymentResponse initializePayment(Long itemId, Long buyerId, Long amount, String deliveryAddress) {
+        log.info("Initializing payment for item: {}, buyer: {}, amount: {}, delivery: {}",
+                itemId, buyerId, amount, deliveryAddress);
 
         // 1. Fetch item and validate
         Item item = itemRepository.findById(itemId)
@@ -119,21 +120,21 @@ public class PaystackService {
         User seller = userRepository.findById(item.getSeller().getId())
                 .orElseThrow(() -> new NotFoundException("Seller not found"));
 
-        // 4. Get seller's subaccount (if not exists, throw error)
-        // Note: Subaccount should be created during seller activation
+        // 4. Get seller's subaccount
         String subaccountCode = getSellerSubaccount(item.getSeller().getId());
 
         try {
-            // 5. Prepare Paystack initialize request
+            // 5. Prepare Paystack initialize request with deliveryAddress in metadata
             PaymentMetadata metadata = PaymentMetadata.builder()
                     .itemId(itemId)
                     .sellerId(item.getSeller().getId())
                     .buyerId(buyerId)
                     .itemTitle(item.getTitle())
+                    .deliveryAddress(deliveryAddress) // ✅ NEW: Include delivery address
                     .build();
 
             PaystackInitializeRequest request = PaystackInitializeRequest.builder()
-                    .amount(String.valueOf(amount)) // Amount in kobo
+                    .amount(String.valueOf(amount))
                     .email(buyer.getEmail())
                     .subaccount(subaccountCode)
                     .metadata(metadata)
@@ -191,10 +192,19 @@ public class PaystackService {
         }
     }
 
+
     /**
      * Verify a payment transaction
      * Checks with Paystack if payment was successful
      */
+    /**
+     * UPDATED verifyPayment() METHOD
+     * Replace your existing verifyPayment() in PaystackService.java with this
+     *
+     * KEY CHANGE: Removed item quantity decrement
+     * Reason: Quantity is now decremented in OrderService.createOrder()
+     */
+
     @Transactional
     public PaystackVerifyResponse verifyPayment(String reference) {
         log.info("Verifying payment with reference: {}", reference);
@@ -222,16 +232,13 @@ public class PaystackService {
                 if ("success".equalsIgnoreCase(status)) {
                     payment.markAsSuccess();
 
-                    // 4. Decrement item quantity
+                    // ❌ REMOVED: Item quantity decrement (moved to OrderService)
+                    // The webhook will create an order which handles quantity decrement
+
+                    // ✅ KEEP: Notify seller about payment
                     Item item = itemRepository.findById(payment.getItemId())
                             .orElseThrow(() -> new NotFoundException("Item not found"));
 
-                    if (item.getQuantity() > 0) {
-                        item.setQuantity(item.getQuantity() - 1);
-                        itemRepository.save(item);
-                    }
-
-                    // ✅ NEW: Notify seller about payment
                     notificationService.sendPaymentNotification(
                             payment.getSellerId(),
                             payment.getAmount(),
