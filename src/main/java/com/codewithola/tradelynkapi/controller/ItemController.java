@@ -10,6 +10,7 @@ import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.ItemFilterService;
 import com.codewithola.tradelynkapi.services.ItemService;
 import com.codewithola.tradelynkapi.services.SearchService;
+import com.codewithola.tradelynkapi.services.SellerProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class ItemController {
     private final ItemService itemService;
     private final ItemFilterService itemFilterService;
     private final SearchService searchService;
+    private final SellerProfileService sellerProfileService;
 
     // ========================================
     // CREATE
@@ -46,6 +48,20 @@ public class ItemController {
 
         log.info("POST /api/items - Creating item for user: {}", userPrincipal.getEmail());
 
+        // ✅ CHECK IF SELLER IS VERIFIED BEFORE CREATING ITEM
+        if (!sellerProfileService.isVerified(userPrincipal.getId())) {
+            log.warn("User {} attempted to create item without verification", userPrincipal.getId());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "You must be a verified seller to create items");
+            response.put("error", "SELLER_NOT_VERIFIED");
+            response.put("hint", "Please complete seller verification to start selling");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+
+        // If verified, proceed to create item
         ItemDTO createdItem = itemService.createItem(userPrincipal.getId(), request);
 
         Map<String, Object> response = new HashMap<>();

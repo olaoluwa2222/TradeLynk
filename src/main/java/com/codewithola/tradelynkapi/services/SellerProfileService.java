@@ -173,4 +173,17 @@ public class SellerProfileService {
             throw new ForbiddenException("You can only update your own seller profile");
         }
     }
+
+    /**
+     * ✅ Check if a user is a verified seller
+     * Returns false if seller profile doesn't exist or if verified is false
+     */
+    @Transactional(readOnly = true)
+    public boolean isVerified(Long userId) {
+        log.debug("Checking verification status for user ID: {}", userId);
+
+        return sellerProfileRepository.findByUserId(userId)
+                .map(SellerProfile::getVerified)
+                .orElse(false);
+    }
 }

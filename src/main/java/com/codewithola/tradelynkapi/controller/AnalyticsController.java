@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api")
 @RequiredArgsConstructor
 @Slf4j
 public class AnalyticsController {
@@ -43,7 +42,7 @@ public class AnalyticsController {
 
     /**
      * GET /api/items/{id}/analytics
-     * Get item-specific analytics (authenticated, item owner only)
+     * Get item-specific analytics (authenticated, item owner only for item owner)
      */
     @GetMapping("/items/{id}/analytics")
     public ResponseEntity<Map<String, Object>> getItemAnalytics(
