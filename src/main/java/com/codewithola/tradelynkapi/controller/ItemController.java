@@ -54,9 +54,9 @@ public class ItemController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "You must be a verified seller to create items");
+            response.put("message", "You must be a verified seller of tradelynk to be able to create items");
             response.put("error", "SELLER_NOT_VERIFIED");
-            response.put("hint", "Please complete seller verification to start selling");
+            response.put("hint", "Please complete seller verification or send a mail to start selling");
 
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }

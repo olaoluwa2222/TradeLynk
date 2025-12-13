@@ -4,6 +4,7 @@ package com.codewithola.tradelynkapi.controller;
 import com.cloudinary.Cloudinary;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.ImageService;
+import com.codewithola.tradelynkapi.services.SellerProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ public class ImageController {
 
     private final ImageService imageService;
     private final Cloudinary cloudinary;
+    private final SellerProfileService sellerProfileService;
 
 
     /**
@@ -35,6 +37,18 @@ public class ImageController {
     public ResponseEntity<Map<String, Object>> uploadImage(
             @RequestParam("image") MultipartFile file,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        // CHECK IF USER IS VERIFIED
+        if (!sellerProfileService.isVerified(userPrincipal.getId())) {
+            log.warn("Unverified user {} attempted to upload image", userPrincipal.getEmail());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "you must be a verified seller before you can uploading images");
+            response.put("error", "SELLER_NOT_VERIFIED");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
 
         log.info("POST /api/v1/images/upload - User: {} uploading image: {}",
                 userPrincipal.getEmail(), file.getOriginalFilename());
@@ -59,6 +73,18 @@ public class ImageController {
     public ResponseEntity<Map<String, Object>> uploadMultipleImages(
             @RequestParam("images") List<MultipartFile> files,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        // CHECK IF USER IS VERIFIED
+        if (!sellerProfileService.isVerified(userPrincipal.getId())) {
+            log.warn("Unverified user {} attempted to upload multiple images", userPrincipal.getEmail());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "you must be a verified seller before you can uploading images");
+            response.put("error", "SELLER_NOT_VERIFIED");
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
 
         log.info("POST /api/v1/images/upload-multiple - User: {} uploading {} images",
                 userPrincipal.getEmail(), files.size());
