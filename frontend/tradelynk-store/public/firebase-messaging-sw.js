@@ -52,8 +52,8 @@ messaging.onBackgroundMessage((payload) => {
     notificationOptions
   );
 
-  // ✅ Notify all open tabs about the new message
-  self.clients
+  // ✅ Broadcast to all open tabs about the new message
+  const broadcastPromise = self.clients
     .matchAll({ type: "window", includeUncontrolled: true })
     .then((clients) => {
       console.log("📢 [SW] Broadcasting to", clients.length, "client(s)");
@@ -65,10 +65,14 @@ messaging.onBackgroundMessage((payload) => {
           chatId: chatId,
         });
       });
+    })
+    .catch((error) => {
+      console.error("❌ [SW] Failed to broadcast message:", error);
+      // Don't throw - allow notification to continue
     });
 
-  // ✅ CRITICAL: Return the promise to keep service worker alive
-  return self.registration
+  // ✅ Show notification
+  const notificationPromise = self.registration
     .showNotification(notificationTitle, notificationOptions)
     .then(() => {
       console.log("✅ [SW] Notification shown successfully");
@@ -81,6 +85,16 @@ messaging.onBackgroundMessage((payload) => {
         icon: "/favicon.ico",
         tag: "fallback",
       });
+    });
+
+  // ✅ CRITICAL: Return combined promise to keep service worker alive
+  return Promise.all([broadcastPromise, notificationPromise])
+    .then(() => {
+      console.log("✅ [SW] Both broadcast and notification completed");
+    })
+    .catch((error) => {
+      console.error("❌ [SW] Error in message handling:", error);
+      // Even if one fails, we tried our best
     });
 });
 
@@ -128,7 +142,7 @@ self.addEventListener("notificationclick", (event) => {
         if (clientList.length > 0) {
           console.log("🔍 [SW] Found existing window, navigating");
           return clientList[0].focus().then(() => {
-            clientList[0].navigate(urlToOpen);
+            return clientList[0].navigate(urlToOpen);
           });
         }
 

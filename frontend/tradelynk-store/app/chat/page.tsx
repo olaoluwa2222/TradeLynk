@@ -123,7 +123,7 @@ export default function ChatPage() {
     };
 
     initializeChats();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, searchParams, selectedChatId]);
 
   // Handle URL changes
   useEffect(() => {
@@ -132,7 +132,7 @@ export default function ChatPage() {
       console.log("🔄 URL changed, updating selected chat:", chatIdParam);
       setSelectedChatId(chatIdParam);
     }
-  }, [searchParams]);
+  }, [searchParams, selectedChatId]);
 
   // Refetch if chat not found
   useEffect(() => {

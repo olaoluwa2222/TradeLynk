@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { itemsApi } from "@/lib/api";
 import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,6 +38,7 @@ export default function ItemDetailPage() {
   const [error, setError] = useState("");
   const [isLiked, setIsLiked] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -77,6 +79,47 @@ export default function ItemDetailPage() {
       }
     } catch (err) {
       console.error("Error toggling like:", err);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to report an item");
+      router.push("/login");
+      return;
+    }
+
+    // Confirm before reporting
+    const confirmed = confirm(
+      "Are you sure you want to report this item? This action will notify our moderation team."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setReportLoading(true);
+      // Call report API endpoint
+      await itemsApi.reportItem(Number(itemId));
+      toast.success("Item reported successfully. Our team will review it.", {
+        duration: 5000,
+        style: {
+          background: "#0F172A",
+          color: "#FFFFFF",
+          border: "1px solid #10B981",
+        },
+      });
+    } catch (err: any) {
+      console.error("Error reporting item:", err);
+      toast.error(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to report item. Please try again.",
+        {
+          duration: 4000,
+        }
+      );
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -453,13 +496,22 @@ export default function ItemDetailPage() {
               </button>
 
               <button
-                className="w-full py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+                onClick={handleReport}
+                disabled={reportLoading}
+                className="w-full py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{
                   fontFamily: "Clash Display",
                   fontWeight: 700,
                 }}
               >
-                ⚠️ Report Item
+                {reportLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-gray-700 border-t-transparent rounded-full animate-spin"></div>
+                    Reporting...
+                  </>
+                ) : (
+                  <>⚠️ Report Item</>
+                )}
               </button>
             </div>
 

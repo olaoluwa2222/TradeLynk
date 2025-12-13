@@ -1,33 +1,64 @@
-// app/create-item/page.tsx - Alternative with manual auth check
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CreateItemForm } from "@/components/items/CreateItemForm";
-import { tokenStorage } from "@/lib/api";
+import { tokenStorage, authApi } from "@/lib/api";
 
 export default function CreateItemPage() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    // Check if user has access token
-    const checkAuth = () => {
-      const token = tokenStorage.getAccessToken();
+    // Track mounted state
+    isMountedRef.current = true;
 
-      if (!token) {
-        // No token, redirect to login
-        router.push("/login");
-        return;
+    // Check if user has valid access token
+    const checkAuth = async () => {
+      try {
+        // Try to get token
+        const token = tokenStorage.getAccessToken();
+
+        if (!token) {
+          // No token, redirect to login and stop
+          router.push("/login");
+          return;
+        }
+
+        // Validate token with backend
+        const userData = await authApi.getCurrentUser();
+
+        // Only update state if still mounted
+        if (isMountedRef.current) {
+          if (userData) {
+            setIsAuthorized(true);
+          } else {
+            // Invalid user data, redirect to login
+            router.push("/login");
+          }
+        }
+      } catch (error) {
+        console.error("❌ Auth validation failed:", error);
+        // Token is invalid or expired, redirect to login
+        if (isMountedRef.current) {
+          router.push("/login");
+        }
+      } finally {
+        // Only update if still mounted
+        if (isMountedRef.current) {
+          setIsChecking(false);
+        }
       }
-
-      // Token exists, user is authenticated
-      setIsAuthorized(true);
-      setIsChecking(false);
     };
 
     checkAuth();
+
+    // Cleanup function
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [router]);
 
   // Show loading state while checking

@@ -183,6 +183,13 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
     }
   }, [chatId]);
 
+  // ✅ Reset refs only when chatId changes (not on reconnection)
+  useEffect(() => {
+    console.log("🔄 [useChat] ChatId changed, resetting refs for:", chatId);
+    hasLoadedInitialRef.current = false;
+    lastMessageTimestampRef.current = 0;
+  }, [chatId]);
+
   // Setup real-time listener for new messages
   useEffect(() => {
     if (!chatId) {
@@ -194,21 +201,43 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
     console.log("🔧 [useChat] Current userId:", currentUserId);
     console.log("🔌 [useChat] Firebase connected:", isConnected);
 
-    // Reset refs when chatId changes
-    hasLoadedInitialRef.current = false;
-    lastMessageTimestampRef.current = 0;
-
-    // Load initial messages
+    // Load initial messages (only if not already loaded)
     loadMessages();
 
-    // ✅ Wait for Firebase connection AND initial load
-    const setupListener = setTimeout(() => {
-      if (!isConnected) {
+    // ✅ Wait for Firebase connection AND initial load with proper readiness check
+    let cancelled = false;
+    const waitForReady = async () => {
+      console.log("⏳ [useChat] Waiting for readiness...");
+
+      // Poll until both conditions are met or component unmounts
+      const checkReady = () => {
+        return isConnected && hasLoadedInitialRef.current;
+      };
+
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait (50 * 100ms)
+
+      while (!checkReady() && !cancelled && attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        attempts++;
+      }
+
+      if (cancelled) {
+        console.log("❌ [useChat] Setup cancelled before ready");
+        return;
+      }
+
+      if (!checkReady()) {
         console.warn(
-          "⚠️ [useChat] Cannot setup listener - Firebase not connected"
+          "⚠️ [useChat] Timeout waiting for readiness. Connected:",
+          isConnected,
+          "Loaded:",
+          hasLoadedInitialRef.current
         );
         return;
       }
+
+      console.log("✅ [useChat] Ready to setup listener");
 
       const messagesRef = ref(database, `chats/${chatId}/messages`);
       const firebasePath = `chats/${chatId}/messages`;
@@ -355,15 +384,16 @@ export const useChat = (chatId: string | null, currentUserId: number) => {
       // Mark chat as read
       console.log("📖 [useChat] Marking chat as read:", chatId);
       markChatAsRead(chatId);
-    }, 1000); // ✅ Wait 1 second for API load + connection
+    };
+
+    // Start async wait
+    waitForReady();
 
     return () => {
-      clearTimeout(setupListener);
+      cancelled = true;
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
-      hasLoadedInitialRef.current = false;
-      lastMessageTimestampRef.current = 0;
     };
   }, [chatId, loadMessages, currentUserId, isConnected]); // ✅ Re-run when connection changes
 

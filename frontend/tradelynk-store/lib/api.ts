@@ -394,6 +394,12 @@ export const itemsApi = {
     const response = await api.post("/items", data);
     return response.data;
   },
+
+  // Report an item
+  reportItem: async (itemId: number) => {
+    const response = await api.post(`/items/${itemId}/report`);
+    return response.data;
+  },
 };
 
 // Sellers API methods
