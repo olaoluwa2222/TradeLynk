@@ -148,7 +148,6 @@ export const initializeNotifications = async (
               requireInteraction: false,
               silent: false,
               data: notificationData.data,
-              timestamp: Date.now(),
             })
             .then(() => {
               console.log("✅ [NOTIF] Foreground notification shown");

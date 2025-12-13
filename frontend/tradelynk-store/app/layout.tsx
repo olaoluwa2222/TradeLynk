@@ -4,6 +4,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import UnverifiedBanner from "@/components/UnverifiedBanner";
 import InAppNotifications from "@/components/InAppNotifications";
+import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
   title: "TradeLynk - Campus Marketplace",
@@ -22,6 +23,7 @@ export default function RootLayout({
           <Navbar />
           <UnverifiedBanner /> {/* ✅ NEW: Show banner if user is unverified */}
           <InAppNotifications />
+          <Toaster position="top-center" />
           <main>{children}</main>
         </AuthProvider>
       </body>

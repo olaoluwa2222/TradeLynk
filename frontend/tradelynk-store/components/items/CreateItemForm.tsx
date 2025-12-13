@@ -15,7 +15,7 @@ import { StepIndicator } from "./StepIndicator";
 import { BasicInfoStep } from "./steps/BasicInfoStep";
 import { DetailsStep } from "./steps/DetailsStep"; // Updated version
 import { ReviewStep } from "./steps/ReviewStep";
-import { itemsApi, chatsApi } from "@/lib/api";
+import { itemsApi, imagesApi } from "@/lib/api";
 
 interface FormErrors {
   title?: string;
@@ -45,8 +45,8 @@ const checkProhibitedKeywords = (text: string): string[] => {
   return PROHIBITED_KEYWORDS.filter((keyword) => lowerText.includes(keyword));
 };
 
-const priceToKobo = (naira: string): number => {
-  return Math.round(parseFloat(naira) * 100);
+const parsePrice = (price: string): number => {
+  return Math.round(parseFloat(price));
 };
 
 export const CreateItemForm: React.FC = () => {
@@ -146,11 +146,10 @@ export const CreateItemForm: React.FC = () => {
       setUploadProgress(`Uploading image ${i + 1} of ${files.length}...`);
 
       try {
-        const response = await chatsApi.uploadImage(file);
+        const response = await imagesApi.uploadImage(file);
 
-        // ✅ FIXED: Check for both possible response structures
-        const imageUrl =
-          response.data?.url || response.imageUrl || response.data?.imageUrl;
+        // Response structure: { success: true, message: "...", data: { url, publicId } }
+        const imageUrl = response.data?.url;
 
         if (imageUrl) {
           uploadedUrls.push(imageUrl);
@@ -159,8 +158,16 @@ export const CreateItemForm: React.FC = () => {
           console.error(`❌ No URL in response for image ${i + 1}:`, response);
           throw new Error(`No URL returned for image: ${file.name}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`❌ Failed to upload image ${i + 1}:`, error);
+
+        // Check if error is due to unverified seller
+        if (error.response?.data?.error === "SELLER_NOT_VERIFIED") {
+          const verificationError: any = new Error("SELLER_NOT_VERIFIED");
+          verificationError.response = error.response;
+          throw verificationError;
+        }
+
         throw new Error(`Failed to upload image: ${file.name}`);
       }
     }
@@ -214,9 +221,76 @@ export const CreateItemForm: React.FC = () => {
             id: "upload",
           });
           console.log("✅ All images uploaded successfully:", imageUrls);
-        } catch (uploadError) {
+        } catch (uploadError: any) {
           console.error("❌ Image upload failed:", uploadError);
+
+          // Check if it's a verification error
+          const isVerificationError =
+            uploadError?.message === "SELLER_NOT_VERIFIED" ||
+            uploadError?.response?.data?.error === "SELLER_NOT_VERIFIED";
+
+          console.log("🔍 Upload error verification check:", {
+            isVerificationError,
+            message: uploadError?.message,
+            status: uploadError?.response?.status,
+            errorCode: uploadError?.response?.data?.error,
+            responseData: uploadError?.response?.data,
+          });
+
+          if (isVerificationError) {
+            toast.dismiss("upload");
+
+            const errorMessage =
+              uploadError.response?.data?.message ||
+              "You must be a verified seller before you can upload images";
+            const hint =
+              uploadError.response?.data?.hint ||
+              "Please complete seller verification or send a mail to start selling";
+
+            // Single compact popup
+            toast.error(
+              () => (
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/20 flex-shrink-0">
+                    <span className="text-lg">🚫</span>
+                  </div>
+                  <div className="flex-1 pt-0.5">
+                    <p className="font-semibold text-white text-sm mb-1">
+                      Verification Required
+                    </p>
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      {errorMessage.replace(
+                        "uploading images",
+                        "upload images"
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                      💡 {hint}
+                    </p>
+                  </div>
+                </div>
+              ),
+              {
+                duration: 7000,
+                style: {
+                  maxWidth: "380px",
+                  background: "#0F172A",
+                  color: "#FFFFFF",
+                  border: "1px solid #EF4444",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
+                },
+              }
+            );
+
+            // Don't continue with item creation
+            return;
+          }
+
+          // Non-verification upload error
           toast.error("Failed to upload images", { id: "upload" });
+
           throw uploadError;
         }
       }
@@ -227,7 +301,7 @@ export const CreateItemForm: React.FC = () => {
         title: title.trim(),
         description: description.trim(),
         category,
-        price: priceToKobo(price),
+        price: parsePrice(price),
         condition,
         quantity: parseInt(quantity),
         ...(category === "FOOD" && expiryDate ? { expiryDate } : {}),
@@ -251,6 +325,15 @@ export const CreateItemForm: React.FC = () => {
           console.log("✅ itemsApi response:", response);
         } catch (apiError: any) {
           console.error("❌ itemsApi.createItem failed:", apiError);
+
+          // Check for verification error
+          if (
+            apiError.response?.data?.error === "SELLER_NOT_VERIFIED" ||
+            apiError.response?.status === 403
+          ) {
+            throw apiError; // Re-throw to be caught by outer catch
+          }
+
           console.log("🔄 Falling back to direct fetch...");
 
           // Fallback to direct fetch
@@ -270,7 +353,21 @@ export const CreateItemForm: React.FC = () => {
           );
 
           if (!fetchResponse.ok) {
-            const errorText = await fetchResponse.text();
+            const errorData = await fetchResponse.json().catch(() => null);
+
+            // Check for verification error in fetch response
+            if (
+              fetchResponse.status === 403 &&
+              errorData?.error === "SELLER_NOT_VERIFIED"
+            ) {
+              const verificationError: any = new Error("SELLER_NOT_VERIFIED");
+              verificationError.response = { data: errorData, status: 403 };
+              throw verificationError;
+            }
+
+            const errorText = errorData
+              ? JSON.stringify(errorData)
+              : await fetchResponse.text();
             console.error("❌ Fetch response error:", errorText);
             throw new Error(
               `API Error: ${fetchResponse.status} - ${errorText}`
@@ -304,7 +401,21 @@ export const CreateItemForm: React.FC = () => {
         );
 
         if (!fetchResponse.ok) {
-          const errorText = await fetchResponse.text();
+          const errorData = await fetchResponse.json().catch(() => null);
+
+          // Check for verification error
+          if (
+            fetchResponse.status === 403 &&
+            errorData?.error === "SELLER_NOT_VERIFIED"
+          ) {
+            const verificationError: any = new Error("SELLER_NOT_VERIFIED");
+            verificationError.response = { data: errorData, status: 403 };
+            throw verificationError;
+          }
+
+          const errorText = errorData
+            ? JSON.stringify(errorData)
+            : await fetchResponse.text();
           console.error("❌ Response body:", errorText);
           throw new Error(`HTTP ${fetchResponse.status}: ${errorText}`);
         }
@@ -346,7 +457,35 @@ export const CreateItemForm: React.FC = () => {
         stack: error.stack,
       });
 
-      toast.error(error.message || "Unable to create item. Please try again.");
+      // Check if error is due to unverified seller
+      const isVerificationError =
+        error.message === "SELLER_NOT_VERIFIED" ||
+        error.response?.data?.error === "SELLER_NOT_VERIFIED" ||
+        error.response?.status === 403;
+
+      if (isVerificationError) {
+        // Show verification error popup
+        const errorMessage =
+          error.response?.data?.message ||
+          "You must be a verified seller of Tradelynk to create items";
+        const hint =
+          error.response?.data?.hint ||
+          "Please complete seller verification or send a mail to start selling";
+
+        toast.error(`${errorMessage}\n${hint}`, {
+          duration: 6000,
+          style: {
+            minWidth: "350px",
+            background: "#0C0A09",
+            color: "#FFFFFF",
+            border: "1px solid #4B5563",
+          },
+        });
+      } else {
+        toast.error(
+          error.message || "Unable to create item. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
       setUploadProgress("");

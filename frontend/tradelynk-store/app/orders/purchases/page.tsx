@@ -24,7 +24,7 @@ interface Order {
     price: number;
     category: string;
     condition: string;
-    imageUrls: string;
+    imageUrls: string | string[];
   };
   buyer: {
     id: number;
@@ -267,11 +267,11 @@ export default function MyOrdersPage() {
                     Array.isArray(urls) && urls.length > 0
                       ? urls[0]
                       : "/placeholder.jpg";
-                } else if (
-                  Array.isArray(order.item.imageUrls) &&
-                  order.item.imageUrls.length > 0
-                ) {
-                  imageUrl = order.item.imageUrls[0];
+                } else if (Array.isArray(order.item.imageUrls)) {
+                  imageUrl =
+                    order.item.imageUrls.length > 0
+                      ? order.item.imageUrls[0]
+                      : "/placeholder.jpg";
                 }
               } catch (e) {
                 console.error("Error parsing image URLs:", e);

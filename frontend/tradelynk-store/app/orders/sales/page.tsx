@@ -356,11 +356,6 @@ export default function MySalesPage() {
                     Array.isArray(urls) && urls.length > 0
                       ? urls[0]
                       : "/placeholder.jpg";
-                } else if (
-                  Array.isArray(sale.item.imageUrls) &&
-                  sale.item.imageUrls.length > 0
-                ) {
-                  imageUrl = sale.item.imageUrls[0];
                 }
               } catch (e) {
                 console.error("Error parsing image URLs:", e);

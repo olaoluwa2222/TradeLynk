@@ -632,4 +632,53 @@ export const analyticsApi = {
   },
 };
 
+// Images API - Upload and manage images
+export const imagesApi = {
+  // Upload single image
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await api.post("/images/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  // Upload multiple images (max 5)
+  uploadMultipleImages: async (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("images", file));
+    const response = await api.post("/images/upload-multiple", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
+  // Delete single image
+  deleteImage: async (publicId: string) => {
+    const response = await api.delete("/images", {
+      params: { publicId },
+    });
+    return response.data;
+  },
+
+  // Delete multiple images
+  deleteMultipleImages: async (publicIds: string[]) => {
+    const response = await api.delete("/images/multiple", {
+      data: { publicIds },
+    });
+    return response.data;
+  },
+
+  // Extract public ID from Cloudinary URL
+  extractPublicId: async (url: string) => {
+    const response = await api.post("/images/extract-public-id", { url });
+    return response.data;
+  },
+};
+
 export default api;

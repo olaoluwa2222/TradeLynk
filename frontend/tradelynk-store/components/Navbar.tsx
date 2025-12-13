@@ -39,13 +39,18 @@ export default function Navbar() {
       try {
         setNotificationsLoading(true);
 
-        // Fetch unread messages count
-        const messagesResponse = await chatsApi.getChats();
-        if (messagesResponse.success && Array.isArray(messagesResponse.data)) {
-          const unreadCount = messagesResponse.data.filter(
-            (chat: any) => (chat.unreadCount || 0) > 0
-          ).length;
-          setUnreadMessages(unreadCount);
+        // Fetch unread messages count using dedicated endpoint
+        try {
+          const unreadResponse = await chatsApi.getUnreadCount();
+          console.log("📧 Unread count response:", unreadResponse);
+          if (unreadResponse.success) {
+            // The endpoint returns { success: true, unreadCount: X }
+            const totalUnread = unreadResponse.unreadCount || 0;
+            console.log("📧 Total unread messages:", totalUnread);
+            setUnreadMessages(totalUnread);
+          }
+        } catch (err) {
+          console.error("❌ Error fetching unread count:", err);
         }
 
         // Fetch pending orders count
@@ -64,8 +69,8 @@ export default function Navbar() {
     };
 
     fetchNotifications();
-    // Poll for new messages every 5 seconds for real-time feel
-    const interval = setInterval(fetchNotifications, 5000);
+    // Poll for new messages every 60 seconds to minimize backend load
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
@@ -159,7 +164,7 @@ export default function Navbar() {
                 fontWeight: 600,
               }}
             >
-              Campus
+              Tradelynk
             </span>
           </Link>
 
@@ -275,7 +280,7 @@ export default function Navbar() {
                   />
                 </svg>
                 {unreadMessages > 0 && (
-                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full scale-100 hover:scale-110 transition-transform">
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-black text-white text-xs font-bold rounded-full scale-100 hover:scale-110 transition-transform shadow-sm">
                     {unreadMessages > 9 ? "9+" : unreadMessages}
                   </span>
                 )}
@@ -303,7 +308,7 @@ export default function Navbar() {
                   />
                 </svg>
                 {pendingOrders > 0 && (
-                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-orange-500 text-white text-xs font-bold rounded-full scale-100 hover:scale-110 transition-transform">
+                  <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-gray-700 text-white text-xs font-bold rounded-full scale-100 hover:scale-110 transition-transform shadow-sm">
                     {pendingOrders > 9 ? "9+" : pendingOrders}
                   </span>
                 )}

@@ -169,7 +169,7 @@ export default function ChatList({
               <div className="flex items-center justify-between mb-1.5">
                 <span
                   className={`text-sm font-bold text-gray-900 truncate ${
-                    chat.unreadCount > 0 ? "text-black" : ""
+                    (chat.unreadCount ?? 0) > 0 ? "text-black" : ""
                   }`}
                 >
                   {chat.buyerName === chat.sellerName
@@ -196,10 +196,10 @@ export default function ChatList({
             </div>
 
             {/* Unread Badge */}
-            {chat.unreadCount > 0 && (
+            {(chat.unreadCount ?? 0) > 0 && (
               <div className="shrink-0">
                 <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-bold leading-none text-white bg-black rounded-full shadow-md">
-                  {chat.unreadCount > 9 ? "9+" : chat.unreadCount}
+                  {(chat.unreadCount ?? 0) > 9 ? "9+" : chat.unreadCount}
                 </span>
               </div>
             )}
