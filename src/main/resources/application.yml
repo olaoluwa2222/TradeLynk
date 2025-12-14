@@ -151,7 +151,7 @@ logging:
 
 # PHASE 1: Postman Testing Only (Current Stage)
 cors:
-  allowed-origins: http://localhost:3000,http://192.168.137.1:3000,http://localhost:8080,https://diego-kingston-existed-real.trycloudflare.com,https://bacterial-searches-warrior-measured.trycloudflare.com
+  allowed-origins: http://localhost:3000,http://192.168.137.1:3000,http://localhost:8080,https://tradelynk-api-t598w.ondigitalocean.app
   allow-credentials: true
   max-age: 3600
 
