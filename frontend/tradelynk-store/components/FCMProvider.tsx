@@ -4,18 +4,25 @@
 import { useEffect, useState } from "react";
 import { initializeFCM, cleanupFCM } from "@/lib/services/fcmService";
 import { useAuth } from "@/hooks/useAuth";
+import { tokenStorage } from "@/lib/api";
 
 export default function FCMProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [fcmInitialized, setFcmInitialized] = useState(false);
 
   useEffect(() => {
     // Only run on client-side and when user is logged in
-    if (typeof window === "undefined" || !user || !token) {
+    if (typeof window === "undefined" || !user) {
+      return;
+    }
+
+    // Get token from storage
+    const token = tokenStorage.getAccessToken();
+    if (!token) {
       return;
     }
 
@@ -66,7 +73,7 @@ export default function FCMProvider({
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [user, token, fcmInitialized]);
+  }, [user, fcmInitialized]);
 
   // Cleanup on logout
   useEffect(() => {

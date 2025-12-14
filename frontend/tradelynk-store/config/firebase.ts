@@ -20,12 +20,16 @@ const firebaseConfig = {
 
 let app;
 let database: Database;
-let messaging: Messaging;
+let messaging: Messaging | undefined;
 
 try {
   app = initializeApp(firebaseConfig);
   database = getDatabase(app);
-  messaging = getMessaging(app);
+
+  // Only initialize messaging on client-side (browser)
+  if (typeof window !== "undefined") {
+    messaging = getMessaging(app);
+  }
 } catch (error) {
   console.error("Firebase initialization error:", error);
 }

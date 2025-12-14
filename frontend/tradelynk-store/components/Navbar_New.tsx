@@ -91,17 +91,16 @@ export default function Navbar() {
 
       try {
         setIsLoadingSuggestions(true);
-        const response = await itemsApi.searchItems(searchQuery, 0, 5);
-        const items = response.data;
+        const data = await itemsApi.getSearchSuggestions(searchQuery.trim());
 
-        if (items) {
-          const names = items.map(
-            (item: any) => item.name || item.title
-          ) as string[];
-          setSuggestions(names);
+        if (data.success && Array.isArray(data.suggestions)) {
+          setSuggestions(data.suggestions as string[]);
+        } else {
+          setSuggestions([]);
         }
       } catch (error) {
         console.error("Error fetching suggestions:", error);
+        setSuggestions([]);
       } finally {
         setIsLoadingSuggestions(false);
       }
@@ -200,9 +199,9 @@ export default function Navbar() {
                 {/* Suggestions Dropdown */}
                 {showSuggestions &&
                   (suggestions.length > 0 || isLoadingSuggestions) && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto">
                       {isLoadingSuggestions ? (
-                        <div className="px-4 py-3 text-center text-sm text-gray-500">
+                        <div className="px-4 py-3 text-center text-sm text-gray-600">
                           Loading...
                         </div>
                       ) : suggestions.length > 0 ? (
@@ -220,7 +219,7 @@ export default function Navbar() {
                                     )}`
                                   );
                                 }}
-                                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 flex items-center gap-2 text-sm"
+                                className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 flex items-start gap-3 text-sm"
                                 style={{
                                   fontFamily: "Clash Display",
                                   fontWeight: 400,
@@ -239,7 +238,14 @@ export default function Navbar() {
                                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                                   />
                                 </svg>
-                                {suggestion}
+                                <span className="flex flex-col">
+                                  <span className="text-sm text-gray-900 font-medium">
+                                    {suggestion}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    Search for items matching this
+                                  </span>
+                                </span>
                               </button>
                             </li>
                           ))}

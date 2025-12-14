@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { paymentsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,7 +16,7 @@ interface PaymentVerification {
   sellerName?: string;
 }
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -417,5 +417,39 @@ export default function PaymentSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin h-16 w-16 border-4 border-black border-t-transparent rounded-full mx-auto mb-6"></div>
+            <h2
+              className="text-2xl font-bold text-black mb-2"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 700,
+              }}
+            >
+              Loading payment status...
+            </h2>
+            <p
+              className="text-gray-600"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 400,
+              }}
+            >
+              Please wait while we load your payment result
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }

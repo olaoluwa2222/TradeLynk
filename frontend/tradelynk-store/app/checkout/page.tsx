@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { itemsApi, paymentsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +22,7 @@ interface ItemDetails {
   status: string;
 }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
@@ -609,5 +609,30 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p
+              className="text-gray-600"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 400,
+              }}
+            >
+              Loading checkout...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }

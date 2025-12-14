@@ -55,30 +55,38 @@ export const initializeNotifications = async (
       return null;
     }
 
-    // ✅ Test notification capability
-    console.log("🔔 [NOTIF] Step 5: Testing notification display");
-    try {
-      await registration.showNotification("TradeLynk", {
-        body: "Notifications are working!",
-        icon: "/favicon.ico",
-        tag: "test",
-        requireInteraction: false,
-      });
-      console.log("✅ [NOTIF] Test notification shown successfully");
-
-      // Close test notification after 2 seconds
-      setTimeout(async () => {
-        const notifications = await registration.getNotifications({
+    // ✅ Test notification capability (development only)
+    if (process.env.NODE_ENV !== "production") {
+      console.log("🔔 [NOTIF] Step 5: Testing notification display");
+      try {
+        await registration.showNotification("TradeLynk", {
+          body: "Notifications are working!",
+          icon: "/favicon.ico",
           tag: "test",
+          requireInteraction: false,
         });
-        notifications.forEach((n) => n.close());
-      }, 2000);
-    } catch (testError) {
-      console.error("❌ [NOTIF] Test notification failed:", testError);
-      // Continue anyway - might still work for FCM
+        console.log("✅ [NOTIF] Test notification shown successfully");
+
+        // Close test notification after 2 seconds
+        setTimeout(async () => {
+          const notifications = await registration.getNotifications({
+            tag: "test",
+          });
+          notifications.forEach((n) => n.close());
+        }, 2000);
+      } catch (testError) {
+        console.error("❌ [NOTIF] Test notification failed:", testError);
+        // Continue anyway - might still work for FCM
+      }
     }
 
     console.log("🔔 [NOTIF] Step 6: Getting FCM token");
+
+    if (!messaging) {
+      console.error("🔔 [NOTIF] Messaging not initialized (might be SSR)");
+      return null;
+    }
+
     const token = await getToken(messaging, {
       vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: registration, // ✅ Pass service worker explicitly
@@ -106,6 +114,11 @@ export const initializeNotifications = async (
     });
 
     console.log("🔔 [NOTIF] Step 9: Setup foreground listener");
+
+    if (!messaging) {
+      console.error("🔔 [NOTIF] Messaging not available for listener setup");
+      return token;
+    }
 
     // ✅ Setup foreground message handler
     onMessage(messaging, (payload) => {
@@ -160,7 +173,7 @@ export const initializeNotifications = async (
             });
         }
 
-        // ✅ Also show in-app toast notification
+        // ✅ Also show in-app toast notification (secure origin)
         window.postMessage(
           {
             type: "FOREGROUND_MESSAGE",
@@ -170,7 +183,7 @@ export const initializeNotifications = async (
               chatId: notificationData.data?.chatId,
             },
           },
-          "*"
+          window.location.origin
         );
       } else {
         console.log(
@@ -217,6 +230,25 @@ export const showNotificationToast = (
   body: string,
   chatId?: string
 ): void => {
+  // ✅ Inject keyframes animation once
+  if (!document.getElementById("toast-notification-styles")) {
+    const style = document.createElement("style");
+    style.id = "toast-notification-styles";
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   const toast = document.createElement("div");
   toast.style.cssText = `
     position: fixed;

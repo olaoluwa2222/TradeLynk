@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { itemsApi } from "@/lib/api";
 
@@ -32,7 +32,7 @@ interface PaginationData {
   hasPrevious: boolean;
 }
 
-export default function ItemsPage() {
+function ItemsPageContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,9 @@ export default function ItemsPage() {
   const [maxPrice, setMaxPrice] = useState<number | undefined>();
   const [condition, setCondition] = useState<string>("");
   const [sort, setSort] = useState<string>("RECENT");
+
+  // Search state from URL (?search=...)
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Sidebar visibility (mobile)
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -72,25 +75,40 @@ export default function ItemsPage() {
     { value: "TRENDING", label: "Trending" },
   ];
 
-  // Fetch items based on filters
+  // Fetch items based on filters and search
   const fetchItems = async () => {
     setLoading(true);
     setError("");
     try {
-      const data = await itemsApi.getAllItems(
-        currentPage,
-        pageSize,
-        category || undefined,
-        minPrice,
-        maxPrice,
-        condition || undefined,
-        sort
-      );
+      let data;
 
-      if (data.success) {
-        setItems(data.data.content || []);
-        setTotalPages(data.data.totalPages || 0);
-        setPageSize(data.data.pageSize || 10);
+      if (searchQuery && searchQuery.trim().length > 0) {
+        // Use backend search when a search query is present
+        data = await itemsApi.searchItems(
+          searchQuery.trim(),
+          currentPage,
+          pageSize
+        );
+      } else {
+        // Otherwise load regular items list
+        data = await itemsApi.getAllItems(
+          currentPage,
+          pageSize,
+          category || undefined,
+          minPrice,
+          maxPrice,
+          condition || undefined,
+          sort
+        );
+      }
+
+      if (data.success && data.data) {
+        const pageData = data.data as PaginationData & {
+          size?: number;
+        };
+        setItems(pageData.content || []);
+        setTotalPages(pageData.totalPages || 0);
+        setPageSize(pageData.size ?? pageData.pageSize ?? 10);
       } else {
         setError(data.message || "Failed to load items");
       }
@@ -103,8 +121,12 @@ export default function ItemsPage() {
 
   // Initialize filters from URL params
   useEffect(() => {
-    const searchQuery = searchParams.get("search");
+    const search = searchParams.get("search");
     const categoryParam = searchParams.get("category");
+
+    if (search) {
+      setSearchQuery(search);
+    }
 
     if (categoryParam) {
       // Decode the category param and set it
@@ -113,10 +135,10 @@ export default function ItemsPage() {
     }
   }, [searchParams]);
 
-  // Fetch items when filters change
+  // Fetch items when filters or search change
   useEffect(() => {
     fetchItems();
-  }, [category, minPrice, maxPrice, condition, sort, currentPage]);
+  }, [category, minPrice, maxPrice, condition, sort, currentPage, searchQuery]);
 
   // Handle like/unlike
   const handleLike = async (itemId: number, isLiked: boolean) => {
@@ -152,6 +174,7 @@ export default function ItemsPage() {
     setCondition("");
     setSort("RECENT");
     setCurrentPage(0);
+    setSearchQuery("");
   };
 
   return (
@@ -761,5 +784,30 @@ export default function ItemsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ItemsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p
+              className="text-gray-600"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 400,
+              }}
+            >
+              Loading items...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <ItemsPageContent />
+    </Suspense>
   );
 }
