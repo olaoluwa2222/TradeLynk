@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd tradelynk-store && npm run build",
+  "outputDirectory": "tradelynk-store/.next",
+  "installCommand": "cd tradelynk-store && npm install"
+}
