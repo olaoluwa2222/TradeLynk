@@ -135,7 +135,7 @@ export default function Home() {
             {isAuthenticated ? (
               <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
                 <Link
-                  href="/shop"
+                  href="/items"
                   className="px-8 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition-colors inline-block"
                   style={{
                     fontFamily: "Clash Display",
@@ -148,7 +148,7 @@ export default function Home() {
                   user?.role === "BOTH" ||
                   user?.role === "ADMIN") && (
                   <Link
-                    href="/items/create"
+                    href="/create-item"
                     className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors inline-block"
                     style={{
                       fontFamily: "Clash Display",
