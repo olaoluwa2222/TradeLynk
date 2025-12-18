@@ -10,8 +10,10 @@ export default function UnverifiedBanner() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const isVerified = user?.isEmailVerified ?? user?.verified ?? false;
+
   // Don't show if user is verified or banner is dismissed
-  if (!user || user.verified || isDismissed) {
+  if (!user || isVerified || isDismissed) {
     return null;
   }
 
@@ -39,7 +41,7 @@ export default function UnverifiedBanner() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center space-x-3 flex-1">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <svg
                 className="h-6 w-6 text-yellow-600"
                 fill="none"
@@ -78,7 +80,7 @@ export default function UnverifiedBanner() {
           {/* Dismiss Button */}
           <button
             onClick={() => setIsDismissed(true)}
-            className="flex-shrink-0 text-yellow-600 hover:text-yellow-800"
+            className="shrink-0 text-yellow-600 hover:text-yellow-800"
             aria-label="Dismiss"
           >
             <svg

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
@@ -265,7 +266,7 @@ function CheckoutContent() {
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
               <div className="flex gap-6">
                 {/* Item Image */}
-                <div className="relative w-32 h-32 flex-shrink-0 bg-gray-200 rounded-lg overflow-hidden">
+                <div className="relative w-32 h-32 shrink-0 bg-gray-200 rounded-lg overflow-hidden">
                   <Image
                     src={item.imageUrls[0] || "/placeholder.jpg"}
                     alt={item.title}

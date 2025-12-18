@@ -56,11 +56,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login({ email, password });
-      const token = response.data.token;
-      const userData = response.data as unknown as User;
+      const rawData: any = response.data;
+
+      const token: string = rawData.token;
+
+      const normalizedUser: User = {
+        userId: Number(rawData.userId ?? rawData.id),
+        email: rawData.email,
+        name: rawData.name,
+        role: rawData.role,
+        profilePictureUrl: rawData.profilePictureUrl,
+        verified: rawData.isEmailVerified ?? rawData.verified ?? false,
+        isEmailVerified: rawData.isEmailVerified ?? rawData.verified ?? false,
+      };
 
       // Save to state/context
-      setUser(userData);
+      setUser(normalizedUser);
 
       // ✅ INITIALIZE FCM AFTER LOGIN
       try {
