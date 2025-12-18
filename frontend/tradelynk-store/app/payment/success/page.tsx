@@ -191,7 +191,7 @@ function PaymentSuccessContent() {
         </div>
 
         {/* Order Details Card */}
-        <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl p-8 mb-8 border border-green-200">
+        <div className="bg-linear-to-br from-green-50 to-blue-50 rounded-2xl p-8 mb-8 border border-green-200">
           <h2
             className="text-2xl font-bold text-black mb-6"
             style={{

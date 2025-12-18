@@ -368,7 +368,7 @@ export default function MySalesPage() {
                 >
                   <div className="flex flex-col md:flex-row gap-6">
                     {/* Item Image */}
-                    <div className="relative w-full md:w-32 h-32 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                    <div className="relative w-full md:w-32 h-32 shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                       <Image
                         src={imageUrl}
                         alt={sale.item.title}

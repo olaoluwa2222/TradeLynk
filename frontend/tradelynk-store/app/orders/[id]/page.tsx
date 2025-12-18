@@ -284,7 +284,7 @@ export default function OrderDetailPage() {
                 Item Details
               </h2>
               <div className="flex gap-6">
-                <div className="relative w-32 h-32 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                <div className="relative w-32 h-32 shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                   <Image
                     src={(() => {
                       try {

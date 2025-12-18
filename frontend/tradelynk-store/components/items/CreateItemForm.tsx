@@ -251,7 +251,7 @@ export const CreateItemForm: React.FC = () => {
             toast.error(
               () => (
                 <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/20 flex-shrink-0">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/20 shrink-0">
                     <span className="text-lg">🚫</span>
                   </div>
                   <div className="flex-1 pt-0.5">

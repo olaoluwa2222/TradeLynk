@@ -807,7 +807,7 @@ export default function SellerDashboard() {
                       href={`/items/${item.itemId}`}
                       className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
                     >
-                      <div className="relative w-16 h-16 flex-shrink-0 rounded bg-gray-200 overflow-hidden">
+                      <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
                         {item.imageUrl ? (
                           <Image
                             src={item.imageUrl}
@@ -900,7 +900,7 @@ export default function SellerDashboard() {
                       href={`/items/${item.itemId}`}
                       className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
                     >
-                      <div className="relative w-16 h-16 flex-shrink-0 rounded bg-gray-200 overflow-hidden">
+                      <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
                         {item.imageUrl ? (
                           <Image
                             src={item.imageUrl}
@@ -993,7 +993,7 @@ export default function SellerDashboard() {
                       href={`/items/${item.itemId}`}
                       className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
                     >
-                      <div className="relative w-16 h-16 flex-shrink-0 rounded bg-gray-200 overflow-hidden">
+                      <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
                         {item.imageUrl ? (
                           <Image
                             src={item.imageUrl}

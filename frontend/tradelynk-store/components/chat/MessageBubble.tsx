@@ -35,7 +35,7 @@ export default function MessageBubble({
           <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl rounded-bl-sm bg-white border-2 border-gray-400 shadow-sm hover:shadow-md transition-all duration-200 ease-out">
             {/* Text Content */}
             {message.content && (
-              <p className="text-sm text-gray-900 break-words whitespace-pre-wrap leading-relaxed font-medium">
+              <p className="text-sm text-gray-900 wrap-break-word whitespace-pre-wrap leading-relaxed font-medium">
                 {message.content}
               </p>
             )}
@@ -75,7 +75,7 @@ export default function MessageBubble({
           <div className="max-w-xs lg:max-w-md px-4 py-3 rounded-2xl rounded-br-sm bg-black text-white shadow-md hover:shadow-lg transition-all duration-200 ease-out">
             {/* Text Content */}
             {message.content && (
-              <p className="text-sm text-white break-words whitespace-pre-wrap leading-relaxed font-medium">
+              <p className="text-sm text-white wrap-break-word whitespace-pre-wrap leading-relaxed font-medium">
                 {message.content}
               </p>
             )}

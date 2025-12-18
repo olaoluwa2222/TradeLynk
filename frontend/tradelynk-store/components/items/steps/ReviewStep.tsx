@@ -125,7 +125,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             {section.fields.map((field, idx) => (
               <div key={idx} className="flex items-start justify-between">
                 <span className="text-sm text-gray-600">{field.label}</span>
-                <span className="text-sm font-semibold text-black max-w-xs text-right break-words">
+                <span className="text-sm font-semibold text-black max-w-xs text-right wrap-break-word">
                   {field.value}
                 </span>
               </div>
