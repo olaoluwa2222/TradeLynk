@@ -133,8 +133,15 @@ public class PaystackService {
                     .deliveryAddress(deliveryAddress) // ✅ NEW: Include delivery address
                     .build();
 
+            // ✅ FIX: Convert Naira to kobo (multiply by 100)
+            // Paystack expects amount in kobo (smallest currency unit)
+            // 1 Naira = 100 kobo, so ₦4,500 = 450,000 kobo
+            Long amountInKobo = amount * 100;
+
+            log.info("Converting amount: ₦{} → {} kobo", amount, amountInKobo);
+
             PaystackInitializeRequest request = PaystackInitializeRequest.builder()
-                    .amount(String.valueOf(amount))
+                    .amount(String.valueOf(amountInKobo))  // ✅ FIXED: Convert to kobo
                     .email(buyer.getEmail())
                     .subaccount(subaccountCode)
                     .metadata(metadata)
@@ -155,12 +162,12 @@ public class PaystackService {
             if (response.getBody() != null && response.getBody().getStatus()) {
                 PaystackInitializeResponse.InitializeData data = response.getBody().getData();
 
-                // 8. Save payment record with PENDING status
+                // 8. Save payment record with PENDING status (store original amount in Naira)
                 Payment payment = Payment.builder()
                         .itemId(itemId)
                         .sellerId(item.getSeller().getId())
                         .buyerId(buyerId)
-                        .amount(amount)
+                        .amount(amount)  // Store amount in Naira in database
                         .paystackReference(data.getReference())
                         .paystackAccessCode(data.getAccessCode())
                         .authorizationUrl(data.getAuthorizationUrl())
@@ -174,7 +181,7 @@ public class PaystackService {
                 return InitializePaymentResponse.builder()
                         .paymentUrl(data.getAuthorizationUrl())
                         .reference(data.getReference())
-                        .amount(amount)
+                        .amount(amount)  // Return amount in Naira to frontend
                         .message("Payment initialized successfully")
                         .build();
 
