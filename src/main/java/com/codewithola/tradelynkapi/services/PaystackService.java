@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.services;
 
-
 import com.codewithola.tradelynkapi.Enum.BankEnum;
 import com.codewithola.tradelynkapi.config.PaystackConfig;
 import com.codewithola.tradelynkapi.dtos.requests.PaymentMetadata;
@@ -28,8 +27,17 @@ import org.springframework.web.client.RestTemplate;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.Map;
 
+/**
+ * UPDATED PaystackService with Escrow Support
+ * KEY CHANGES:
+ * 1. Removed subaccount from payment initialization (money goes to platform account)
+ * 2. Added refund functionality
+ * 3. Payments now held in escrow until delivery confirmation
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -40,23 +48,22 @@ public class PaystackService {
     private final PaymentRepository paymentRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
-    private final SellerProfileRepository sellerProfileRepository; // ADDED
+    private final SellerProfileRepository sellerProfileRepository;
     private final NotificationService notificationService;
 
-    private static final Double PLATFORM_FEE_PERCENTAGE = 3.0; // 10% platform fee
+    private static final Double PLATFORM_FEE_PERCENTAGE = 3.0; // 3% platform fee
 
     /**
      * Create a Paystack subaccount for a seller
-     * This allows split payments - platform takes 10%, seller gets 90%
+     * Note: Subaccounts are NO LONGER used during payment initialization (escrow system)
+     * They may be used in future for direct transfers
      */
     public String createSubaccount(SellerProfile seller) {
         log.info("Creating Paystack subaccount for seller: {}", seller.getUser().getFullName());
 
         try {
-            // Get bank code from bank name
             BankEnum bank = BankEnum.fromName(seller.getBankName());
 
-            // Prepare request
             PaystackSubaccountRequest request = PaystackSubaccountRequest.builder()
                     .businessName(seller.getBusinessName() != null ?
                             seller.getBusinessName() : "Seller-" + seller.getUser().getId())
@@ -65,14 +72,12 @@ public class PaystackService {
                     .percentageCharge(PLATFORM_FEE_PERCENTAGE)
                     .build();
 
-            // Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
 
             HttpEntity<PaystackSubaccountRequest> entity = new HttpEntity<>(request, headers);
 
-            // Call Paystack API
             String url = paystackConfig.getBaseUrl() + "/subaccount";
             ResponseEntity<PaystackSubaccountResponse> response = restTemplate.postForEntity(
                     url, entity, PaystackSubaccountResponse.class);
@@ -96,12 +101,12 @@ public class PaystackService {
     }
 
     /**
-     * Initialize a payment transaction
-     * Creates a payment record and gets authorization URL from Paystack
+     * ✅ UPDATED: Initialize a payment transaction (ESCROW SYSTEM)
+     * KEY CHANGE: NO subaccount - money goes to platform account (escrow)
      */
     @Transactional
     public InitializePaymentResponse initializePayment(Long itemId, Long buyerId, Long amount, String deliveryAddress) {
-        log.info("Initializing payment for item: {}, buyer: {}, amount: {}, delivery: {}",
+        log.info("🔒 Initializing ESCROW payment for item: {}, buyer: {}, amount: ₦{}, delivery: {}",
                 itemId, buyerId, amount, deliveryAddress);
 
         // 1. Fetch item and validate
@@ -120,41 +125,38 @@ public class PaystackService {
         User seller = userRepository.findById(item.getSeller().getId())
                 .orElseThrow(() -> new NotFoundException("Seller not found"));
 
-        // 4. Get seller's subaccount
-        String subaccountCode = getSellerSubaccount(item.getSeller().getId());
+        // ❌ REMOVED: Get seller's subaccount (now using escrow system)
+        // Payment will go to platform account, not seller's subaccount
 
         try {
-            // 5. Prepare Paystack initialize request with deliveryAddress in metadata
+            // 4. Prepare Paystack initialize request
             PaymentMetadata metadata = PaymentMetadata.builder()
                     .itemId(itemId)
                     .sellerId(item.getSeller().getId())
                     .buyerId(buyerId)
                     .itemTitle(item.getTitle())
-                    .deliveryAddress(deliveryAddress) // ✅ NEW: Include delivery address
+                    .deliveryAddress(deliveryAddress)
                     .build();
 
-            // ✅ FIX: Convert Naira to kobo (multiply by 100)
-            // Paystack expects amount in kobo (smallest currency unit)
-            // 1 Naira = 100 kobo, so ₦4,500 = 450,000 kobo
+            // Convert Naira to kobo (Paystack expects amount in kobo)
             Long amountInKobo = amount * 100;
-
             log.info("Converting amount: ₦{} → {} kobo", amount, amountInKobo);
 
             PaystackInitializeRequest request = PaystackInitializeRequest.builder()
-                    .amount(String.valueOf(amountInKobo))  // ✅ FIXED: Convert to kobo
+                    .amount(String.valueOf(amountInKobo))
                     .email(buyer.getEmail())
-                    .subaccount(subaccountCode)
+                    // ❌ REMOVED: .subaccount(subaccountCode) - Money goes to platform account
                     .metadata(metadata)
                     .build();
 
-            // 6. Set headers
+            // 5. Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
 
             HttpEntity<PaystackInitializeRequest> entity = new HttpEntity<>(request, headers);
 
-            // 7. Call Paystack API
+            // 6. Call Paystack API
             String url = paystackConfig.getBaseUrl() + "/transaction/initialize";
             ResponseEntity<PaystackInitializeResponse> response = restTemplate.postForEntity(
                     url, entity, PaystackInitializeResponse.class);
@@ -162,12 +164,12 @@ public class PaystackService {
             if (response.getBody() != null && response.getBody().getStatus()) {
                 PaystackInitializeResponse.InitializeData data = response.getBody().getData();
 
-                // 8. Save payment record with PENDING status (store original amount in Naira)
+                // 7. Save payment record with PENDING status
                 Payment payment = Payment.builder()
                         .itemId(itemId)
                         .sellerId(item.getSeller().getId())
                         .buyerId(buyerId)
-                        .amount(amount)  // Store amount in Naira in database
+                        .amount(amount)  // Store in Naira
                         .paystackReference(data.getReference())
                         .paystackAccessCode(data.getAccessCode())
                         .authorizationUrl(data.getAuthorizationUrl())
@@ -176,13 +178,13 @@ public class PaystackService {
 
                 paymentRepository.save(payment);
 
-                log.info("Payment initialized successfully. Reference: {}", data.getReference());
+                log.info("✅ ESCROW payment initialized. Reference: {}", data.getReference());
 
                 return InitializePaymentResponse.builder()
                         .paymentUrl(data.getAuthorizationUrl())
                         .reference(data.getReference())
-                        .amount(amount)  // Return amount in Naira to frontend
-                        .message("Payment initialized successfully")
+                        .amount(amount)
+                        .message("Payment initialized successfully (escrow mode)")
                         .build();
 
             } else {
@@ -199,19 +201,9 @@ public class PaystackService {
         }
     }
 
-
     /**
      * Verify a payment transaction
-     * Checks with Paystack if payment was successful
      */
-    /**
-     * UPDATED verifyPayment() METHOD
-     * Replace your existing verifyPayment() in PaystackService.java with this
-     *
-     * KEY CHANGE: Removed item quantity decrement
-     * Reason: Quantity is now decremented in OrderService.createOrder()
-     */
-
     @Transactional
     public PaystackVerifyResponse verifyPayment(String reference) {
         log.info("Verifying payment with reference: {}", reference);
@@ -239,14 +231,11 @@ public class PaystackService {
                 if ("success".equalsIgnoreCase(status)) {
                     payment.markAsSuccess();
 
-                    // ❌ REMOVED: Item quantity decrement (moved to OrderService)
-                    // The webhook will create an order which handles quantity decrement
-
-                    // ✅ KEEP: Notify seller about payment
+                    // Notify seller about payment (money in escrow)
                     Item item = itemRepository.findById(payment.getItemId())
                             .orElseThrow(() -> new NotFoundException("Item not found"));
 
-                    notificationService.sendPaymentNotification(
+                    notificationService.sendPaymentHeldNotification(
                             payment.getSellerId(),
                             payment.getAmount(),
                             item.getTitle()
@@ -276,8 +265,60 @@ public class PaystackService {
     }
 
     /**
+     * ✅ NEW: Refund a payment (for disputed orders)
+     * Uses Paystack Refund API to return money to buyer's original payment method
+     */
+    public void refundPayment(String reference) {
+        log.info("🔄 Initiating refund for payment reference: {}", reference);
+
+        try {
+            // 1. Verify payment exists and is eligible for refund
+            Payment payment = paymentRepository.findByPaystackReference(reference)
+                    .orElseThrow(() -> new NotFoundException("Payment not found"));
+
+            if (payment.getStatus() != Payment.PaymentStatus.SUCCESS) {
+                throw new BadRequestException("Can only refund successful payments");
+            }
+
+            // 2. Call Paystack Refund API
+            Map<String, Object> refundRequest = new HashMap<>();
+            refundRequest.put("transaction", reference);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", paystackConfig.getAuthorizationHeader());
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(refundRequest, headers);
+
+            String url = paystackConfig.getBaseUrl() + "/refund";
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+
+            if (response.getBody() != null && Boolean.TRUE.equals(response.getBody().get("status"))) {
+                log.info("✅ Refund successful for reference: {}", reference);
+
+                // Notify buyer about refund
+                notificationService.sendRefundNotification(
+                        payment.getBuyerId(),
+                        payment.getAmount()
+                );
+
+            } else {
+                String errorMessage = response.getBody() != null ?
+                        (String) response.getBody().get("message") : "Unknown error";
+                throw new RuntimeException("Paystack refund failed: " + errorMessage);
+            }
+
+        } catch (HttpClientErrorException e) {
+            log.error("Paystack refund API error: {}", e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Failed to refund payment: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error refunding payment", e);
+            throw new RuntimeException("Failed to refund payment: " + e.getMessage());
+        }
+    }
+
+    /**
      * Verify Paystack webhook signature
-     * Security measure to ensure webhook is from Paystack
      */
     public boolean verifyWebhookSignature(String payload, String signature) {
         try {
@@ -302,31 +343,18 @@ public class PaystackService {
         }
     }
 
-    private String getSellerSubaccount(Long sellerId) {
-        // Fetch seller's subaccount from database
-        SellerProfile sellerProfile = sellerProfileRepository.findByUserId(sellerId)
-                .orElseThrow(() -> new NotFoundException("Seller profile not found"));
-
-        if (sellerProfile.getPayStackSubaccountId() == null ||
-                sellerProfile.getPayStackSubaccountId().isEmpty()) {
-            throw new BadRequestException(
-                    "Seller subaccount not configured. Please contact support.");
-        }
-
-        return sellerProfile.getPayStackSubaccountId();
-    }
-
+    /**
+     * Validate bank account (for seller profile setup)
+     */
     public String validateBankAccount(String accountNumber, String bankCode) {
         log.info("Validating bank account: {} with bank code: {}", accountNumber, bankCode);
 
         try {
-            // 1. Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
 
             HttpEntity<?> entity = new HttpEntity<>(headers);
 
-            // 2. Build URL with query parameters
             String url = String.format(
                     "%s/bank/resolve?account_number=%s&bank_code=%s",
                     paystackConfig.getBaseUrl(),
@@ -334,7 +362,6 @@ public class PaystackService {
                     bankCode
             );
 
-            // 3. Call Paystack API
             ResponseEntity<PaystackAccountValidationResponse> response = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
@@ -342,12 +369,9 @@ public class PaystackService {
                     PaystackAccountValidationResponse.class
             );
 
-            // 4. Process response
             if (response.getBody() != null && response.getBody().getStatus()) {
                 String accountName = response.getBody().getData().getAccountName();
-                String accountNumber2 = response.getBody().getData().getAccountNumber();
-
-                log.info("Account validated successfully: {} - {}", accountNumber2, accountName);
+                log.info("Account validated successfully: {} - {}", accountNumber, accountName);
                 return accountName;
 
             } else {

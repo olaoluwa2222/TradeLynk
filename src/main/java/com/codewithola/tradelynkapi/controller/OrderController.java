@@ -1,7 +1,6 @@
 package com.codewithola.tradelynkapi.controller;
 
 import com.codewithola.tradelynkapi.dtos.requests.OrderCancelRequest;
-import com.codewithola.tradelynkapi.dtos.requests.OrderCreateRequest;
 import com.codewithola.tradelynkapi.dtos.response.OrderDTO;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.OrderService;
@@ -11,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +18,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * UPDATED OrderController with Escrow Flow
+ * Handles order operations: create, view, ship, confirm delivery, cancel
+ */
 @RestController
 @RequestMapping("/orders")
 @RequiredArgsConstructor
@@ -28,62 +31,31 @@ public class OrderController {
     private final OrderService orderService;
 
     /**
-     * POST /api/orders
-     * Create an order (authenticated)
-     * Note: In most cases, orders are auto-created via webhook after payment
-     * But this endpoint allows manual order creation if needed
-     */
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> createOrder(
-            @Valid @RequestBody OrderCreateRequest request,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-
-        log.info("POST /api/orders - User: {} creating order for item: {}",
-                userPrincipal.getEmail(), request.getItemId());
-
-        // Note: In production, you'd extract sellerId and amount from the item/payment
-        // For now, this assumes the client provides valid data
-        // Better approach: Get these from Payment entity using paymentId
-
-        OrderDTO order = orderService.createOrder(
-                request.getItemId(),
-                userPrincipal.getId(),
-                null, // TODO: Get sellerId from item or payment
-                request.getPaymentId(),
-                null, // TODO: Get amount from payment
-                request.getDeliveryAddress()
-        );
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("message", "Order created successfully");
-        response.put("data", order);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
      * GET /api/orders/my-purchases
-     * Get current user's purchase history (authenticated)
+     * Get buyer's purchase history
      */
     @GetMapping("/my-purchases")
     public ResponseEntity<Map<String, Object>> getMyPurchases(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        log.info("GET /api/orders/my-purchases - User: {}, page: {}, size: {}",
-                userPrincipal.getEmail(), page, size);
+        log.info("GET /api/orders/my-purchases - Buyer: {}", userPrincipal.getEmail());
 
-        Pageable pageable = PageRequest.of(page, size);
+        Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ?
+                Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
         Page<OrderDTO> orders = orderService.getMyPurchases(userPrincipal.getId(), pageable);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", orders.getContent());
         response.put("currentPage", orders.getNumber());
-        response.put("totalPages", orders.getTotalPages());
         response.put("totalItems", orders.getTotalElements());
+        response.put("totalPages", orders.getTotalPages());
         response.put("hasNext", orders.hasNext());
         response.put("hasPrevious", orders.hasPrevious());
 
@@ -92,26 +64,30 @@ public class OrderController {
 
     /**
      * GET /api/orders/my-sales
-     * Get current user's sales history (authenticated)
+     * Get seller's sales history
      */
     @GetMapping("/my-sales")
     public ResponseEntity<Map<String, Object>> getMySales(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        log.info("GET /api/orders/my-sales - User: {}, page: {}, size: {}",
-                userPrincipal.getEmail(), page, size);
+        log.info("GET /api/orders/my-sales - Seller: {}", userPrincipal.getEmail());
 
-        Pageable pageable = PageRequest.of(page, size);
+        Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ?
+                Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
         Page<OrderDTO> orders = orderService.getMySales(userPrincipal.getId(), pageable);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("data", orders.getContent());
         response.put("currentPage", orders.getNumber());
-        response.put("totalPages", orders.getTotalPages());
         response.put("totalItems", orders.getTotalElements());
+        response.put("totalPages", orders.getTotalPages());
         response.put("hasNext", orders.hasNext());
         response.put("hasPrevious", orders.hasPrevious());
 
@@ -120,7 +96,7 @@ public class OrderController {
 
     /**
      * GET /api/orders/{id}
-     * Get order details by ID (authenticated)
+     * Get order details by ID
      */
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getOrderById(
@@ -139,21 +115,42 @@ public class OrderController {
     }
 
     /**
-     * PUT /api/orders/{id}/mark-delivered
-     * Mark order as delivered (only buyer can do this)
+     * ✅ NEW: PUT /api/orders/{id}/mark-shipped
+     * Seller marks order as shipped
      */
-    @PutMapping("/{id}/mark-delivered")
-    public ResponseEntity<Map<String, Object>> markAsDelivered(
+    @PutMapping("/{id}/mark-shipped")
+    public ResponseEntity<Map<String, Object>> markAsShipped(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        log.info("PUT /api/orders/{}/mark-delivered - User: {}", id, userPrincipal.getEmail());
+        log.info("PUT /api/orders/{}/mark-shipped - Seller: {}", id, userPrincipal.getEmail());
+
+        OrderDTO order = orderService.markAsShipped(id, userPrincipal.getId());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Order marked as shipped successfully");
+        response.put("data", order);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * PUT /api/orders/{id}/confirm-delivery
+     * Buyer confirms delivery (releases escrow to seller)
+     */
+    @PutMapping("/{id}/confirm-delivery")
+    public ResponseEntity<Map<String, Object>> confirmDelivery(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        log.info("PUT /api/orders/{}/confirm-delivery - Buyer: {}", id, userPrincipal.getEmail());
 
         OrderDTO order = orderService.markAsDelivered(id, userPrincipal.getId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Order marked as delivered successfully");
+        response.put("message", "Delivery confirmed. Payment will be released to seller.");
         response.put("data", order);
 
         return ResponseEntity.ok(response);
@@ -161,7 +158,7 @@ public class OrderController {
 
     /**
      * PUT /api/orders/{id}/cancel
-     * Cancel an order (buyer or seller can do this)
+     * Cancel an order
      */
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Map<String, Object>> cancelOrder(
@@ -169,8 +166,7 @@ public class OrderController {
             @Valid @RequestBody OrderCancelRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        log.info("PUT /api/orders/{}/cancel - User: {}, reason: {}",
-                id, userPrincipal.getEmail(), request.getReason());
+        log.info("PUT /api/orders/{}/cancel - User: {}", id, userPrincipal.getEmail());
 
         OrderDTO order = orderService.cancelOrder(id, userPrincipal.getId(), request.getReason());
 
@@ -184,10 +180,10 @@ public class OrderController {
 
     /**
      * GET /api/orders/statistics
-     * Get order statistics for current user (authenticated)
+     * Get order statistics for current user
      */
     @GetMapping("/statistics")
-    public ResponseEntity<Map<String, Object>> getStatistics(
+    public ResponseEntity<Map<String, Object>> getOrderStatistics(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
         log.info("GET /api/orders/statistics - User: {}", userPrincipal.getEmail());

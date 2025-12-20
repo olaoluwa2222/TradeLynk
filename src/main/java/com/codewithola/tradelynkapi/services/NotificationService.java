@@ -582,4 +582,442 @@ public class NotificationService {
             log.error("❌ Failed to send auto-completion notifications", e);
         }
     }
+
+    /**
+     * ✅ NEW: Send notification that payment is held in escrow
+     */
+    public void sendPaymentHeldNotification(Long sellerId, Long amount, String itemTitle) {
+        log.info("Sending payment held notification to seller: {}", sellerId);
+
+        try {
+            User seller = userRepository.findById(sellerId)
+                    .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+            String amountFormatted = String.format("₦%,d", amount);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("💰 Payment Received (In Escrow)")
+                                    .setBody(itemTitle + " - " + amountFormatted + " held until delivery")
+                                    .build())
+                            .putData("type", "payment_held")
+                            .putData("amount", String.valueOf(amount))
+                            .putData("itemTitle", itemTitle)
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Send email notification
+            String subject = "Payment Received (Escrow) - " + itemTitle;
+            String body = String.format("""
+                Hello %s,
+                
+                Great news! A buyer has paid for your item.
+                
+                📦 Item: %s
+                💰 Amount: ₦%,d (held in escrow)
+                
+                The payment is currently held in escrow for security. You'll receive the funds once the buyer confirms delivery.
+                
+                Next steps:
+                1. Arrange delivery with the buyer
+                2. Mark the order as "Shipped" when you deliver
+                3. Funds will be released after buyer confirms delivery (or after 5 days automatically)
+                
+                View order details: %s/dashboard/sales
+                
+                Best regards,
+                The TradeLynk Team
+                """,
+                    seller.getFullName(),
+                    itemTitle,
+                    amount,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(seller.getEmail(), subject, body);
+            log.info("✅ Payment held email sent to seller: {}", seller.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send payment held notification", e);
+        }
+    }
+
+    /**
+     * ✅ NEW: Send notification when seller marks order as shipped
+     */
+    public void sendShippedNotification(Long buyerId, String itemTitle, String deliveryAddress) {
+        log.info("Sending shipped notification to buyer: {}", buyerId);
+
+        try {
+            User buyer = userRepository.findById(buyerId)
+                    .orElseThrow(() -> new NotFoundException("Buyer not found"));
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(buyerId);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("📦 Order Shipped!")
+                                    .setBody("Your order for '" + itemTitle + "' is on its way")
+                                    .build())
+                            .putData("type", "order_shipped")
+                            .putData("itemTitle", itemTitle)
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Send email notification
+            String subject = "Order Shipped - " + itemTitle;
+            String body = String.format("""
+                Hello %s,
+                
+                Your order has been shipped!
+                
+                📦 Item: %s
+                📍 Delivery Location: %s
+                
+                The seller has marked your order as shipped. You should receive it soon.
+                
+                Important: Once you receive the item, please confirm delivery in your dashboard. 
+                This will release the payment to the seller.
+                
+                If you don't receive the item or there's any issue, you can report a problem within 5 days.
+                
+                Track your order: %s/dashboard/purchases
+                
+                Best regards,
+                The TradeLynk Team
+                """,
+                    buyer.getFullName(),
+                    itemTitle,
+                    deliveryAddress,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(buyer.getEmail(), subject, body);
+            log.info("✅ Shipped email sent to buyer: {}", buyer.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send shipped notification", e);
+        }
+    }
+
+    /**
+     * ✅ NEW: Send notification when seller receives payout
+     */
+    public void sendPayoutNotification(Long sellerId, Long amount, String itemTitle) {
+        log.info("Sending payout notification to seller: {}", sellerId);
+
+        try {
+            User seller = userRepository.findById(sellerId)
+                    .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+            String amountFormatted = String.format("₦%,d", amount);
+            Long platformFee = (long) (amount * 0.03);
+            Long payout = amount - platformFee;
+            String payoutFormatted = String.format("₦%,d", payout);
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("💸 Payment Released!")
+                                    .setBody("You've received " + payoutFormatted + " for '" + itemTitle + "'")
+                                    .build())
+                            .putData("type", "payout")
+                            .putData("amount", String.valueOf(payout))
+                            .putData("itemTitle", itemTitle)
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Send email notification
+            String subject = "Payment Received - " + itemTitle;
+            String body = String.format("""
+                Hello %s,
+                
+                Congratulations! Your payment has been released.
+                
+                📦 Item: %s
+                💰 Order Amount: %s
+                🏦 Platform Fee (3%%): ₦%,d
+                ✅ Your Payout: %s
+                
+                The funds have been transferred to your registered bank account and should arrive within 1-2 business days.
+                
+                Thank you for selling on TradeLynk!
+                
+                View your earnings: %s/dashboard/sales
+                
+                Best regards,
+                The TradeLynk Team
+                """,
+                    seller.getFullName(),
+                    itemTitle,
+                    amountFormatted,
+                    platformFee,
+                    payoutFormatted,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(seller.getEmail(), subject, body);
+            log.info("✅ Payout email sent to seller: {}", seller.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send payout notification", e);
+        }
+    }
+
+    /**
+     * ✅ NEW: Send notification about refund
+     */
+    public void sendRefundNotification(Long buyerId, Long amount) {
+        log.info("Sending refund notification to buyer: {}", buyerId);
+
+        try {
+            User buyer = userRepository.findById(buyerId)
+                    .orElseThrow(() -> new NotFoundException("Buyer not found"));
+
+            String amountFormatted = String.format("₦%,d", amount);
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(buyerId);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("💵 Refund Processed")
+                                    .setBody("Your refund of " + amountFormatted + " has been processed")
+                                    .build())
+                            .putData("type", "refund")
+                            .putData("amount", String.valueOf(amount))
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Send email notification
+            String subject = "Refund Processed - " + amountFormatted;
+            String body = String.format("""
+                Hello %s,
+                
+                Your refund has been processed.
+                
+                💵 Refund Amount: %s
+                
+                The funds will be returned to your original payment method within 5-10 business days.
+                
+                If you have any questions, please contact our support team.
+                
+                Best regards,
+                The TradeLynk Team
+                """,
+                    buyer.getFullName(),
+                    amountFormatted
+            );
+
+            emailService.sendEmail(buyer.getEmail(), subject, body);
+            log.info("✅ Refund email sent to buyer: {}", buyer.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send refund notification", e);
+        }
+    }
+
+    /**
+     * ✅ NEW: Send notification when dispute is raised
+     */
+    public void sendDisputeNotification(Long sellerId, String itemTitle, String reason) {
+        log.info("Sending dispute notification to seller: {}", sellerId);
+
+        try {
+            User seller = userRepository.findById(sellerId)
+                    .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("⚠️ Dispute Raised")
+                                    .setBody("Buyer raised a dispute for '" + itemTitle + "'")
+                                    .build())
+                            .putData("type", "dispute")
+                            .putData("itemTitle", itemTitle)
+                            .putData("reason", reason)
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Send email notification
+            String subject = "Dispute Raised - " + itemTitle;
+            String body = String.format("""
+                Hello %s,
+                
+                A buyer has raised a dispute for one of your orders.
+                
+                📦 Item: %s
+                ⚠️ Reason: %s
+                
+                The payment is currently on hold while we review this dispute. Our team will investigate and reach out if we need more information.
+                
+                Please check your dashboard for details and be ready to provide any relevant information.
+                
+                View dispute details: %s/dashboard/sales
+                
+                Best regards,
+                The TradeLynk Team
+                """,
+                    seller.getFullName(),
+                    itemTitle,
+                    reason,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(seller.getEmail(), subject, body);
+            log.info("✅ Dispute email sent to seller: {}", seller.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send dispute notification", e);
+        }
+    }
+
+    /**
+     * ✅ NEW: Send notification about dispute resolution
+     */
+    public void sendDisputeResolutionNotification(Long userId, String itemTitle, String resolution, String userRole) {
+        log.info("Sending dispute resolution notification to {}: {}", userRole, userId);
+
+        try {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundException("User not found"));
+
+            String title = "Dispute Resolved - " + itemTitle;
+            String resultMessage;
+
+            switch (resolution) {
+                case "REFUND_BUYER":
+                    resultMessage = userRole.equals("buyer") ?
+                            "The dispute was resolved in your favor. You'll receive a full refund." :
+                            "The dispute was resolved in the buyer's favor. The payment will be refunded.";
+                    break;
+                case "RELEASE_TO_SELLER":
+                    resultMessage = userRole.equals("seller") ?
+                            "The dispute was resolved in your favor. The payment will be released to you." :
+                            "The dispute was resolved in the seller's favor. The payment will be released to them.";
+                    break;
+                default:
+                    resultMessage = "The dispute has been closed.";
+            }
+
+            // 1. Send push notifications
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(userId);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("✅ Dispute Resolved")
+                                    .setBody(resultMessage)
+                                    .build())
+                            .putData("type", "dispute_resolved")
+                            .putData("itemTitle", itemTitle)
+                            .putData("resolution", resolution)
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Send email notification
+            String subject = "Dispute Resolved - " + itemTitle;
+            String body = String.format("""
+                Hello %s,
+                
+                The dispute for your order has been resolved.
+                
+                📦 Item: %s
+                ✅ Resolution: %s
+                
+                %s
+                
+                If you have any questions about this decision, please contact our support team.
+                
+                View order details: %s/dashboard
+                
+                Best regards,
+                The TradeLynk Team
+                """,
+                    user.getFullName(),
+                    itemTitle,
+                    resolution.replace("_", " "),
+                    resultMessage,
+                    frontendUrl
+            );
+
+            emailService.sendEmail(user.getEmail(), subject, body);
+            log.info("✅ Dispute resolution email sent to {}: {}", userRole, user.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send dispute resolution notification", e);
+        }
+    }
 }

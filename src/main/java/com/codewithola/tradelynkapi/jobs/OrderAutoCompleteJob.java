@@ -7,8 +7,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Scheduled job to auto-complete orders that are pending delivery for more than 48 hours
- * Runs every 6 hours
+ * Scheduled job for auto-completing orders
+ * Runs daily to automatically complete orders that have been shipped for 5+ days
  */
 @Component
 @RequiredArgsConstructor
@@ -18,41 +18,41 @@ public class OrderAutoCompleteJob {
     private final OrderService orderService;
 
     /**
-     * Auto-complete pending orders every 6 hours
-     * Cron expression: "0 0 6 * * *"
-            * - Second: 0
-            * - Minute: 0
-            * - Hour: Every 6 hours (0, 6, 12, 18)
-     * - Day: Every day
-     * - Month: Every month
-     * - Day of week: Every day
+     * Auto-complete orders that have been shipped for 5 days
+     * Runs daily at 2:00 AM
+     *
+     * Cron format: second minute hour day month weekday
+     * "0 0 2 * * *" = At 02:00:00 AM every day
      */
-    @Scheduled(cron = "0 0 */6 * * *")
+    @Scheduled(cron = "0 0 2 * * *")
     public void autoCompleteOrders() {
-        log.info("========================================");
-        log.info("Starting auto-complete orders job");
-        log.info("========================================");
+        log.info("========== AUTO-COMPLETE JOB STARTED ==========");
+        log.info("Checking for orders that need auto-completion (shipped 5+ days ago)");
 
         try {
             int completedCount = orderService.autoCompleteOrders();
 
-            log.info("Auto-complete job completed successfully");
-            log.info("Orders auto-completed: {}", completedCount);
+            if (completedCount > 0) {
+                log.info("✅ Successfully auto-completed {} order(s)", completedCount);
+            } else {
+                log.info("No orders to auto-complete");
+            }
 
         } catch (Exception e) {
-            log.error("Error running auto-complete orders job", e);
+            log.error("❌ Error during auto-complete job", e);
         }
 
-        log.info("========================================");
+        log.info("========== AUTO-COMPLETE JOB FINISHED ==========");
     }
 
     /**
-     * Alternative: Run every day at 2 AM
-     * Uncomment if you prefer daily execution
+     * Test endpoint - runs auto-complete immediately
+     * Remove or comment out in production
+     * Uncomment for manual testing: @Scheduled(fixedDelay = Long.MAX_VALUE)
      */
-    // @Scheduled(cron = "0 0 2 * * *")
-    // public void autoCompleteOrdersDaily() {
-    //     log.info("Running daily auto-complete orders job at 2 AM");
-    //     orderService.autoCompleteOrders();
-    // }
+    // @Scheduled(fixedDelay = Long.MAX_VALUE)
+    public void manualTrigger() {
+        log.info("Manual trigger of auto-complete job");
+        autoCompleteOrders();
+    }
 }
