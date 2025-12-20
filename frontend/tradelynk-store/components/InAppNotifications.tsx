@@ -100,7 +100,7 @@ export default function InAppNotifications() {
   if (notifications.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] space-y-3 pointer-events-none">
+    <div className="fixed top-4 right-4 z-9999 space-y-3 pointer-events-none">
       {notifications.map((notification) => (
         <div
           key={notification.id}
@@ -108,7 +108,7 @@ export default function InAppNotifications() {
           onClick={() => handleNotificationClick(notification)}
         >
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+            <div className="shrink-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
 
@@ -122,7 +122,7 @@ export default function InAppNotifications() {
                     e.stopPropagation();
                     removeNotification(notification.id);
                   }}
-                  className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>

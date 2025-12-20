@@ -9,7 +9,7 @@ import {
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: "http://localhost:8080/api/v1",
+  baseURL: "https://tradelynk-api-t598w.ondigitalocean.app/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
