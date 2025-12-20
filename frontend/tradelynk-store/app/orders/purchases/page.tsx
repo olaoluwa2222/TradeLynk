@@ -7,14 +7,20 @@ import { useRouter } from "next/navigation";
 import { ordersApi } from "@/lib/api";
 import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
+import DisputeModal from "@/components/DisputeModal";
+import { OrderStatus } from "@/types/orders";
 
 interface Order {
   id: number;
   amount: number;
   deliveryAddress: string;
-  status: "PENDING_DELIVERY" | "DELIVERED" | "CANCELLED";
+  status: OrderStatus;
   createdAt: string;
+  shippedAt?: string;
   deliveredAt?: string;
+  completedAt?: string;
+  disputedAt?: string;
+  refundedAt?: string;
   autoCompletedAt?: string;
   cancellationReason?: string;
   item: {
@@ -57,6 +63,25 @@ export default function MyOrdersPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [chatLoading, setChatLoading] = useState<number | null>(null);
+  const [confirmingDelivery, setConfirmingDelivery] = useState<number | null>(
+    null
+  );
+  const [disputeModalOrder, setDisputeModalOrder] = useState<Order | null>(
+    null
+  );
+  const [actionError, setActionError] = useState<string>("");
+  const [actionSuccess, setActionSuccess] = useState<string>("");
+
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (actionError || actionSuccess) {
+      const timer = setTimeout(() => {
+        setActionError("");
+        setActionSuccess("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionError, actionSuccess]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -109,23 +134,53 @@ export default function MyOrdersPage() {
   // Get status badge style
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "PENDING_DELIVERY":
+      case "PAYMENT_HELD":
         return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-800",
-          label: "⏳ Pending Delivery",
+          bg: "bg-amber-100",
+          text: "text-amber-800",
+          label: "💰 Payment Held",
+        };
+      case "SHIPPED":
+        return {
+          bg: "bg-blue-100",
+          text: "text-blue-800",
+          label: "🚚 Shipped",
         };
       case "DELIVERED":
         return {
+          bg: "bg-emerald-100",
+          text: "text-emerald-800",
+          label: "✅ Delivered",
+        };
+      case "COMPLETED":
+        return {
           bg: "bg-green-100",
           text: "text-green-800",
-          label: "✅ Delivered",
+          label: "💸 Completed",
+        };
+      case "DISPUTED":
+        return {
+          bg: "bg-red-100",
+          text: "text-red-800",
+          label: "⚠️ Disputed",
+        };
+      case "REFUNDED":
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          label: "💵 Refunded",
         };
       case "CANCELLED":
         return {
           bg: "bg-red-100",
           text: "text-red-800",
           label: "❌ Cancelled",
+        };
+      case "PENDING_DELIVERY":
+        return {
+          bg: "bg-yellow-100",
+          text: "text-yellow-800",
+          label: "⏳ Pending Delivery",
         };
       default:
         return {
@@ -134,6 +189,75 @@ export default function MyOrdersPage() {
           label: status,
         };
     }
+  };
+
+  // Get progress step for order timeline
+  const getProgressStep = (status: string): number => {
+    switch (status) {
+      case "PAYMENT_HELD":
+        return 1;
+      case "SHIPPED":
+        return 2;
+      case "DELIVERED":
+        return 3;
+      case "COMPLETED":
+        return 4;
+      case "DISPUTED":
+      case "REFUNDED":
+      case "CANCELLED":
+        return -1; // Special case
+      default:
+        return 0;
+    }
+  };
+
+  // Handle confirm delivery
+  const handleConfirmDelivery = async (orderId: number) => {
+    setConfirmingDelivery(orderId);
+    setActionError("");
+    setActionSuccess("");
+
+    try {
+      const response = await ordersApi.confirmDelivery(orderId);
+      if (response.success) {
+        setActionSuccess(
+          "Delivery confirmed! Payment has been released to the seller."
+        );
+        // Update order status locally
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId
+              ? { ...order, status: "DELIVERED" as OrderStatus }
+              : order
+          )
+        );
+        // Refresh orders after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(response.message || "Failed to confirm delivery");
+      }
+    } catch (err: any) {
+      console.error("Error confirming delivery:", err);
+      setActionError(
+        err.message || "Failed to confirm delivery. Please try again."
+      );
+    } finally {
+      setConfirmingDelivery(null);
+    }
+  };
+
+  // Handle dispute submission success
+  const handleDisputeSuccess = () => {
+    setDisputeModalOrder(null);
+    setActionSuccess(
+      "Your dispute has been submitted. We'll review it within 24-48 hours."
+    );
+    // Refresh orders
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
   };
 
   // Loading state
@@ -184,33 +308,67 @@ export default function MyOrdersPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Success/Error Messages */}
+        {actionSuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p
+              className="text-green-700 text-sm"
+              style={{ fontFamily: "Clash Display", fontWeight: 500 }}
+            >
+              ✅ {actionSuccess}
+            </p>
+          </div>
+        )}
+        {actionError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p
+              className="text-red-600 text-sm"
+              style={{ fontFamily: "Clash Display", fontWeight: 500 }}
+            >
+              ❌ {actionError}
+            </p>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="mb-8 flex flex-wrap gap-3">
-          {["ALL", "PENDING_DELIVERY", "DELIVERED", "CANCELLED"].map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                  filterStatus === status
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                {status === "ALL"
-                  ? "All Orders"
-                  : status === "PENDING_DELIVERY"
-                  ? "Pending"
-                  : status === "DELIVERED"
-                  ? "Delivered"
-                  : "Cancelled"}
-              </button>
-            )
-          )}
+          {[
+            "ALL",
+            "PAYMENT_HELD",
+            "SHIPPED",
+            "DELIVERED",
+            "COMPLETED",
+            "DISPUTED",
+            "CANCELLED",
+          ].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-6 py-2 rounded-full font-semibold transition-all ${
+                filterStatus === status
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 600,
+              }}
+            >
+              {status === "ALL"
+                ? "All Orders"
+                : status === "PAYMENT_HELD"
+                ? "Payment Held"
+                : status === "SHIPPED"
+                ? "Shipped"
+                : status === "DELIVERED"
+                ? "Delivered"
+                : status === "COMPLETED"
+                ? "Completed"
+                : status === "DISPUTED"
+                ? "Disputed"
+                : "Cancelled"}
+            </button>
+          ))}
         </div>
 
         {/* Error State */}
@@ -336,6 +494,94 @@ export default function MyOrdersPage() {
                         </span>
                       </div>
 
+                      {/* Order Progress Tracker */}
+                      {getProgressStep(order.status) > 0 && (
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            {[
+                              "Payment",
+                              "Shipped",
+                              "Delivered",
+                              "Completed",
+                            ].map((step, index) => {
+                              const currentStep = getProgressStep(order.status);
+                              const stepNumber = index + 1;
+                              const isCompleted = stepNumber < currentStep;
+                              const isCurrent = stepNumber === currentStep;
+                              const isPending = stepNumber > currentStep;
+
+                              return (
+                                <div key={step} className="flex items-center">
+                                  <div className="flex flex-col items-center">
+                                    <div
+                                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                        isCompleted
+                                          ? "bg-green-500 text-white"
+                                          : isCurrent
+                                          ? "bg-black text-white"
+                                          : "bg-gray-200 text-gray-500"
+                                      }`}
+                                    >
+                                      {isCompleted ? "✓" : stepNumber}
+                                    </div>
+                                    <span
+                                      className={`text-xs mt-1 ${
+                                        isCompleted || isCurrent
+                                          ? "text-black font-semibold"
+                                          : "text-gray-400"
+                                      }`}
+                                      style={{
+                                        fontFamily: "Clash Display",
+                                        fontWeight: isCurrent ? 600 : 400,
+                                      }}
+                                    >
+                                      {step}
+                                    </span>
+                                  </div>
+                                  {index < 3 && (
+                                    <div
+                                      className={`w-8 md:w-12 h-0.5 mx-1 ${
+                                        stepNumber < currentStep
+                                          ? "bg-green-500"
+                                          : "bg-gray-200"
+                                      }`}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Dispute/Refund notice */}
+                      {(order.status === "DISPUTED" ||
+                        order.status === "REFUNDED") && (
+                        <div
+                          className={`mb-4 p-3 rounded-lg ${
+                            order.status === "DISPUTED"
+                              ? "bg-red-50 border border-red-200"
+                              : "bg-gray-50 border border-gray-200"
+                          }`}
+                        >
+                          <p
+                            className={`text-sm ${
+                              order.status === "DISPUTED"
+                                ? "text-red-700"
+                                : "text-gray-700"
+                            }`}
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {order.status === "DISPUTED"
+                              ? "⚠️ You've raised a dispute for this order. We're reviewing it and will get back to you soon."
+                              : "💵 This order has been refunded to your original payment method."}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
                           <p
@@ -401,6 +647,43 @@ export default function MyOrdersPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-3">
+                        {/* Confirm Delivery Button - only for SHIPPED orders */}
+                        {order.status === "SHIPPED" && (
+                          <button
+                            onClick={() => handleConfirmDelivery(order.id)}
+                            disabled={confirmingDelivery === order.id}
+                            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {confirmingDelivery === order.id ? (
+                              <>
+                                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></div>
+                                Confirming...
+                              </>
+                            ) : (
+                              <>✅ Confirm Delivery</>
+                            )}
+                          </button>
+                        )}
+
+                        {/* Report Issue Button - for PAYMENT_HELD or SHIPPED orders */}
+                        {(order.status === "PAYMENT_HELD" ||
+                          order.status === "SHIPPED") && (
+                          <button
+                            onClick={() => setDisputeModalOrder(order)}
+                            className="px-6 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors text-sm font-semibold"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 600,
+                            }}
+                          >
+                            ⚠️ Report Issue
+                          </button>
+                        )}
+
                         <Link
                           href={`/orders/${order.id}`}
                           className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-semibold"
@@ -422,7 +705,7 @@ export default function MyOrdersPage() {
                               );
                             } catch (err: any) {
                               console.error("Error starting chat:", err);
-                              alert(
+                              setActionError(
                                 err.message ||
                                   "Failed to start chat. Please try again."
                               );
@@ -453,6 +736,16 @@ export default function MyOrdersPage() {
               );
             })}
           </div>
+        )}
+
+        {/* Dispute Modal */}
+        {disputeModalOrder && (
+          <DisputeModal
+            orderId={disputeModalOrder.id}
+            itemTitle={disputeModalOrder.item.title}
+            onClose={() => setDisputeModalOrder(null)}
+            onSuccess={handleDisputeSuccess}
+          />
         )}
 
         {/* Pagination */}

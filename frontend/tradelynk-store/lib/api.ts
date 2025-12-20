@@ -9,7 +9,7 @@ import {
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: "https://tradelynk-api-t598w.ondigitalocean.app/api/v1",
+  baseURL: "http://localhost:8080/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
@@ -611,7 +611,7 @@ export const ordersApi = {
     return response.data;
   },
 
-  // Mark order as delivered (buyer only)
+  // Mark order as delivered (buyer only) - OLD METHOD (kept for backwards compatibility)
   markAsDelivered: async (orderId: number) => {
     const response = await api.put(`/orders/${orderId}/mark-delivered`);
     return response.data;
@@ -626,6 +626,54 @@ export const ordersApi = {
   // Get order statistics (for dashboard)
   getOrderStatistics: async () => {
     const response = await api.get("/orders/statistics");
+    return response.data;
+  },
+
+  // ===== NEW ESCROW SYSTEM ENDPOINTS =====
+
+  // Mark order as shipped (seller only)
+  markAsShipped: async (orderId: number) => {
+    const response = await api.put(`/orders/${orderId}/mark-shipped`);
+    return response.data;
+  },
+
+  // Confirm delivery (buyer only) - releases escrow payment to seller
+  confirmDelivery: async (orderId: number) => {
+    const response = await api.put(`/orders/${orderId}/confirm-delivery`);
+    return response.data;
+  },
+};
+
+// Disputes API methods
+export const disputesApi = {
+  // Create a dispute for an order (buyer only)
+  createDispute: async (
+    orderId: number,
+    data: { reason: string; description: string }
+  ) => {
+    const response = await api.post(`/disputes/orders/${orderId}`, data);
+    return response.data;
+  },
+
+  // Get buyer's disputes
+  getMyDisputes: async (page: number = 0, size: number = 10) => {
+    const response = await api.get("/disputes/my-disputes", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get seller's disputes
+  getSellerDisputes: async (page: number = 0, size: number = 10) => {
+    const response = await api.get("/disputes/seller/disputes", {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get dispute by ID
+  getDisputeById: async (disputeId: number) => {
+    const response = await api.get(`/disputes/${disputeId}`);
     return response.data;
   },
 };

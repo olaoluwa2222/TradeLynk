@@ -392,8 +392,9 @@ function CheckoutContent() {
                       fontWeight: 400,
                     }}
                   >
-                    Your payment is secured by Paystack. Arrange delivery with
-                    the seller after payment confirmation.
+                    Your payment is held securely in escrow until you confirm
+                    delivery. You have 5 days after shipment to report any
+                    issues.
                   </p>
                 </div>
               </div>

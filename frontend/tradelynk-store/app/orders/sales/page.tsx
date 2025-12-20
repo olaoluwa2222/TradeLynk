@@ -6,14 +6,19 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ordersApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { OrderStatus } from "@/types/orders";
 
 interface Sale {
   id: number;
   amount: number;
   deliveryAddress: string;
-  status: "PENDING_DELIVERY" | "DELIVERED" | "CANCELLED";
+  status: OrderStatus;
   createdAt: string;
+  shippedAt?: string;
   deliveredAt?: string;
+  completedAt?: string;
+  disputedAt?: string;
+  refundedAt?: string;
   autoCompletedAt?: string;
   cancellationReason?: string;
   item: {
@@ -56,10 +61,28 @@ export default function MySalesPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [pendingRevenue, setPendingRevenue] = useState(0);
+  const [markingShipped, setMarkingShipped] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string>("");
+  const [actionSuccess, setActionSuccess] = useState<string>("");
+
+  // Platform fee is 3%
+  const PLATFORM_FEE_PERCENT = 0.03;
 
   // Check if user is seller
   const isSeller =
     user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
+
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (actionError || actionSuccess) {
+      const timer = setTimeout(() => {
+        setActionError("");
+        setActionSuccess("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [actionError, actionSuccess]);
 
   // Redirect if not seller
   useEffect(() => {
@@ -96,13 +119,25 @@ export default function MySalesPage() {
           setSales(filteredSales);
           setTotalPages(response.totalPages || 1);
 
-          // Calculate total revenue (only delivered orders)
-          const revenue = salesData
-            .filter((sale: Sale) => sale.status === "DELIVERED")
+          // Calculate total revenue (only COMPLETED orders - money actually paid out)
+          const completedRevenue = salesData
+            .filter((sale: Sale) => sale.status === "COMPLETED")
             .reduce((sum: number, sale: Sale) => sum + sale.amount, 0);
 
-          // Seller gets 90% (after 10% commission)
-          setTotalRevenue(revenue * 0.9);
+          // Seller gets 97% (after 3% platform fee)
+          setTotalRevenue(completedRevenue * (1 - PLATFORM_FEE_PERCENT));
+
+          // Calculate pending revenue (PAYMENT_HELD, SHIPPED, DELIVERED - money in escrow)
+          const pendingEscrow = salesData
+            .filter(
+              (sale: Sale) =>
+                sale.status === "PAYMENT_HELD" ||
+                sale.status === "SHIPPED" ||
+                sale.status === "DELIVERED"
+            )
+            .reduce((sum: number, sale: Sale) => sum + sale.amount, 0);
+
+          setPendingRevenue(pendingEscrow * (1 - PLATFORM_FEE_PERCENT));
         } else {
           throw new Error(response.message || "Failed to load sales");
         }
@@ -122,17 +157,41 @@ export default function MySalesPage() {
   // Get status badge style
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "PENDING_DELIVERY":
+      case "PAYMENT_HELD":
         return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-800",
-          label: "⏳ Pending Delivery",
+          bg: "bg-amber-100",
+          text: "text-amber-800",
+          label: "💰 Payment Held",
+        };
+      case "SHIPPED":
+        return {
+          bg: "bg-blue-100",
+          text: "text-blue-800",
+          label: "🚚 Shipped",
         };
       case "DELIVERED":
         return {
+          bg: "bg-emerald-100",
+          text: "text-emerald-800",
+          label: "✅ Delivered",
+        };
+      case "COMPLETED":
+        return {
           bg: "bg-green-100",
           text: "text-green-800",
-          label: "✅ Delivered",
+          label: "💸 Completed",
+        };
+      case "DISPUTED":
+        return {
+          bg: "bg-red-100",
+          text: "text-red-800",
+          label: "⚠️ Disputed",
+        };
+      case "REFUNDED":
+        return {
+          bg: "bg-gray-100",
+          text: "text-gray-800",
+          label: "💵 Refunded",
         };
       case "CANCELLED":
         return {
@@ -140,12 +199,94 @@ export default function MySalesPage() {
           text: "text-red-800",
           label: "❌ Cancelled",
         };
+      case "PENDING_DELIVERY":
+        return {
+          bg: "bg-yellow-100",
+          text: "text-yellow-800",
+          label: "⏳ Pending Delivery",
+        };
       default:
         return {
           bg: "bg-gray-100",
           text: "text-gray-800",
           label: status,
         };
+    }
+  };
+
+  // Get payment status for display
+  const getPaymentStatus = (status: string) => {
+    switch (status) {
+      case "PAYMENT_HELD":
+      case "SHIPPED":
+        return { label: "💰 In Escrow", color: "text-amber-600" };
+      case "DELIVERED":
+        return { label: "⏳ Pending Release", color: "text-blue-600" };
+      case "COMPLETED":
+        return { label: "✅ Paid Out", color: "text-green-600" };
+      case "DISPUTED":
+        return { label: "⚠️ On Hold", color: "text-red-600" };
+      case "REFUNDED":
+        return { label: "💸 Refunded", color: "text-gray-600" };
+      case "CANCELLED":
+        return { label: "❌ Cancelled", color: "text-gray-600" };
+      default:
+        return { label: "Unknown", color: "text-gray-600" };
+    }
+  };
+
+  // Calculate days until auto-complete (5 days from shipped date)
+  const getDaysUntilAutoComplete = (shippedAt?: string) => {
+    if (!shippedAt) return null;
+    const shippedDate = new Date(shippedAt);
+    const autoCompleteDate = new Date(
+      shippedDate.getTime() + 5 * 24 * 60 * 60 * 1000
+    );
+    const now = new Date();
+    const daysRemaining = Math.ceil(
+      (autoCompleteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return daysRemaining > 0 ? daysRemaining : 0;
+  };
+
+  // Handle mark as shipped
+  const handleMarkAsShipped = async (orderId: number) => {
+    setMarkingShipped(orderId);
+    setActionError("");
+    setActionSuccess("");
+
+    try {
+      const response = await ordersApi.markAsShipped(orderId);
+      if (response.success) {
+        setActionSuccess(
+          "Order marked as shipped! The buyer has been notified."
+        );
+        // Update order status locally
+        setSales((prev) =>
+          prev.map((sale) =>
+            sale.id === orderId
+              ? {
+                  ...sale,
+                  status: "SHIPPED" as OrderStatus,
+                  shippedAt: new Date().toISOString(),
+                }
+              : sale
+          )
+        );
+        // Refresh after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        throw new Error(response.message || "Failed to mark as shipped");
+      }
+    } catch (err: any) {
+      console.error("Error marking as shipped:", err);
+      setActionError(
+        err.message || "Failed to mark as shipped. Please try again."
+      );
+    } finally {
+      setMarkingShipped(null);
     }
   };
 
@@ -213,7 +354,7 @@ export default function MySalesPage() {
               </div>
             </div>
 
-            {/* Total Revenue Card */}
+            {/* Paid Out (Completed) Card */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm hover:bg-white/10 transition-all">
               <div className="flex items-center justify-between">
                 <div>
@@ -224,10 +365,10 @@ export default function MySalesPage() {
                       fontWeight: 500,
                     }}
                   >
-                    Total Revenue (90%)
+                    Paid Out (97%)
                   </p>
                   <p
-                    className="text-4xl font-bold"
+                    className="text-4xl font-bold text-green-400"
                     style={{
                       fontFamily: "Clash Display",
                       fontWeight: 700,
@@ -235,12 +376,22 @@ export default function MySalesPage() {
                   >
                     ₦{(totalRevenue || 0).toLocaleString()}
                   </p>
+                  <p
+                    className="text-white/50 text-xs mt-1"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    {sales.filter((s) => s.status === "COMPLETED").length}{" "}
+                    completed orders
+                  </p>
                 </div>
                 <div className="text-6xl opacity-20">💰</div>
               </div>
             </div>
 
-            {/* Delivered Orders Card */}
+            {/* Held in Escrow Card */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm hover:bg-white/10 transition-all">
               <div className="flex items-center justify-between">
                 <div>
@@ -251,19 +402,35 @@ export default function MySalesPage() {
                       fontWeight: 500,
                     }}
                   >
-                    Delivered Orders
+                    In Escrow
                   </p>
                   <p
-                    className="text-5xl font-bold"
+                    className="text-4xl font-bold text-amber-400"
                     style={{
                       fontFamily: "Clash Display",
                       fontWeight: 700,
                     }}
                   >
-                    {sales.filter((s) => s.status === "DELIVERED").length}
+                    ₦{(pendingRevenue || 0).toLocaleString()}
+                  </p>
+                  <p
+                    className="text-white/50 text-xs mt-1"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    {
+                      sales.filter((s) =>
+                        ["PAYMENT_HELD", "SHIPPED", "DELIVERED"].includes(
+                          s.status
+                        )
+                      ).length
+                    }{" "}
+                    pending orders
                   </p>
                 </div>
-                <div className="text-6xl opacity-20">✅</div>
+                <div className="text-6xl opacity-20">⏳</div>
               </div>
             </div>
           </div>
@@ -272,33 +439,70 @@ export default function MySalesPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Action Messages */}
+        {actionSuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p
+              className="text-green-700"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 500,
+              }}
+            >
+              ✅ {actionSuccess}
+            </p>
+          </div>
+        )}
+        {actionError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p
+              className="text-red-700"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 500,
+              }}
+            >
+              ❌ {actionError}
+            </p>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="mb-8 flex flex-wrap gap-3">
-          {["ALL", "PENDING_DELIVERY", "DELIVERED", "CANCELLED"].map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                  filterStatus === status
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                {status === "ALL"
-                  ? "All Sales"
-                  : status === "PENDING_DELIVERY"
-                  ? "Pending"
-                  : status === "DELIVERED"
-                  ? "Delivered"
-                  : "Cancelled"}
-              </button>
-            )
-          )}
+          {[
+            "ALL",
+            "PAYMENT_HELD",
+            "SHIPPED",
+            "DELIVERED",
+            "COMPLETED",
+            "DISPUTED",
+          ].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
+              className={`px-6 py-2 rounded-full font-semibold transition-all ${
+                filterStatus === status
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 600,
+              }}
+            >
+              {status === "ALL"
+                ? "All Sales"
+                : status === "PAYMENT_HELD"
+                ? "💰 Payment Held"
+                : status === "SHIPPED"
+                ? "🚚 Shipped"
+                : status === "DELIVERED"
+                ? "✅ Delivered"
+                : status === "COMPLETED"
+                ? "💸 Completed"
+                : "⚠️ Disputed"}
+            </button>
+          ))}
         </div>
 
         {/* Error State */}
@@ -345,7 +549,9 @@ export default function MySalesPage() {
           <div className="space-y-6">
             {sales.map((sale) => {
               const statusBadge = getStatusBadge(sale.status);
-              const sellerRevenue = sale.amount * 0.9; // 90% after commission
+              const paymentStatus = getPaymentStatus(sale.status);
+              const sellerRevenue = sale.amount * (1 - PLATFORM_FEE_PERCENT); // 97% after 3% fee
+              const daysRemaining = getDaysUntilAutoComplete(sale.shippedAt);
 
               // Parse imageUrls if it's a string
               let imageUrl = "/placeholder.jpg";
@@ -449,7 +655,7 @@ export default function MySalesPage() {
                               fontWeight: 400,
                             }}
                           >
-                            Your Revenue (90%)
+                            You&apos;ll Get (97%)
                           </p>
                           <p
                             className="text-lg font-bold text-green-600"
@@ -459,6 +665,15 @@ export default function MySalesPage() {
                             }}
                           >
                             ₦{sellerRevenue.toLocaleString()}
+                          </p>
+                          <p
+                            className={`text-xs mt-1 ${paymentStatus.color}`}
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {paymentStatus.label}
                           </p>
                         </div>
                         <div>
@@ -503,8 +718,46 @@ export default function MySalesPage() {
                         </div>
                       </div>
 
+                      {/* Auto-complete countdown for shipped orders */}
+                      {sale.status === "SHIPPED" && daysRemaining !== null && (
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p
+                            className="text-sm text-blue-700"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 500,
+                            }}
+                          >
+                            ⏳ Auto-completes in {daysRemaining} day
+                            {daysRemaining !== 1 ? "s" : ""} if buyer
+                            doesn&apos;t confirm
+                          </p>
+                        </div>
+                      )}
+
                       {/* Actions */}
                       <div className="flex flex-wrap gap-3">
+                        {/* Mark as Shipped button for PAYMENT_HELD orders */}
+                        {sale.status === "PAYMENT_HELD" && (
+                          <button
+                            onClick={() => handleMarkAsShipped(sale.id)}
+                            disabled={markingShipped === sale.id}
+                            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {markingShipped === sale.id ? (
+                              <>
+                                <span className="animate-spin">⏳</span>
+                                Marking...
+                              </>
+                            ) : (
+                              "📦 Mark as Shipped"
+                            )}
+                          </button>
+                        )}
                         <Link
                           href={`/orders/${sale.id}`}
                           className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-semibold"
