@@ -118,7 +118,7 @@ export default function Home() {
                 fontWeight: 700,
               }}
             >
-              🎓 Buy & Sell Within Landmark University
+              🛍️ Your Marketplace, Your Brand, Your Success
             </h1>
 
             <p
@@ -128,8 +128,9 @@ export default function Home() {
                 fontWeight: 400,
               }}
             >
-              Discover amazing deals from fellow students. No need to leave
-              campus—everything you need, right at your fingertips.
+              Discover amazing products from sellers worldwide. Every seller
+              gets their own branded mini-website to showcase products, share
+              their story, and build their online presence—all in one place.
             </p>
 
             {isAuthenticated ? (
@@ -665,16 +666,16 @@ export default function Home() {
                 fontWeight: 700,
               }}
             >
-              Why Students Love TradeLynk
+              Why Users Love TradeLynk
             </h2>
             <div className="h-1 w-20 bg-linear-to-r from-blue-500 to-purple-600 mx-auto"></div>
           </div>
 
           {/* Features Grid - 2x3 Layout */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1: Safe & Verified */}
+            {/* Feature 1: Your Own Storefront */}
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 hover:bg-white/20 transition-all duration-300 border border-white/20">
-              <div className="text-4xl mb-4">✅</div>
+              <div className="text-4xl mb-4">🏪</div>
               <h3
                 className="text-xl font-bold text-white mb-3"
                 style={{
@@ -682,7 +683,7 @@ export default function Home() {
                   fontWeight: 600,
                 }}
               >
-                Safe & Verified
+                Your Own Storefront
               </h3>
               <p
                 className="text-gray-200 text-sm leading-relaxed"
@@ -691,12 +692,13 @@ export default function Home() {
                   fontWeight: 400,
                 }}
               >
-                Only Landmark students can buy and sell. Verified transactions
-                you can trust.
+                Every seller gets a personalized mini-website with home, about,
+                products, and contact sections. Build your brand within our
+                platform.
               </p>
             </div>
 
-            {/* Feature 2: Fast & Convenient */}
+            {/* Feature 2: No Website Needed */}
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 hover:bg-white/20 transition-all duration-300 border border-white/20">
               <div className="text-4xl mb-4">🚀</div>
               <h3
@@ -706,7 +708,7 @@ export default function Home() {
                   fontWeight: 600,
                 }}
               >
-                Fast & Convenient
+                No Website Needed
               </h3>
               <p
                 className="text-gray-200 text-sm leading-relaxed"
@@ -715,12 +717,12 @@ export default function Home() {
                   fontWeight: 400,
                 }}
               >
-                No need to leave campus. Get what you need delivered right to
-                your door.
+                Don't have a website? No problem! TradeLynk gives you everything
+                you need to sell online—instantly and professionally.
               </p>
             </div>
 
-            {/* Feature 3: Best Prices */}
+            {/* Feature 3: Direct Connection */}
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 hover:bg-white/20 transition-all duration-300 border border-white/20">
               <div className="text-4xl mb-4">💰</div>
               <h3
@@ -730,7 +732,7 @@ export default function Home() {
                   fontWeight: 600,
                 }}
               >
-                Best Prices
+                Direct Connection
               </h3>
               <p
                 className="text-gray-200 text-sm leading-relaxed"
@@ -739,8 +741,8 @@ export default function Home() {
                   fontWeight: 400,
                 }}
               >
-                Direct from students. No middleman, just great deals between
-                peers.
+                Connect directly with sellers. No middleman fees, just authentic
+                relationships and fair prices for quality products.
               </p>
             </div>
 
@@ -768,9 +770,9 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature 5: Student Community */}
+            {/* Feature 5: Global Marketplace */}
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-8 hover:bg-white/20 transition-all duration-300 border border-white/20">
-              <div className="text-4xl mb-4">👥</div>
+              <div className="text-4xl mb-4">🌍</div>
               <h3
                 className="text-xl font-bold text-white mb-3"
                 style={{
@@ -778,7 +780,7 @@ export default function Home() {
                   fontWeight: 600,
                 }}
               >
-                Student Community
+                Global Marketplace
               </h3>
               <p
                 className="text-gray-200 text-sm leading-relaxed"
@@ -787,8 +789,8 @@ export default function Home() {
                   fontWeight: 400,
                 }}
               >
-                Buy and sell with your classmates. Support fellow students on
-                campus.
+                Shop from sellers worldwide or sell to a global audience. Break
+                geographical barriers and expand your reach effortlessly.
               </p>
             </div>
 
@@ -847,7 +849,7 @@ export default function Home() {
             >
               How TradeLynk Works
             </h2>
-            <div className="h-1 w-20 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto"></div>
+            <div className="h-1 w-20 bg-linear-to-r from-blue-500 to-purple-600 mx-auto"></div>
           </div>
 
           {/* Steps Container */}
@@ -886,8 +888,8 @@ export default function Home() {
                   fontWeight: 400,
                 }}
               >
-                Find the perfect item from fellow students. Explore thousands of
-                listings updated daily.
+                Discover unique products from sellers worldwide. Explore
+                thousands of listings across diverse categories, updated daily.
               </p>
 
               {/* Arrow to next step */}
@@ -974,7 +976,8 @@ export default function Home() {
                   fontWeight: 400,
                 }}
               >
-                Arrange delivery on campus and complete your transaction safely.
+                Arrange delivery or pickup and complete your transaction
+                securely. Fast, safe, and hassle-free.
               </p>
             </div>
           </div>
@@ -983,7 +986,7 @@ export default function Home() {
           <div className="text-center mt-16">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="inline-flex items-center gap-2 px-8 py-3 bg-linear-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
               style={{
                 fontFamily: "Clash Display",
                 fontWeight: 700,
@@ -1044,8 +1047,9 @@ export default function Home() {
                   fontWeight: 500,
                 }}
               >
-                Join <span className="text-white font-bold">200+</span> students
-                already buying and selling on campus
+                Join <span className="text-white font-bold">thousands</span> of
+                sellers already building their brands and reaching customers
+                worldwide
               </p>
             </div>
 
@@ -1059,7 +1063,7 @@ export default function Home() {
                     fontWeight: 700,
                   }}
                 >
-                  200+
+                  5000+
                 </div>
                 <div
                   className="text-sm text-gray-300 mt-1"
@@ -1068,7 +1072,7 @@ export default function Home() {
                     fontWeight: 400,
                   }}
                 >
-                  Active Students
+                  Active Sellers
                 </div>
               </div>
 
@@ -1080,7 +1084,7 @@ export default function Home() {
                     fontWeight: 700,
                   }}
                 >
-                  1000+
+                  50K+
                 </div>
                 <div
                   className="text-sm text-gray-300 mt-1"
@@ -1089,7 +1093,7 @@ export default function Home() {
                     fontWeight: 400,
                   }}
                 >
-                  Items Listed
+                  Products Listed
                 </div>
               </div>
 
@@ -1101,7 +1105,7 @@ export default function Home() {
                     fontWeight: 700,
                   }}
                 >
-                  24/7
+                  150+
                 </div>
                 <div
                   className="text-sm text-gray-300 mt-1"
@@ -1110,7 +1114,7 @@ export default function Home() {
                     fontWeight: 400,
                   }}
                 >
-                  Support
+                  Countries
                 </div>
               </div>
             </div>
@@ -1119,7 +1123,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-linear-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
                 style={{
                   fontFamily: "Clash Display",
                   fontWeight: 700,
@@ -1150,7 +1154,8 @@ export default function Home() {
                 fontWeight: 400,
               }}
             >
-              No verification fee • Free listings • Secure transactions
+              No setup fee • Free mini-website • Personalized seller page •
+              Secure transactions
             </div>
           </div>
         </div>

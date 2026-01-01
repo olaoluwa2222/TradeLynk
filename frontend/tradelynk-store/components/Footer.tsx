@@ -27,8 +27,9 @@ export default function Footer() {
                 fontWeight: 400,
               }}
             >
-              Buy and sell within Landmark University. Your campus marketplace
-              for everything you need.
+              Your global marketplace where sellers get their own branded
+              storefront. Connect, trade, and grow your business—all in one
+              platform.
             </p>
           </div>
 
@@ -262,7 +263,7 @@ export default function Footer() {
         <div className="border-t border-gray-200"></div>
 
         {/* Copyright Section */}
-        <div className="pt-8 text-center space-y-2">
+        <div className="pt-8 text-center">
           <p
             className="text-sm text-gray-600"
             style={{
@@ -271,15 +272,6 @@ export default function Footer() {
             }}
           >
             © {currentYear} TradeLynk. All rights reserved.
-          </p>
-          <p
-            className="text-sm text-gray-600"
-            style={{
-              fontFamily: "Clash Display",
-              fontWeight: 400,
-            }}
-          >
-            Made with ❤️ for Landmark University students
           </p>
         </div>
       </div>
