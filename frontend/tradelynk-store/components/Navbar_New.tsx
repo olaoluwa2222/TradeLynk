@@ -140,7 +140,7 @@ export default function Navbar() {
           {/* Logo Section */}
           <Link
             href="/"
-            className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity"
           >
             <Image
               src="/Logo Icon.png"
@@ -167,7 +167,7 @@ export default function Navbar() {
               <form onSubmit={handleSearch} className="relative">
                 <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 hover:border-gray-400 focus-within:border-black focus-within:bg-white transition-all">
                   <svg
-                    className="w-5 h-5 text-gray-400 flex-shrink-0"
+                    className="w-5 h-5 text-gray-400 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -226,7 +226,7 @@ export default function Navbar() {
                                 }}
                               >
                                 <svg
-                                  className="w-4 h-4 text-gray-400 flex-shrink-0"
+                                  className="w-4 h-4 text-gray-400 shrink-0"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -349,7 +349,7 @@ export default function Navbar() {
               >
                 {/* Profile Button */}
                 <button className="flex items-center gap-2 hover:opacity-75 transition-opacity py-2">
-                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0">
                     <span className="text-white font-bold text-sm">
                       {user?.name?.charAt(0).toUpperCase()}
                     </span>
@@ -368,7 +368,7 @@ export default function Navbar() {
                     )}
                   </div>
                   <svg
-                    className={`w-4 h-4 hidden sm:block transition-transform ${
+                    className={`w-4 h-4 hidden sm:block transition-transform duration-200 ${
                       showProfileDropdown ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -379,7 +379,7 @@ export default function Navbar() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                      d="M19 9l-7 7-7-7"
                     />
                   </svg>
                 </button>
@@ -495,7 +495,7 @@ export default function Navbar() {
           <form onSubmit={handleSearch} className="relative">
             <div className="flex items-center bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5">
               <svg
-                className="w-5 h-5 text-gray-400 flex-shrink-0"
+                className="w-5 h-5 text-gray-400 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -546,7 +546,7 @@ export default function Navbar() {
                             }}
                           >
                             <svg
-                              className="w-4 h-4 text-gray-400 flex-shrink-0"
+                              className="w-4 h-4 text-gray-400 shrink-0"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"

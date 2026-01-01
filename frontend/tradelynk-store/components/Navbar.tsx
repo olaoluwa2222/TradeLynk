@@ -375,7 +375,7 @@ export default function Navbar() {
                     )}
                   </div>
                   <svg
-                    className={`w-4 h-4 hidden sm:block transition-transform ${
+                    className={`w-4 h-4 hidden sm:block transition-transform duration-200 ${
                       showProfileDropdown ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -386,7 +386,7 @@ export default function Navbar() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                      d="M19 9l-7 7-7-7"
                     />
                   </svg>
                 </button>
