@@ -5,9 +5,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { sellersApi } from "@/lib/api";
+import ImageUpload from "@/components/ImageUpload";
+import GrammarChecker from "@/components/GrammarChecker";
 
 export default function BecomeASellerPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
 
   return (
@@ -41,14 +43,14 @@ export default function BecomeASellerPage() {
                   }}
                 >
                   Turn your unused items into cash. Join 50+ student sellers
-                  making ₦50,000+ per month on Landmark Marketplace.
+                  making ₦50,000+ per month on TradeLynk Marketplace.
                 </p>
               </div>
 
               {/* CTA Button */}
               <div>
-                <Link
-                  href={isAuthenticated ? "/seller-dashboard" : "/register"}
+                <a
+                  href="#form"
                   className="inline-flex items-center gap-3 px-8 py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg group"
                   style={{
                     fontFamily: "Clash Display",
@@ -57,9 +59,9 @@ export default function BecomeASellerPage() {
                 >
                   <span>Start Selling Now</span>
                   <span className="group-hover:translate-x-1 transition-transform">
-                    ↓
+                    →
                   </span>
-                </Link>
+                </a>
               </div>
 
               {/* Benefits List */}
@@ -131,7 +133,7 @@ export default function BecomeASellerPage() {
                         fontWeight: 400,
                       }}
                     >
-                      Create your profile in less than 2 minutes
+                      Create your profile in less than 5 minutes
                     </p>
                   </div>
                 </div>
@@ -238,8 +240,8 @@ export default function BecomeASellerPage() {
                 >
                   Ready to start earning?
                 </p>
-                <Link
-                  href={isAuthenticated ? "/seller-dashboard" : "/register"}
+                <a
+                  href="#form"
                   className="inline-block w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-900 transition-colors"
                   style={{
                     fontFamily: "Clash Display",
@@ -247,17 +249,12 @@ export default function BecomeASellerPage() {
                   }}
                 >
                   Become a Seller
-                </Link>
+                </a>
               </div>
             </div>
           </div>
         </div>
       </section>
-
-      {/* Additional sections will be added here */}
-      {/* Why Sell Section */}
-      {/* How to Get Started Section */}
-      {/* Support Section */}
 
       {/* How Selling Works Section */}
       <section className="w-full bg-white py-20 px-4 sm:px-6 lg:px-8">
@@ -278,12 +275,8 @@ export default function BecomeASellerPage() {
 
           {/* Steps Container */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* Connection Lines */}
-            <div className="hidden md:block absolute top-24 left-0 right-0 h-1 bg-linear-to-r from-black via-black to-black -z-10"></div>
-
             {/* Step 1: Sign Up */}
             <div className="flex flex-col items-center text-center group">
-              {/* Step Circle */}
               <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
                 <span
                   className="text-5xl"
@@ -296,7 +289,6 @@ export default function BecomeASellerPage() {
                 </span>
               </div>
 
-              {/* Step Label */}
               <h3
                 className="text-2xl font-bold text-black mb-4"
                 style={{
@@ -307,7 +299,6 @@ export default function BecomeASellerPage() {
                 Step 1
               </h3>
 
-              {/* Step Title */}
               <h4
                 className="text-xl font-semibold text-black mb-3"
                 style={{
@@ -318,7 +309,6 @@ export default function BecomeASellerPage() {
                 Sign Up
               </h4>
 
-              {/* Step Description */}
               <p
                 className="text-gray-600 text-sm leading-relaxed"
                 style={{
@@ -327,13 +317,12 @@ export default function BecomeASellerPage() {
                 }}
               >
                 Add your bank details and complete your seller profile in less
-                than 2 minutes.
+                than 5 minutes.
               </p>
             </div>
 
             {/* Step 2: List Item */}
             <div className="flex flex-col items-center text-center group">
-              {/* Step Circle */}
               <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
                 <span
                   className="text-5xl"
@@ -346,7 +335,6 @@ export default function BecomeASellerPage() {
                 </span>
               </div>
 
-              {/* Step Label */}
               <h3
                 className="text-2xl font-bold text-black mb-4"
                 style={{
@@ -357,7 +345,6 @@ export default function BecomeASellerPage() {
                 Step 2
               </h3>
 
-              {/* Step Title */}
               <h4
                 className="text-xl font-semibold text-black mb-3"
                 style={{
@@ -368,7 +355,6 @@ export default function BecomeASellerPage() {
                 List Item
               </h4>
 
-              {/* Step Description */}
               <p
                 className="text-gray-600 text-sm leading-relaxed"
                 style={{
@@ -383,7 +369,6 @@ export default function BecomeASellerPage() {
 
             {/* Step 3: Get Paid */}
             <div className="flex flex-col items-center text-center group">
-              {/* Step Circle */}
               <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
                 <span
                   className="text-5xl"
@@ -396,7 +381,6 @@ export default function BecomeASellerPage() {
                 </span>
               </div>
 
-              {/* Step Label */}
               <h3
                 className="text-2xl font-bold text-black mb-4"
                 style={{
@@ -407,7 +391,6 @@ export default function BecomeASellerPage() {
                 Step 3
               </h3>
 
-              {/* Step Title */}
               <h4
                 className="text-xl font-semibold text-black mb-3"
                 style={{
@@ -418,7 +401,6 @@ export default function BecomeASellerPage() {
                 Get Paid
               </h4>
 
-              {/* Step Description */}
               <p
                 className="text-gray-600 text-sm leading-relaxed"
                 style={{
@@ -435,7 +417,11 @@ export default function BecomeASellerPage() {
       </section>
 
       {/* Seller Activation Form Section */}
-      <SellerActivationForm isAuthenticated={isAuthenticated} router={router} />
+      <SellerActivationForm
+        isAuthenticated={isAuthenticated}
+        router={router}
+        userName={user?.name || ""}
+      />
     </div>
   );
 }
@@ -444,11 +430,34 @@ export default function BecomeASellerPage() {
 function SellerActivationForm({
   isAuthenticated,
   router,
+  userName,
 }: {
   isAuthenticated: boolean;
   router: ReturnType<typeof useRouter>;
+  userName: string;
 }) {
   const [banks, setBanks] = useState<Array<{ code: string; name: string }>>([]);
+
+  // Store profile fields
+  const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
+  const [usernameError, setUsernameError] = useState("");
+
+  const [storeTagline, setStoreTagline] = useState("");
+  const [bio, setBio] = useState("");
+
+  // Optional fields
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bannerImageUrl, setBannerImageUrl] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [twitterHandle, setTwitterHandle] = useState("");
+  const [storeScreenshotUrl, setStoreScreenshotUrl] = useState("");
+
+  // Existing fields
   const [businessName, setBusinessName] = useState("");
   const [campusAddress, setCampusAddress] = useState("");
   const [bankName, setBankName] = useState("");
@@ -456,8 +465,8 @@ function SellerActivationForm({
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [validationStatus, setValidationStatus] = useState<
@@ -482,6 +491,45 @@ function SellerActivationForm({
       fetchBanks();
     }
   }, [isAuthenticated]);
+
+  // Check username availability
+  useEffect(() => {
+    const checkUsername = async () => {
+      if (!username || username.length < 3) {
+        setUsernameStatus("idle");
+        return;
+      }
+
+      // Validate format
+      const validFormat = /^[a-z0-9-]+$/.test(username);
+      if (!validFormat) {
+        setUsernameStatus("idle");
+        setUsernameError(
+          "Only lowercase letters, numbers, and hyphens allowed"
+        );
+        return;
+      }
+
+      setUsernameStatus("checking");
+      setUsernameError("");
+
+      try {
+        const data = await sellersApi.checkUsername(username);
+        if (data.success && data.data.available) {
+          setUsernameStatus("available");
+        } else {
+          setUsernameStatus("taken");
+          setUsernameError(data.data.message || "Username is taken");
+        }
+      } catch (err) {
+        setUsernameStatus("idle");
+        setUsernameError("Failed to check username availability");
+      }
+    };
+
+    const debounceTimer = setTimeout(checkUsername, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [username]);
 
   // Validate account number when it changes
   useEffect(() => {
@@ -515,12 +563,44 @@ function SellerActivationForm({
     return () => clearTimeout(debounceTimer);
   }, [accountNumber, bankCode]);
 
+  // Generate username from name
+  const generateUsername = () => {
+    if (!userName) return;
+
+    const generated = userName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .substring(0, 50);
+
+    setUsername(generated);
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     // Validation
+    if (!username || usernameStatus !== "available") {
+      setError("Please provide a valid, available username");
+      return;
+    }
+
+    if (
+      !storeTagline ||
+      storeTagline.length < 10 ||
+      storeTagline.length > 100
+    ) {
+      setError("Store tagline must be between 10-100 characters");
+      return;
+    }
+
+    if (!bio || bio.length < 50 || bio.length > 500) {
+      setError("Bio must be between 50-500 characters");
+      return;
+    }
+
     if (!bankName || !accountNumber || !agreedToTerms) {
       setError("Please fill in all required fields and agree to terms");
       return;
@@ -531,10 +611,35 @@ function SellerActivationForm({
       return;
     }
 
+    if (phoneNumber && phoneNumber.length !== 11) {
+      setError("Phone number must be 11 digits");
+      return;
+    }
+
+    if (whatsappNumber && whatsappNumber.length !== 11) {
+      setError("WhatsApp number must be 11 digits");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const data = await sellersApi.activateSeller({
+        // Required new fields
+        username,
+        storeTagline,
+        bio,
+
+        // Optional new fields
+        logoUrl: logoUrl || undefined,
+        bannerImageUrl: bannerImageUrl || undefined,
+        phoneNumber: phoneNumber || undefined,
+        whatsappNumber: whatsappNumber || undefined,
+        instagramHandle: instagramHandle || undefined,
+        twitterHandle: twitterHandle || undefined,
+        storeScreenshotUrl: storeScreenshotUrl || undefined,
+
+        // Existing fields
         businessName: businessName || undefined,
         campusAddress: campusAddress || undefined,
         bankName,
@@ -546,7 +651,7 @@ function SellerActivationForm({
       if (data.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push("/seller-dashboard");
+          router.push("/dashboard/seller");
         }, 2000);
       } else {
         setError(data.message || "Failed to activate seller account");
@@ -560,7 +665,10 @@ function SellerActivationForm({
 
   if (!isAuthenticated) {
     return (
-      <section className="w-full bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
+      <section
+        id="form"
+        className="w-full bg-gray-50 py-20 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-4xl mx-auto text-center">
           <h2
             className="text-3xl font-bold text-black mb-4"
@@ -597,7 +705,10 @@ function SellerActivationForm({
 
   if (success) {
     return (
-      <section className="w-full bg-green-50 py-20 px-4 sm:px-6 lg:px-8">
+      <section
+        id="form"
+        className="w-full bg-green-50 py-20 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-4xl mx-auto text-center">
           <div className="mb-6">
             <svg
@@ -630,8 +741,8 @@ function SellerActivationForm({
               fontWeight: 400,
             }}
           >
-            Welcome to the seller community! You can now start listing items and
-            earning money.
+            Welcome to the seller community! Your storefront is now live at{" "}
+            <span className="font-semibold">/sellers/{username}</span>
           </p>
           <p
             className="text-sm text-gray-500"
@@ -648,8 +759,8 @@ function SellerActivationForm({
   }
 
   return (
-    <section className="w-full bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <section id="form" className="w-full bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
         {/* Section Title */}
         <div className="text-center mb-12">
           <h2
@@ -668,13 +779,13 @@ function SellerActivationForm({
               fontWeight: 400,
             }}
           >
-            Set up your seller account to start earning
+            Set up your seller account and storefront
           </p>
         </div>
 
         {/* Form Card */}
         <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-10">
             {/* Error Alert */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
@@ -682,7 +793,321 @@ function SellerActivationForm({
               </div>
             )}
 
-            {/* Business Information Section */}
+            {/* SECTION 1: Store Identity (NEW) */}
+            <div className="border-b border-gray-200 pb-8">
+              <h3
+                className="text-2xl font-semibold text-black mb-6"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 600,
+                }}
+              >
+                Store Identity (Required)
+              </h3>
+
+              {/* Username */}
+              <div className="mb-6">
+                <label
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 500,
+                  }}
+                >
+                  Store Username <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) =>
+                        setUsername(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9-]/g, "")
+                        )
+                      }
+                      placeholder="your-store-name"
+                      maxLength={50}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    />
+                    {usernameStatus === "checking" && (
+                      <div className="absolute right-3 top-3">
+                        <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    {usernameStatus === "available" && (
+                      <div className="absolute right-3 top-3 text-green-500 text-xl">
+                        ✓
+                      </div>
+                    )}
+                    {usernameStatus === "taken" && (
+                      <div className="absolute right-3 top-3 text-red-500 text-xl">
+                        ✗
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateUsername}
+                    className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm whitespace-nowrap"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Generate from name
+                  </button>
+                </div>
+                <div className="mt-1 flex justify-between items-center">
+                  <p
+                    className="text-xs text-gray-500"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Your storefront: /sellers/{username || "..."}
+                  </p>
+                  {usernameError && (
+                    <p className="text-xs text-red-500">{usernameError}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Store Tagline */}
+              <div className="mb-6">
+                <GrammarChecker
+                  text={storeTagline}
+                  onTextChange={setStoreTagline}
+                  type="tagline"
+                  label="Store Tagline *"
+                  maxLength={100}
+                />
+                <p
+                  className="text-xs text-gray-500 mt-1"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  A catchy one-liner (10-100 chars)
+                </p>
+              </div>
+
+              {/* Bio */}
+              <div>
+                <GrammarChecker
+                  text={bio}
+                  onTextChange={setBio}
+                  type="bio"
+                  label="Store Bio *"
+                  maxLength={500}
+                />
+                <p
+                  className="text-xs text-gray-500 mt-1"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Tell buyers about yourself and what you sell (50-500 chars)
+                </p>
+              </div>
+            </div>
+
+            {/* SECTION 2: Visual Branding (NEW - Optional) */}
+            <div className="border-b border-gray-200 pb-8">
+              <h3
+                className="text-2xl font-semibold text-black mb-6"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 600,
+                }}
+              >
+                Visual Branding (Optional)
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Store Logo */}
+                <div>
+                  <ImageUpload
+                    onUploadComplete={setLogoUrl}
+                    currentImageUrl={logoUrl}
+                    label="Store Logo (Optional)"
+                    helpText="Square image recommended (e.g., 300x300px)"
+                  />
+                </div>
+
+                {/* Banner Image */}
+                <div>
+                  <ImageUpload
+                    onUploadComplete={setBannerImageUrl}
+                    currentImageUrl={bannerImageUrl}
+                    label="Banner Image (Optional)"
+                    helpText="Wide image recommended (e.g., 1200x400px)"
+                  />
+                </div>
+              </div>
+
+              {/* Store Screenshot */}
+              <div className="mt-6">
+                <ImageUpload
+                  onUploadComplete={setStoreScreenshotUrl}
+                  currentImageUrl={storeScreenshotUrl}
+                  label="Store Screenshot (Optional - for verification)"
+                  helpText="Screenshot of your store or previous sales (if any)"
+                />
+              </div>
+            </div>
+
+            {/* SECTION 3: Contact Information (NEW - Optional) */}
+            <div className="border-b border-gray-200 pb-8">
+              <h3
+                className="text-2xl font-semibold text-black mb-6"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 600,
+                }}
+              >
+                Contact Information (Optional)
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Phone Number */}
+                <div>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Phone Number (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) =>
+                      setPhoneNumber(
+                        e.target.value.replace(/\D/g, "").slice(0, 11)
+                      )
+                    }
+                    placeholder="08012345678"
+                    maxLength={11}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">11 digits</p>
+                </div>
+
+                {/* WhatsApp Number */}
+                <div>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 500,
+                    }}
+                  >
+                    WhatsApp Number (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={whatsappNumber}
+                    onChange={(e) =>
+                      setWhatsappNumber(
+                        e.target.value.replace(/\D/g, "").slice(0, 11)
+                      )
+                    }
+                    placeholder="08012345678"
+                    maxLength={11}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">11 digits</p>
+                </div>
+
+                {/* Instagram Handle */}
+                <div>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Instagram Handle (Optional)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3 text-gray-500">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      value={instagramHandle}
+                      onChange={(e) =>
+                        setInstagramHandle(
+                          e.target.value.replace(/[^a-zA-Z0-9_.]/g, "")
+                        )
+                      }
+                      placeholder="yourusername"
+                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Twitter Handle */}
+                <div>
+                  <label
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Twitter Handle (Optional)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3 text-gray-500">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      value={twitterHandle}
+                      onChange={(e) =>
+                        setTwitterHandle(
+                          e.target.value.replace(/[^a-zA-Z0-9_]/g, "")
+                        )
+                      }
+                      placeholder="yourusername"
+                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 4: Business Information (Optional) */}
             <div className="border-b border-gray-200 pb-8">
               <h3
                 className="text-2xl font-semibold text-black mb-6"
@@ -703,28 +1128,19 @@ function SellerActivationForm({
                     fontWeight: 500,
                   }}
                 >
-                  Business Name
+                  Business Name (Optional)
                 </label>
                 <input
                   type="text"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g., John's Used Books"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 400,
                   }}
                 />
-                <p
-                  className="text-xs text-gray-500 mt-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  This will appear on your listings
-                </p>
               </div>
 
               {/* Campus Address */}
@@ -736,14 +1152,14 @@ function SellerActivationForm({
                     fontWeight: 500,
                   }}
                 >
-                  Campus Address
+                  Campus Address (Optional)
                 </label>
                 <input
                   type="text"
                   value={campusAddress}
                   onChange={(e) => setCampusAddress(e.target.value)}
                   placeholder="e.g., Male Hostel Block B, Room 205"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 400,
@@ -752,7 +1168,7 @@ function SellerActivationForm({
               </div>
             </div>
 
-            {/* Bank Account Details Section */}
+            {/* SECTION 5: Bank Account Details (Required) */}
             <div className="border-b border-gray-200 pb-8">
               <h3
                 className="text-2xl font-semibold text-black mb-6"
@@ -773,7 +1189,7 @@ function SellerActivationForm({
                     fontWeight: 500,
                   }}
                 >
-                  Bank Name
+                  Bank Name <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={bankName}
@@ -787,7 +1203,7 @@ function SellerActivationForm({
                     setAccountName("");
                     setValidationStatus("idle");
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 400,
@@ -811,7 +1227,7 @@ function SellerActivationForm({
                     fontWeight: 500,
                   }}
                 >
-                  Account Number
+                  Account Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -822,7 +1238,7 @@ function SellerActivationForm({
                     }
                     placeholder="0123456789"
                     maxLength={10}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
                     style={{
                       fontFamily: "Clash Display",
                       fontWeight: 400,
@@ -845,15 +1261,7 @@ function SellerActivationForm({
                     </div>
                   )}
                 </div>
-                <p
-                  className="text-xs text-gray-500 mt-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  10 digits
-                </p>
+                <p className="text-xs text-gray-500 mt-1">10 digits</p>
               </div>
 
               {/* Account Name */}
@@ -878,13 +1286,7 @@ function SellerActivationForm({
                     fontWeight: 400,
                   }}
                 />
-                <p
-                  className="text-xs text-gray-500 mt-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
+                <p className="text-xs text-gray-500 mt-1">
                   Auto-filled when account is validated
                 </p>
               </div>
@@ -913,7 +1315,7 @@ function SellerActivationForm({
               </div>
             </div>
 
-            {/* Terms & Conditions Section */}
+            {/* SECTION 6: Terms & Conditions */}
             <div className="pb-8">
               <h3
                 className="text-2xl font-semibold text-black mb-6"
@@ -940,7 +1342,8 @@ function SellerActivationForm({
                       fontWeight: 400,
                     }}
                   >
-                    I agree to the Seller Terms & Conditions
+                    I agree to the Seller Terms & Conditions{" "}
+                    <span className="text-red-500">*</span>
                   </span>
                 </label>
 
@@ -954,6 +1357,7 @@ function SellerActivationForm({
                   <p>• I understand the 10% commission on each sale</p>
                   <p>• I will only sell items allowed by campus rules</p>
                   <p>• I understand my bank details are encrypted and secure</p>
+                  <p>• I agree to maintain accurate product listings</p>
                 </div>
               </div>
             </div>
@@ -961,7 +1365,11 @@ function SellerActivationForm({
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || validationStatus !== "valid"}
+              disabled={
+                isLoading ||
+                usernameStatus !== "available" ||
+                validationStatus !== "valid"
+              }
               className="w-full py-4 px-6 bg-black hover:bg-gray-900 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
               style={{
                 fontFamily: "Clash Display",
@@ -975,7 +1383,7 @@ function SellerActivationForm({
                 </>
               ) : (
                 <>
-                  Activate Seller Account
+                  Activate Seller Account & Create Storefront
                   <span>→</span>
                 </>
               )}

@@ -69,3 +69,13 @@ body {
   font-family: "Clash Display", Arial, Helvetica, sans-serif;
   font-weight: 400;
 }
+
+/* Hide scrollbar for horizontal scroll on mobile */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

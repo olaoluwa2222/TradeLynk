@@ -418,14 +418,41 @@ export const sellersApi = {
     return response.data;
   },
 
+  // Check username availability
+  checkUsername: async (username: string) => {
+    const response = await api.get("/sellers/check-username", {
+      params: { username },
+    });
+    return response.data;
+  },
+
+  // Get storefront by username (public)
+  getStorefront: async (username: string) => {
+    const response = await api.get(`/sellers/${username}/storefront`);
+    return response.data;
+  },
+
   // Activate seller account
   activateSeller: async (data: {
+    // Existing fields
     businessName?: string;
     campusAddress?: string;
     bankName: string;
     accountNumber: string;
     accountName: string;
     agreedToTerms: boolean;
+
+    // NEW fields
+    username: string;
+    storeTagline: string;
+    bio: string;
+    logoUrl?: string;
+    bannerImageUrl?: string;
+    phoneNumber?: string;
+    whatsappNumber?: string;
+    instagramHandle?: string;
+    twitterHandle?: string;
+    storeScreenshotUrl?: string;
   }) => {
     const response = await api.post("/sellers/activate", data);
     return response.data;
