@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User,Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
 
     /**
      * Find user by email address
@@ -17,12 +17,28 @@ public interface UserRepository extends JpaRepository<User,Long> {
     Optional<User> findByEmail(String email);
 
     /**
+     * ✅ NEW: Find user by username
+     * Used for public storefront lookup
+     * @param username User's unique username
+     * @return Optional containing User if found, empty otherwise
+     */
+    Optional<User> findByUsername(String username);
+
+    /**
      * Check if a user exists with the given email
      * Used to prevent duplicate registrations
      * @param email Email address to check
      * @return true if user exists, false otherwise
      */
     boolean existsByEmail(String email);
+
+    /**
+     * ✅ NEW: Check if username is already taken
+     * Used during seller activation to prevent duplicate usernames
+     * @param username Username to check
+     * @return true if username exists, false otherwise
+     */
+    boolean existsByUsername(String username);
 
     /**
      * Find active user by email
@@ -39,5 +55,4 @@ public interface UserRepository extends JpaRepository<User,Long> {
      */
     @Query("SELECT COUNT(u) FROM User u")
     long countTotalUsers();
-
 }

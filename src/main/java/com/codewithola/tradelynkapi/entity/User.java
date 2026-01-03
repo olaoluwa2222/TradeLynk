@@ -3,6 +3,7 @@ package com.codewithola.tradelynkapi.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -14,6 +15,7 @@ import java.util.List;
 @Entity
 @Table(name = "users", indexes = {
         @Index(name = "idx_email", columnList = "email", unique = true),
+        @Index(name = "idx_username", columnList = "username", unique = true), // ✅ NEW
         @Index(name = "idx_created_at", columnList = "created_at")
 })
 @Data
@@ -31,16 +33,18 @@ public class User {
     @NotBlank(message = "Email is required")
     private String email;
 
+    // ✅ NEW: Username for public storefront URL
+    @Column(unique = true, length = 50)
+    @Pattern(regexp = "^[a-z0-9-]{3,50}$",
+            message = "Username must be 3-50 characters, lowercase letters, numbers, and hyphens only")
+    private String username;
+
     @Column(nullable = false, length = 255)
     @NotBlank(message = "Name is required")
     private String name;
 
     @Column(length = 500)
     private String profilePictureUrl;
-
-    // ❌ REMOVE THIS FIELD (we're using DeviceToken table now)
-    // @Column(length = 500)
-    // private String fcmToken;
 
     @Column(nullable = false)
     @NotBlank(message = "Password is required")
@@ -73,7 +77,6 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private VerificationToken verificationToken;
 
-    // ✅ ADD THIS: Relationship with DeviceToken
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<DeviceToken> deviceTokens = new ArrayList<>();
@@ -91,6 +94,19 @@ public class User {
         if (this.email != null && !this.email.toLowerCase().endsWith("@lmu.edu.ng")) {
             throw new IllegalArgumentException("Email must be in @lmu.edu.ng format");
         }
+    }
+
+    // ✅ NEW: Generate username from name if not provided
+    public static String generateUsernameFromName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+
+        return name.toLowerCase()
+                .replaceAll("[^a-z0-9\\s-]", "") // Remove special chars except space and hyphen
+                .replaceAll("\\s+", "-") // Replace spaces with hyphens
+                .replaceAll("-+", "-") // Remove duplicate hyphens
+                .replaceAll("^-|-$", ""); // Remove leading/trailing hyphens
     }
 
     public String getFullName() {

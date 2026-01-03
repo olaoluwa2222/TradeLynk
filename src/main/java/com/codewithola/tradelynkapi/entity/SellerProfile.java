@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 /**
  * SellerProfile Entity - Represents seller-specific information
  * Links to User entity with a One-to-One relationship
- * Contains bank account and Paystack integration details
+ * Contains bank account, Paystack integration, and storefront details
  */
 @Entity
 @Table(name = "seller_profiles", indexes = {
@@ -48,6 +48,10 @@ public class SellerProfile {
      */
     @Column(length = 500)
     private String address;
+
+    // ============================================
+    // BANK ACCOUNT DETAILS (Existing)
+    // ============================================
 
     /**
      * Bank name where seller's account is registered
@@ -87,6 +91,79 @@ public class SellerProfile {
     private Boolean verified = false;
 
     /**
+     * Verification timestamp (when the seller was approved)
+     */
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    // ============================================
+    // STOREFRONT FIELDS (NEW)
+    // ============================================
+
+    /**
+     * Short tagline/slogan for the store
+     * Example: "Best Tech Deals on Campus"
+     */
+    @Column(length = 100)
+    private String storeTagline;
+
+    /**
+     * Seller's bio/description (max 500 chars)
+     * Tells customers about the seller and their business
+     */
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    /**
+     * Store logo URL (Cloudinary)
+     * Optional, uploaded during signup or later
+     */
+    @Column(length = 500)
+    private String logoUrl;
+
+    /**
+     * Store banner/header image URL (Cloudinary)
+     * Optional, uploaded during signup or later
+     */
+    @Column(length = 500)
+    private String bannerImageUrl;
+
+    /**
+     * Phone number for customer contact
+     * Optional
+     */
+    @Column(length = 20)
+    private String phoneNumber;
+
+    /**
+     * WhatsApp number for customer contact
+     * Optional
+     */
+    @Column(length = 20)
+    private String whatsappNumber;
+
+    /**
+     * Instagram handle (without @)
+     * Optional
+     */
+    @Column(length = 50)
+    private String instagramHandle;
+
+    /**
+     * Twitter handle (without @)
+     * Optional
+     */
+    @Column(length = 50)
+    private String twitterHandle;
+
+    /**
+     * Screenshot of existing online store/page (for verification)
+     * Optional, helps speed up manual verification
+     */
+    @Column(length = 500)
+    private String storeScreenshotUrl;
+
+    /**
      * Timestamp when the seller profile was created
      */
     @CreationTimestamp
@@ -94,18 +171,13 @@ public class SellerProfile {
     private LocalDateTime createdAt;
 
     /**
-     * Verification timestamp (when the seller was approved)
-     */
-    @Column(name = "verified_at")
-    private LocalDateTime verifiedAt;
-
-    /**
      * Pre-update validation to ensure PayStack subaccount ID is set before marking verified
+     * NOTE: Commenting this out for MVP (unverified sellers can sell)
      */
-    @PreUpdate
-    private void validateVerification() {
-        if (Boolean.TRUE.equals(this.verified) && this.payStackSubaccountId == null) {
-            throw new IllegalArgumentException("PayStack subaccount ID must be set before verification");
-        }
-    }
+    // @PreUpdate
+    // private void validateVerification() {
+    //     if (Boolean.TRUE.equals(this.verified) && this.payStackSubaccountId == null) {
+    //         throw new IllegalArgumentException("PayStack subaccount ID must be set before verification");
+    //     }
+    // }
 }

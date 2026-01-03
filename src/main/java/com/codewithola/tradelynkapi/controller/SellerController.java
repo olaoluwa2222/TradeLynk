@@ -149,4 +149,56 @@ public class SellerController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    /**
+     * GET /api/sellers/check-username?username=isaiah-tech
+     * Check if username is available (public)
+     */
+    @GetMapping("/check-username")
+    public ResponseEntity<Map<String, Object>> checkUsernameAvailability(
+            @RequestParam String username) {
+
+        log.info("GET /api/sellers/check-username - Checking: {}", username);
+
+        try {
+            // Validate format
+            if (!username.matches("^[a-z0-9-]{3,50}$")) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("available", false);
+                response.put("message", "Username must be 3-50 characters, lowercase letters, numbers, and hyphens only");
+                return ResponseEntity.ok(response);
+            }
+
+            // Check if reserved
+            if (username.equals("admin") || username.equals("api") ||
+                    username.equals("www") || username.equals("tradelynk")) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("available", false);
+                response.put("message", "This username is reserved");
+                return ResponseEntity.ok(response);
+            }
+
+            // Check availability
+            boolean available = sellerActivationService.isUsernameAvailable(username);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("available", available);
+            response.put("message", available ?
+                    "Username is available" :
+                    "Username is already taken");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error checking username availability", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to check username availability");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
 }

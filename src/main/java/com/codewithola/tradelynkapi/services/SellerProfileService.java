@@ -5,6 +5,7 @@ import com.codewithola.tradelynkapi.dtos.requests.SellerProfileUpdateRequest;
 import com.codewithola.tradelynkapi.dtos.requests.SellerStatsDTO;
 import com.codewithola.tradelynkapi.dtos.response.ItemDTO;
 import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
+import com.codewithola.tradelynkapi.dtos.response.StorefrontResponse;
 import com.codewithola.tradelynkapi.entity.Item;
 import com.codewithola.tradelynkapi.entity.SellerProfile;
 import com.codewithola.tradelynkapi.entity.User;
@@ -186,4 +187,44 @@ public class SellerProfileService {
                 .map(SellerProfile::getVerified)
                 .orElse(false);
     }
+
+    /**
+     * ✅ NEW: Get public storefront by username
+     * Used for public storefront page: /sellers/[username]
+     */
+    @Transactional(readOnly = true)
+    public StorefrontResponse getStorefrontByUsername(String username) {
+        log.info("Fetching storefront for username: {}", username);
+
+        // 1. Find user by username
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+        // 2. Get seller profile (optional, user might not be a seller yet)
+        SellerProfile sellerProfile = sellerProfileRepository.findByUserId(user.getId())
+                .orElse(null);
+
+        // 3. Calculate stats
+        List<Item> allItems = itemRepository.findBySellerId(user.getId());
+        List<Item> activeItems = allItems.stream()
+                .filter(item -> item.getStatus() == Item.Status.ACTIVE)
+                .toList();
+        List<Item> soldItems = allItems.stream()
+                .filter(item -> item.getStatus() == Item.Status.SOLD)
+                .toList();
+
+        int totalLikes = allItems.stream()
+                .mapToInt(Item::getLikeCount)
+                .sum();
+
+        // 4. Build and return storefront response
+        return StorefrontResponse.fromEntities(
+                user,
+                sellerProfile,
+                activeItems.size(),
+                totalLikes,
+                soldItems.size()
+        );
+    }
+
 }

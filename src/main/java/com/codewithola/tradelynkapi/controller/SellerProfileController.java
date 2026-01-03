@@ -4,6 +4,7 @@ import com.codewithola.tradelynkapi.dtos.requests.SellerProfileUpdateRequest;
 import com.codewithola.tradelynkapi.dtos.requests.SellerStatsDTO;
 import com.codewithola.tradelynkapi.dtos.response.ItemDTO;
 import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
+import com.codewithola.tradelynkapi.dtos.response.StorefrontResponse;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.SellerProfileService;
 import jakarta.validation.Valid;
@@ -156,4 +157,25 @@ public class SellerProfileController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * GET /api/sellers/{username}/storefront
+     * Get seller's public storefront (by username)
+     * This is the main endpoint for the public storefront page
+     */
+    @GetMapping("/{username}/storefront")
+    public ResponseEntity<Map<String, Object>> getStorefrontByUsername(
+            @PathVariable String username) {
+
+        log.info("GET /api/sellers/{}/storefront - Fetching storefront", username);
+
+        StorefrontResponse storefront = sellerProfileService.getStorefrontByUsername(username);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", storefront);
+
+        return ResponseEntity.ok(response);
+    }
+
 }

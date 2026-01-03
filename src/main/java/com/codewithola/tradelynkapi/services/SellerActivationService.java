@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.services;
 
-
 import com.codewithola.tradelynkapi.Enum.BankEnum;
 import com.codewithola.tradelynkapi.dtos.requests.BecomeSellerRequest;
 import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
@@ -8,6 +7,7 @@ import com.codewithola.tradelynkapi.dtos.response.SellerStatusResponse;
 import com.codewithola.tradelynkapi.entity.SellerProfile;
 import com.codewithola.tradelynkapi.entity.User;
 import com.codewithola.tradelynkapi.exception.AlreadySellerException;
+import com.codewithola.tradelynkapi.exception.BadRequestException;
 import com.codewithola.tradelynkapi.exception.InvalidBankAccountException;
 import com.codewithola.tradelynkapi.exception.NotFoundException;
 import com.codewithola.tradelynkapi.repositories.SellerProfileRepository;
@@ -30,6 +30,7 @@ public class SellerActivationService {
     private final PaystackService paystackService;
 
     private static final Pattern ACCOUNT_NUMBER_PATTERN = Pattern.compile("^[0-9]{10}$");
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-z0-9-]{3,50}$");
 
     @Transactional
     public SellerProfileDTO activateSeller(Long userId, BecomeSellerRequest request) {
@@ -44,10 +45,18 @@ public class SellerActivationService {
             throw new AlreadySellerException("You are already a seller. Cannot activate seller account again.");
         }
 
-        // 3. Validate bank account details
+        // 3. ✅ NEW: Validate username
+        validateUsername(request.getUsername());
+
+        // 4. ✅ NEW: Check if username is already taken
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new BadRequestException("Username '" + request.getUsername() + "' is already taken");
+        }
+
+        // 5. Validate bank account details
         validateBankAccountDetails(request);
 
-        // 4. Validate bank name exists in enum
+        // 6. Validate bank name exists in enum
         BankEnum bank;
         try {
             bank = BankEnum.fromName(request.getBankName());
@@ -55,20 +64,37 @@ public class SellerActivationService {
             throw new InvalidBankAccountException("Invalid bank name: " + request.getBankName());
         }
 
-        // 5. Create Seller Profile
+        // 7. ✅ NEW: Set username on user
+        user.setUsername(request.getUsername());
+        userRepository.save(user);
+
+        // 8. Create Seller Profile with NEW fields
         SellerProfile sellerProfile = SellerProfile.builder()
                 .user(user)
-                .businessName(request.getBusinessName())
+                // Bank details (existing)
+                .businessName(request.getBusinessName() != null ? request.getBusinessName() : user.getName())
                 .address(request.getAddress())
                 .bankName(bank.getName())
                 .accountName(request.getAccountName())
                 .accountNumber(request.getAccountNumber())
+                // ✅ NEW: Storefront fields (required)
+                .storeTagline(request.getStoreTagline())
+                .bio(request.getBio())
+                // ✅ NEW: Storefront fields (optional)
+                .logoUrl(request.getLogoUrl())
+                .bannerImageUrl(request.getBannerImageUrl())
+                .phoneNumber(request.getPhoneNumber())
+                .whatsappNumber(request.getWhatsappNumber())
+                .instagramHandle(request.getInstagramHandle())
+                .twitterHandle(request.getTwitterHandle())
+                .storeScreenshotUrl(request.getStoreScreenshotUrl())
+                // Verification (default false - manual review later)
                 .verified(false)
                 .build();
 
         sellerProfileRepository.save(sellerProfile);
 
-        // 6. Create Paystack Subaccount (NEW)
+        // 9. Create Paystack Subaccount
         try {
             String subaccountCode = paystackService.createSubaccount(sellerProfile);
             sellerProfile.setPayStackSubaccountId(subaccountCode);
@@ -80,13 +106,34 @@ public class SellerActivationService {
             // Admin can manually create subaccount later
         }
 
-        // 7. Update User role from BUYER to SELLER
+        // 10. Update User role from BUYER to SELLER
         updateUserRole(user);
 
-        log.info("Seller account activated successfully for user ID: {}", userId);
+        log.info("Seller account activated successfully for user ID: {} with username: {}",
+                userId, request.getUsername());
 
-        // 8. Return seller profile DTO
+        // 11. Return seller profile DTO
         return sellerProfileService.getSellerProfile(userId);
+    }
+
+    /**
+     * ✅ NEW: Validate username format
+     */
+    private void validateUsername(String username) {
+        if (username == null || username.isBlank()) {
+            throw new BadRequestException("Username is required");
+        }
+
+        if (!USERNAME_PATTERN.matcher(username).matches()) {
+            throw new BadRequestException(
+                    "Username must be 3-50 characters, lowercase letters, numbers, and hyphens only");
+        }
+
+        // Reserved usernames
+        if (username.equals("admin") || username.equals("api") ||
+                username.equals("www") || username.equals("tradelynk")) {
+            throw new BadRequestException("Username '" + username + "' is reserved");
+        }
     }
 
     private void validateBankAccountDetails(BecomeSellerRequest request) {
@@ -102,9 +149,6 @@ public class SellerActivationService {
                     "Account name must be at least 3 characters long.");
         }
 
-        // Account number should not start with 0 in some banks (optional check)
-        // You can add more bank-specific validations here
-
         log.info("Bank account details validated successfully");
     }
 
@@ -112,7 +156,7 @@ public class SellerActivationService {
         User.UserRole currentRole = user.getRole();
 
         if (currentRole == User.UserRole.BUYER) {
-            // Buyer becomes Seller (or you can use Role.BOTH if you have it)
+            // Buyer becomes Seller
             user.setRole(User.UserRole.SELLER);
         } else if (currentRole == User.UserRole.SELLER) {
             // Already a seller, shouldn't reach here due to earlier check
@@ -145,4 +189,11 @@ public class SellerActivationService {
         return sellerProfileRepository.existsByUserId(userId);
     }
 
+    /**
+     * ✅ NEW: Check if username is available
+     */
+    @Transactional(readOnly = true)
+    public boolean isUsernameAvailable(String username) {
+        return !userRepository.existsByUsername(username);
+    }
 }
