@@ -163,6 +163,46 @@ public class SellerProfile {
     @Column(length = 500)
     private String storeScreenshotUrl;
 
+    // ============================================
+// THEME & CUSTOMIZATION (NEW)
+// ============================================
+
+    /**
+     * Selected theme for storefront
+     * Options: modern-clean, bold-vibrant, minimalist-luxury, campus-friendly, product-showcase
+     */
+    @Column(length = 50)
+    @Builder.Default
+    private String theme = "modern-clean";
+
+    /**
+     * Primary brand color (hex code)
+     */
+    @Column(length = 7)
+    @Builder.Default
+    private String primaryColor = "#000000";
+
+    /**
+     * Secondary brand color (hex code)
+     */
+    @Column(length = 7)
+    @Builder.Default
+    private String secondaryColor = "#FFFFFF";
+
+    /**
+     * Layout type: single-page or multi-page
+     */
+    @Column(length = 20)
+    @Builder.Default
+    private String layoutType = "multi-page";
+
+    /**
+     * Facebook handle (without @)
+     * Optional
+     */
+    @Column(length = 100)
+    private String facebookHandle;
+
     /**
      * Timestamp when the seller profile was created
      */

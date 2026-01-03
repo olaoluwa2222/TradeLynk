@@ -121,4 +121,32 @@ public class BecomeSellerRequest {
      */
     @Size(max = 500, message = "Screenshot URL too long")
     private String storeScreenshotUrl;
+
+    // ============================================
+// THEME & CUSTOMIZATION (OPTIONAL)
+// ============================================
+
+    /**
+     * Selected theme (optional, defaults to modern-clean)
+     */
+    @Size(max = 50, message = "Theme name too long")
+    private String theme;
+
+    /**
+     * Primary color (optional, defaults to #000000)
+     */
+    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$|^$", message = "Invalid color format")
+    private String primaryColor;
+
+    /**
+     * Secondary color (optional, defaults to #FFFFFF)
+     */
+    @Pattern(regexp = "^#[0-9A-Fa-f]{6}$|^$", message = "Invalid color format")
+    private String secondaryColor;
+
+    /**
+     * Facebook handle (optional)
+     */
+    @Size(max = 100, message = "Facebook handle too long")
+    private String facebookHandle;
 }

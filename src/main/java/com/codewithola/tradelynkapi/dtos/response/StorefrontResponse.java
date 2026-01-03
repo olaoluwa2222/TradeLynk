@@ -46,6 +46,7 @@ public class StorefrontResponse {
     private String whatsappNumber;
     private String instagramHandle;
     private String twitterHandle;
+    private String facebookHandle;
 
     // ============================================
     // STATS
@@ -60,6 +61,14 @@ public class StorefrontResponse {
     // ============================================
     private Boolean isVerified;
 
+    // ============================================
+    // THEME & CUSTOMIZATION
+    // ============================================
+    private String theme;
+    private String primaryColor;
+    private String secondaryColor;
+    private String layoutType;
+
     /**
      * Factory method to create StorefrontResponse from User and SellerProfile
      */
@@ -70,6 +79,7 @@ public class StorefrontResponse {
             Integer totalLikes,
             Integer totalSales
     ) {
+
         return StorefrontResponse.builder()
                 // Basic info
                 .userId(user.getId())
@@ -91,6 +101,7 @@ public class StorefrontResponse {
                 .whatsappNumber(sellerProfile != null ? sellerProfile.getWhatsappNumber() : null)
                 .instagramHandle(sellerProfile != null ? sellerProfile.getInstagramHandle() : null)
                 .twitterHandle(sellerProfile != null ? sellerProfile.getTwitterHandle() : null)
+                .facebookHandle(sellerProfile != null ? sellerProfile.getFacebookHandle() : null)
 
                 // Stats
                 .totalItems(totalItems)
@@ -99,7 +110,14 @@ public class StorefrontResponse {
                 .memberSince(user.getCreatedAt())
 
                 // Verification
-                .isVerified(sellerProfile != null && sellerProfile.getVerified())
+                .isVerified(sellerProfile != null && Boolean.TRUE.equals(sellerProfile.getVerified()))
+
+                // Theme & customization
+                .theme(sellerProfile != null ? sellerProfile.getTheme() : "modern-clean")
+                .primaryColor(sellerProfile != null ? sellerProfile.getPrimaryColor() : "#000000")
+                .secondaryColor(sellerProfile != null ? sellerProfile.getSecondaryColor() : "#FFFFFF")
+                .layoutType(sellerProfile != null ? sellerProfile.getLayoutType() : "multi-page")
+
                 .build();
     }
 }
