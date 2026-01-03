@@ -95,13 +95,25 @@ export default function GrammarChecker({
   return (
     <div className="w-full">
       {/* Text Area */}
-      <label className="block text-sm font-medium mb-2">{label}</label>
+      <label
+        className="block text-sm font-medium text-gray-700 mb-2"
+        style={{
+          fontFamily: "Clash Display",
+          fontWeight: 500,
+        }}
+      >
+        {label}
+      </label>
       <textarea
         value={text}
         onChange={(e) => onTextChange(e.target.value)}
         maxLength={maxLength}
-        rows={type === "bio" ? 6 : 2}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent resize-none"
+        rows={type === "bio" ? 6 : 3}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent resize-none text-gray-900"
+        style={{
+          fontFamily: "Clash Display",
+          fontWeight: 400,
+        }}
         placeholder={
           type === "bio"
             ? "Tell buyers about yourself and what you sell..."

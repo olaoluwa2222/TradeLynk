@@ -515,13 +515,16 @@ function SellerActivationForm({
 
       try {
         const data = await sellersApi.checkUsername(username);
-        if (data.success && data.data.available) {
+        // API returns: {success: true, available: true, message: "..."}
+        if (data.success && data.available) {
           setUsernameStatus("available");
+          setUsernameError("");
         } else {
           setUsernameStatus("taken");
-          setUsernameError(data.data.message || "Username is taken");
+          setUsernameError(data.message || "Username is taken");
         }
       } catch (err) {
+        console.error("Username check error:", err);
         setUsernameStatus("idle");
         setUsernameError("Failed to check username availability");
       }
@@ -1361,6 +1364,39 @@ function SellerActivationForm({
                 </div>
               </div>
             </div>
+
+            {/* Validation Errors */}
+            {(usernameStatus !== "available" ||
+              validationStatus !== "valid") && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p
+                  className="text-sm font-semibold text-yellow-800 mb-2"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ Please complete the following before submitting:
+                </p>
+                <ul
+                  className="text-sm text-yellow-700 space-y-1 ml-4"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  {usernameStatus !== "available" && (
+                    <li>• Choose a valid and available username</li>
+                  )}
+                  {validationStatus !== "valid" && (
+                    <li>
+                      • Validate your bank account number (must be 10 digits and
+                      match selected bank)
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
