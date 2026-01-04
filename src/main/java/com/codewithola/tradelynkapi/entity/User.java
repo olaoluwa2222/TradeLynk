@@ -91,8 +91,9 @@ public class User {
     @PrePersist
     @PreUpdate
     private void validateEmail() {
-        if (this.email != null && !this.email.toLowerCase().endsWith("@lmu.edu.ng")) {
-            throw new IllegalArgumentException("Email must be in @lmu.edu.ng format");
+        // Allow all valid email formats - validation happens in UserService
+        if (this.email == null || this.email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email cannot be empty");
         }
     }
 

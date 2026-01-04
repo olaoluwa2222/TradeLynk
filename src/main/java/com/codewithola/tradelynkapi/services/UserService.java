@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -24,8 +26,34 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // Allowed email domains for global use
+    private static final List<String> ALLOWED_DOMAINS = Arrays.asList(
+            // Nigerian Universities
+            "@lmu.edu.ng",
+            "@oauife.edu.ng",
+            "@unilag.edu.ng",
+            "@ui.edu.ng",
+            "@uniben.edu.ng",
+            "@unn.edu.ng",
+            "@abu.edu.ng",
+            "@futa.edu.ng",
+            "@uniport.edu.ng",
+            "@covenant.edu.ng",
+            "@babcock.edu.ng",
+            "@run.edu.ng",
+            "@lasu.edu.ng",
+            "@unilorin.edu.ng",
+
+            // Trusted Global Providers
+            "@gmail.com",
+            "@outlook.com",
+            "@hotmail.com",
+            "@live.com"
+    );
+
     // Email pattern for Landmark University
-    private static final Pattern LANDMARK_EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@lmu\\.edu\\.ng$");
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
     // Password pattern: at least 8 chars, 1 uppercase, 1 lowercase, 1 number
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$");
@@ -233,11 +261,24 @@ public class UserService {
             throw new InvalidEmailFormatException("Email cannot be empty");
         }
 
-        if (!LANDMARK_EMAIL_PATTERN.matcher(email.trim()).matches()) {
-            log.error("Invalid email format: {}", email);
-            throw new InvalidEmailFormatException();
+        String normalizedEmail = email.toLowerCase().trim();
+
+        // Check basic email format
+        if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
+            throw new InvalidEmailFormatException("Invalid email format");
+        }
+
+        // Check if domain is allowed
+        boolean isDomainAllowed = ALLOWED_DOMAINS.stream()
+                .anyMatch(normalizedEmail::endsWith);
+
+        if (!isDomainAllowed) {
+            throw new InvalidEmailFormatException(
+                    "Email domain not supported. Please use: Nigerian university emails, Gmail, Outlook, or Hotmail"
+            );
         }
     }
+
 
     /**
      * Validate password strength
