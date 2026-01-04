@@ -12,8 +12,37 @@ import StorefrontPreview from "@/components/StorefrontPreview";
 import { Theme } from "@/types/seller";
 
 export default function BecomeASellerPage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect existing sellers away from this page
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      if (user.role === "SELLER" || user.role === "BOTH" || user.role === "ADMIN") {
+        router.push("/create-item");
+      }
+    }
+  }, [isLoading, isAuthenticated, user, router]);
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // If user is already a seller, show redirect message
+  if (isAuthenticated && user && (user.role === "SELLER" || user.role === "BOTH" || user.role === "ADMIN")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <p className="text-lg text-gray-600">You are already a seller! Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

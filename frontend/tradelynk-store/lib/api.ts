@@ -475,6 +475,31 @@ export const sellersApi = {
     const response = await api.get("/sellers/me/status");
     return response.data;
   },
+
+  // Get current seller's profile/info (includes username)
+  getMySellerProfile: async () => {
+    const response = await api.get("/sellers/me/profile");
+    return response.data;
+  },
+
+  // Update seller profile
+  updateSellerProfile: async (data: {
+    businessName?: string;
+    storeTagline?: string;
+    bio?: string;
+    logoUrl?: string;
+    bannerImageUrl?: string;
+    phoneNumber?: string;
+    whatsappNumber?: string;
+    instagramHandle?: string;
+    twitterHandle?: string;
+    theme?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+  }) => {
+    const response = await api.put("/sellers/me/profile", data);
+    return response.data;
+  },
 };
 
 // Chat API methods

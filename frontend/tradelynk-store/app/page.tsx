@@ -164,7 +164,7 @@ export default function Home() {
                   </Link>
                   {(user?.role === "SELLER" ||
                     user?.role === "BOTH" ||
-                    user?.role === "ADMIN") && (
+                    user?.role === "ADMIN") ? (
                     <Link
                       href="/create-item"
                       className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors inline-block"
@@ -173,7 +173,18 @@ export default function Home() {
                         fontWeight: 600,
                       }}
                     >
-                      Start Selling
+                      Create Item
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/become-a-seller"
+                      className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors inline-block"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Become a Seller
                     </Link>
                   )}
                 </div>

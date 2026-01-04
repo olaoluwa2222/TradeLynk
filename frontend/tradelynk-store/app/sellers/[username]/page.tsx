@@ -143,6 +143,7 @@ export default function SellerStorefrontPage() {
         theme={theme}
         primaryColor={primaryColor}
         scrollY={scrollY}
+        isOwner={isOwner}
       />
 
       <main>
@@ -200,7 +201,9 @@ function Navigation({
   theme,
   primaryColor,
   scrollY,
+  isOwner,
 }: any) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isScrolled = scrollY > 50;
 
   const getNavBg = () => {
@@ -210,119 +213,227 @@ function Navigation({
         : "bg-white/95 backdrop-blur-xl shadow-lg";
     }
     return theme === "product-showcase"
-      ? "bg-transparent"
-      : "bg-white/80 backdrop-blur-sm";
+      ? "bg-gray-900/80 backdrop-blur-md"
+      : "bg-white/90 backdrop-blur-md shadow-sm";
+  };
+
+  const getTextColor = () => {
+    return theme === "product-showcase" ? "text-white" : "text-gray-900";
   };
 
   const tabs = [
-    { id: "home", label: "Home" },
-    { id: "products", label: "Products" },
-    { id: "about", label: "About" },
-    { id: "contact", label: "Contact" },
+    { id: "home", label: "Home", icon: "🏠" },
+    { id: "products", label: "Products", icon: "🛍️" },
+    { id: "about", label: "About", icon: "ℹ️" },
+    { id: "contact", label: "Contact", icon: "📧" },
   ];
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${getNavBg()}`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div
-          className={`flex items-center justify-between transition-all duration-300 ${
-            isScrolled ? "h-14" : "h-16"
-          }`}
-        >
-          {/* Logo */}
-          <div className="flex items-center gap-3 animate-fade-in-up">
-            {storefront.logoUrl ? (
-              <div
-                className={`rounded-full overflow-hidden border-2 shadow-sm transition-all duration-300 ${
-                  isScrolled ? "w-8 h-8" : "w-10 h-10"
-                }`}
-                style={{ borderColor: primaryColor }}
-              >
-                <Image
-                  src={storefront.logoUrl}
-                  alt="Logo"
-                  width={40}
-                  height={40}
-                  className="object-cover w-full h-full"
-                />
-              </div>
-            ) : (
-              <div
-                className={`rounded-xl flex items-center justify-center text-white font-bold shadow-lg transition-all duration-300 ${
-                  isScrolled ? "w-8 h-8 text-sm" : "w-10 h-10 text-base"
-                }`}
-                style={{
-                  background: `linear-gradient(135deg, ${primaryColor}, ${
-                    storefront.secondaryColor || "#6366F1"
-                  })`,
-                }}
-              >
-                {storefront.businessName?.[0]?.toUpperCase() || "S"}
-              </div>
-            )}
-            <div className="hidden sm:block">
-              <h1
-                className={`font-bold transition-all duration-300 ${
-                  isScrolled ? "text-base" : "text-lg"
-                } ${
-                  theme === "product-showcase" && !isScrolled
-                    ? "text-white"
-                    : "text-gray-900"
-                }`}
-                style={{ fontFamily: "Clash Display" }}
-              >
-                {storefront.businessName || storefront.name}
-              </h1>
-              {storefront.isVerified && (
-                <div className="flex items-center gap-1">
-                  <CheckCircle size={12} className="text-blue-500" />
-                  <span className="text-xs text-gray-500">Verified Seller</span>
+    <>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${getNavBg()}`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div
+            className={`flex items-center justify-between transition-all duration-300 ${
+              isScrolled ? "h-14" : "h-16"
+            }`}
+          >
+            {/* Logo & Store Name */}
+            <div className="flex items-center gap-3 animate-fade-in-up">
+              {storefront.logoUrl ? (
+                <div
+                  className={`rounded-full overflow-hidden border-2 shadow-sm transition-all duration-300 ${
+                    isScrolled ? "w-8 h-8" : "w-10 h-10"
+                  }`}
+                  style={{ borderColor: primaryColor }}
+                >
+                  <Image
+                    src={storefront.logoUrl}
+                    alt="Logo"
+                    width={40}
+                    height={40}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              ) : (
+                <div
+                  className={`rounded-xl flex items-center justify-center text-white font-bold shadow-lg transition-all duration-300 ${
+                    isScrolled ? "w-8 h-8 text-sm" : "w-10 h-10 text-base"
+                  }`}
+                  style={{
+                    background: `linear-gradient(135deg, ${primaryColor}, ${
+                      storefront.secondaryColor || "#6366F1"
+                    })`,
+                  }}
+                >
+                  {storefront.businessName?.[0]?.toUpperCase() || "S"}
                 </div>
               )}
+              {/* Show store name on mobile too */}
+              <div>
+                <h1
+                  className={`font-bold transition-all duration-300 ${
+                    isScrolled ? "text-sm sm:text-base" : "text-base sm:text-lg"
+                  } ${getTextColor()}`}
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  {storefront.businessName || storefront.name}
+                </h1>
+                {storefront.isVerified && (
+                  <div className="flex items-center gap-1">
+                    <CheckCircle size={10} className="text-blue-500" />
+                    <span className={`text-xs ${theme === "product-showcase" ? "text-gray-300" : "text-gray-500"}`}>
+                      Verified
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Desktop Tabs */}
-          <div className="hidden md:flex items-center gap-1 bg-gray-100/80 backdrop-blur-sm p-1 rounded-full">
+            {/* Desktop Tabs + Settings */}
+            <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-gray-100/80 backdrop-blur-sm p-1 rounded-full">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    data-tab={tab.id}
+                    className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ${
+                      activeTab === tab.id
+                        ? "text-white shadow-lg"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+                    }`}
+                    style={
+                      activeTab === tab.id ? { backgroundColor: primaryColor } : {}
+                    }
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Edit Button for Owner */}
+              {isOwner && (
+                <Link
+                  href={`/sellers/${storefront.username}/settings`}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full bg-black text-white hover:bg-gray-800 transition-all"
+                >
+                  <span>⚙️</span>
+                  <span>Edit</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className={`md:hidden p-2 rounded-lg transition-all ${
+                theme === "product-showcase"
+                  ? "bg-white/10 hover:bg-white/20"
+                  : "bg-gray-100 hover:bg-gray-200"
+              }`}
+              aria-label="Toggle menu"
+            >
+              <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
+                <span
+                  className={`block w-5 h-0.5 transition-all duration-300 ${
+                    theme === "product-showcase" ? "bg-white" : "bg-gray-700"
+                  } ${mobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`}
+                />
+                <span
+                  className={`block w-5 h-0.5 transition-all duration-300 ${
+                    theme === "product-showcase" ? "bg-white" : "bg-gray-700"
+                  } ${mobileMenuOpen ? "opacity-0" : ""}`}
+                />
+                <span
+                  className={`block w-5 h-0.5 transition-all duration-300 ${
+                    theme === "product-showcase" ? "bg-white" : "bg-gray-700"
+                  } ${mobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`}
+                />
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        <div
+          className={`md:hidden fixed inset-x-0 top-14 transition-all duration-300 overflow-hidden ${
+            mobileMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          } ${
+            theme === "product-showcase"
+              ? "bg-gray-900/98"
+              : "bg-white/98 border-t border-gray-200"
+          } backdrop-blur-xl shadow-2xl`}
+        >
+          <div className="px-4 py-4 space-y-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                data-tab={tab.id}
-                className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 ${
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left font-medium transition-all ${
                   activeTab === tab.id
                     ? "text-white shadow-lg"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
+                    : theme === "product-showcase"
+                    ? "text-gray-300 hover:bg-white/10"
+                    : "text-gray-600 hover:bg-gray-100"
                 }`}
                 style={
                   activeTab === tab.id ? { backgroundColor: primaryColor } : {}
                 }
               >
-                {tab.label}
+                <span className="text-xl">{tab.icon}</span>
+                <span className="text-base">{tab.label}</span>
               </button>
             ))}
-          </div>
-
-          {/* Mobile Menu */}
-          <div className="md:hidden">
-            <select
-              value={activeTab}
-              onChange={(e) => setActiveTab(e.target.value)}
-              className="px-4 py-2 rounded-full bg-gray-100 border-0 text-sm font-medium focus:ring-2"
-              style={{ "--tw-ring-color": primaryColor } as any}
+            
+            {/* Divider */}
+            <div className={`my-3 border-t ${theme === "product-showcase" ? "border-gray-700" : "border-gray-200"}`} />
+            
+            {/* Settings - Only for store owner */}
+            {isOwner && (
+              <Link
+                href={`/sellers/${storefront.username}/settings`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left font-medium transition-all ${
+                  theme === "product-showcase"
+                    ? "text-gray-300 hover:bg-white/10"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <span className="text-xl">⚙️</span>
+                <span className="text-base">Edit My Website</span>
+              </Link>
+            )}
+            
+            {/* Back to TradeLynk */}
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left font-medium transition-all ${
+                theme === "product-showcase"
+                  ? "text-gray-400 hover:bg-white/10"
+                  : "text-gray-500 hover:bg-gray-100"
+              }`}
             >
-              {tabs.map((tab) => (
-                <option key={tab.id} value={tab.id}>
-                  {tab.label}
-                </option>
-              ))}
-            </select>
+              <span className="text-xl">🏪</span>
+              <span className="text-base">Back to TradeLynk</span>
+            </Link>
           </div>
         </div>
-      </div>
-    </nav>
+        
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[-1]"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+      </nav>
+    </>
   );
 }
 
