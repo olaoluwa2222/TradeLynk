@@ -72,6 +72,7 @@ public class SecurityConfig {
 
                         // ✅ Seller endpoints
                         .requestMatchers(HttpMethod.GET, "/sellers/*/profile").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/sellers/*/storefront").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers/*/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers/banks").permitAll()
 
