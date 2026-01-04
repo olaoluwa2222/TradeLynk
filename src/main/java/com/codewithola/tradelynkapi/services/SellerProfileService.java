@@ -63,6 +63,7 @@ public class SellerProfileService {
         return SellerProfileDTO.builder()
                 .userId(user.getId())
                 .name(user.getName())
+                .username(user.getUsername())
                 .email(user.getEmail())
                 .businessName(sellerProfile != null ? sellerProfile.getBusinessName() : null)
                 .profilePictureUrl(user.getProfilePictureUrl())

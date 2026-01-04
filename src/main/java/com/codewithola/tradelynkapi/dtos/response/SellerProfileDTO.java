@@ -15,6 +15,7 @@ public class SellerProfileDTO {
 
     private Long userId;
     private String name;
+    private String username;
     private String email;
     private String businessName;
     private String profilePictureUrl;
