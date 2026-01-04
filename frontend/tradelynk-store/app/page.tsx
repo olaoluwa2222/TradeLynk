@@ -162,9 +162,9 @@ export default function Home() {
                   >
                     Browse Items
                   </Link>
-                  {(user?.role === "SELLER" ||
-                    user?.role === "BOTH" ||
-                    user?.role === "ADMIN") ? (
+                  {user?.role === "SELLER" ||
+                  user?.role === "BOTH" ||
+                  user?.role === "ADMIN" ? (
                     <Link
                       href="/create-item"
                       className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors inline-block"

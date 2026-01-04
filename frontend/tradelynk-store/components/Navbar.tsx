@@ -5,12 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { itemsApi, ordersApi, chatsApi } from "@/lib/api";
+import { useRouter, usePathname } from "next/navigation";
+import { itemsApi, ordersApi, chatsApi, sellersApi } from "@/lib/api";
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -19,10 +20,16 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  // Hide navbar on storefront pages (they have their own navigation)
+  const isStorefrontPage = pathname?.startsWith("/sellers/");
+  
   // Notification counts
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  // Seller username for storefront link
+  const [sellerUsername, setSellerUsername] = useState<string | null>(null);
 
   // ✅ Show verification badge if user is not verified
   const isEmailVerified = user?.isEmailVerified ?? user?.verified ?? false;
@@ -31,6 +38,33 @@ export default function Navbar() {
   // ✅ Check if user is a seller
   const isSeller =
     user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
+
+  // Fetch seller username if user is a seller
+  useEffect(() => {
+    if (!isAuthenticated || !isSeller) return;
+
+    const fetchSellerInfo = async () => {
+      try {
+        // Use getMySellerProfile which returns username from /sellers/me/profile
+        const profileResponse = await sellersApi.getMySellerProfile();
+        console.log("🏪 Seller profile response:", profileResponse);
+        
+        // Handle the response structure: { success: true, data: { username: "..." } }
+        const username = profileResponse.data?.username || profileResponse.username;
+        
+        if (profileResponse.success && username) {
+          console.log("🏪 Setting seller username:", username);
+          setSellerUsername(username);
+        } else {
+          console.log("🏪 No username found in profile response");
+        }
+      } catch (error) {
+        console.error("Error fetching seller profile:", error);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [isAuthenticated, isSeller]);
 
   // Fetch notification counts
   useEffect(() => {
@@ -139,6 +173,11 @@ export default function Navbar() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Don't render navbar on storefront pages - they have their own navigation
+  if (isStorefrontPage) {
+    return null;
+  }
 
   return (
     <nav className="bg-white border-b border-gray-300 sticky top-0 z-50 shadow-sm">
@@ -322,7 +361,7 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Sell Item Button */}
+            {/* Create Item Button */}
             {isAuthenticated && isSeller && (
               <Link
                 href="/create-item"
@@ -342,7 +381,7 @@ export default function Navbar() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                <span className="text-sm">Sell</span>
+                <span className="text-sm">Create Item</span>
               </Link>
             )}
 
@@ -420,6 +459,33 @@ export default function Navbar() {
                       }}
                     >
                       📦 My Orders
+                    </Link>
+
+                    {/* My Website - Link to storefront or become-a-seller */}
+                    <Link
+                      href={
+                        sellerUsername
+                          ? `/sellers/${sellerUsername}`
+                          : isSeller
+                          ? "#" // Loading state - seller but username not loaded yet
+                          : "/become-a-seller"
+                      }
+                      onClick={(e) => {
+                        setShowProfileDropdown(false);
+                        // If seller but username not loaded yet, prevent navigation
+                        if (isSeller && !sellerUsername) {
+                          e.preventDefault();
+                          console.log("🏪 Waiting for storefront username to load...");
+                        }
+                      }}
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      style={{
+                        color: "#0C0A09",
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      🌐 My Website {isSeller && !sellerUsername && "(Loading...)"}
                     </Link>
 
                     {/* My Sales - Only for sellers */}

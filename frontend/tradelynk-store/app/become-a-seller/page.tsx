@@ -18,7 +18,11 @@ export default function BecomeASellerPage() {
   // Redirect existing sellers away from this page
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
-      if (user.role === "SELLER" || user.role === "BOTH" || user.role === "ADMIN") {
+      if (
+        user.role === "SELLER" ||
+        user.role === "BOTH" ||
+        user.role === "ADMIN"
+      ) {
         router.push("/create-item");
       }
     }
@@ -34,11 +38,17 @@ export default function BecomeASellerPage() {
   }
 
   // If user is already a seller, show redirect message
-  if (isAuthenticated && user && (user.role === "SELLER" || user.role === "BOTH" || user.role === "ADMIN")) {
+  if (
+    isAuthenticated &&
+    user &&
+    (user.role === "SELLER" || user.role === "BOTH" || user.role === "ADMIN")
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <p className="text-lg text-gray-600">You are already a seller! Redirecting...</p>
+          <p className="text-lg text-gray-600">
+            You are already a seller! Redirecting...
+          </p>
         </div>
       </div>
     );

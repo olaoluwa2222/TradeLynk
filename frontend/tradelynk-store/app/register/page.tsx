@@ -43,7 +43,7 @@ export default function RegisterPage() {
   }, [images.length]);
 
   const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@lmu\.edu\.ng$/i;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
     return emailRegex.test(email);
   };
 
@@ -91,7 +91,7 @@ export default function RegisterPage() {
     }
 
     if (!validateEmail(email)) {
-      setError("Email must be a valid @lmu.edu.ng address");
+      setError("Please enter a valid email address");
       return;
     }
 

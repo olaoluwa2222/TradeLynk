@@ -283,7 +283,13 @@ function Navigation({
                 {storefront.isVerified && (
                   <div className="flex items-center gap-1">
                     <CheckCircle size={10} className="text-blue-500" />
-                    <span className={`text-xs ${theme === "product-showcase" ? "text-gray-300" : "text-gray-500"}`}>
+                    <span
+                      className={`text-xs ${
+                        theme === "product-showcase"
+                          ? "text-gray-300"
+                          : "text-gray-500"
+                      }`}
+                    >
                       Verified
                     </span>
                   </div>
@@ -305,14 +311,16 @@ function Navigation({
                         : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
                     }`}
                     style={
-                      activeTab === tab.id ? { backgroundColor: primaryColor } : {}
+                      activeTab === tab.id
+                        ? { backgroundColor: primaryColor }
+                        : {}
                     }
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
-              
+
               {/* Edit Button for Owner */}
               {isOwner && (
                 <Link
@@ -389,10 +397,16 @@ function Navigation({
                 <span className="text-base">{tab.label}</span>
               </button>
             ))}
-            
+
             {/* Divider */}
-            <div className={`my-3 border-t ${theme === "product-showcase" ? "border-gray-700" : "border-gray-200"}`} />
-            
+            <div
+              className={`my-3 border-t ${
+                theme === "product-showcase"
+                  ? "border-gray-700"
+                  : "border-gray-200"
+              }`}
+            />
+
             {/* Settings - Only for store owner */}
             {isOwner && (
               <Link
@@ -408,7 +422,7 @@ function Navigation({
                 <span className="text-base">Edit My Website</span>
               </Link>
             )}
-            
+
             {/* Back to TradeLynk */}
             <Link
               href="/"
@@ -424,10 +438,10 @@ function Navigation({
             </Link>
           </div>
         </div>
-        
+
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
-          <div 
+          <div
             className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-[-1]"
             onClick={() => setMobileMenuOpen(false)}
           />
