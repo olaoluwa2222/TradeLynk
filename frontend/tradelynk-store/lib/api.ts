@@ -400,6 +400,12 @@ export const itemsApi = {
     const response = await api.post(`/items/${itemId}/report`);
     return response.data;
   },
+
+  // Get items by seller ID
+  getItemsBySeller: async (sellerId: number) => {
+    const response = await api.get(`/items/seller/${sellerId}`);
+    return response.data;
+  },
 };
 
 // Sellers API methods
@@ -453,6 +459,12 @@ export const sellersApi = {
     instagramHandle?: string;
     twitterHandle?: string;
     storeScreenshotUrl?: string;
+
+    // Theme fields
+    theme: string;
+    primaryColor: string;
+    secondaryColor: string;
+    layoutType: string;
   }) => {
     const response = await api.post("/sellers/activate", data);
     return response.data;

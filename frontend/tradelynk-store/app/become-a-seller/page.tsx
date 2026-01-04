@@ -7,6 +7,9 @@ import { useState, useEffect } from "react";
 import { sellersApi } from "@/lib/api";
 import ImageUpload from "@/components/ImageUpload";
 import GrammarChecker from "@/components/GrammarChecker";
+import ThemeSelector from "@/components/ThemeSelector";
+import StorefrontPreview from "@/components/StorefrontPreview";
+import { Theme } from "@/types/seller";
 
 export default function BecomeASellerPage() {
   const { isAuthenticated, user } = useAuth();
@@ -457,6 +460,12 @@ function SellerActivationForm({
   const [twitterHandle, setTwitterHandle] = useState("");
   const [storeScreenshotUrl, setStoreScreenshotUrl] = useState("");
 
+  // Theme fields
+  const [selectedTheme, setSelectedTheme] = useState<Theme>("modern-clean");
+  const [primaryColor, setPrimaryColor] = useState("#000000");
+  const [secondaryColor, setSecondaryColor] = useState("#FFFFFF");
+  const [layoutType, setLayoutType] = useState("multi-page");
+
   // Existing fields
   const [businessName, setBusinessName] = useState("");
   const [campusAddress, setCampusAddress] = useState("");
@@ -579,6 +588,17 @@ function SellerActivationForm({
     setUsername(generated);
   };
 
+  // Handle theme change
+  const handleThemeChange = (
+    theme: Theme,
+    primary: string,
+    secondary: string
+  ) => {
+    setSelectedTheme(theme);
+    setPrimaryColor(primary);
+    setSecondaryColor(secondary);
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -641,6 +661,12 @@ function SellerActivationForm({
         instagramHandle: instagramHandle || undefined,
         twitterHandle: twitterHandle || undefined,
         storeScreenshotUrl: storeScreenshotUrl || undefined,
+
+        // Theme fields
+        theme: selectedTheme,
+        primaryColor,
+        secondaryColor,
+        layoutType,
 
         // Existing fields
         businessName: businessName || undefined,
@@ -763,7 +789,7 @@ function SellerActivationForm({
 
   return (
     <section id="form" className="w-full bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Section Title */}
         <div className="text-center mb-12">
           <h2
@@ -786,287 +812,419 @@ function SellerActivationForm({
           </p>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <form onSubmit={handleSubmit} className="space-y-10">
-            {/* Error Alert */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
+        {/* Form + Preview Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Card - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
+              <form onSubmit={handleSubmit} className="space-y-10">
+                {/* Error Alert */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+                    {error}
+                  </div>
+                )}
 
-            {/* SECTION 1: Store Identity (NEW) */}
-            <div className="border-b border-gray-200 pb-8">
-              <h3
-                className="text-2xl font-semibold text-black mb-6"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Store Identity (Required)
-              </h3>
+                {/* SECTION 1: Store Identity (NEW) */}
+                <div className="border-b border-gray-200 pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-6"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Store Identity (Required)
+                  </h3>
 
-              {/* Username */}
-              <div className="mb-6">
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Store Username <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
+                  {/* Username */}
+                  <div className="mb-6">
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Store Username <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) =>
+                            setUsername(
+                              e.target.value
+                                .toLowerCase()
+                                .replace(/[^a-z0-9-]/g, "")
+                            )
+                          }
+                          placeholder="your-store-name"
+                          maxLength={50}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                          style={{
+                            fontFamily: "Clash Display",
+                            fontWeight: 400,
+                          }}
+                        />
+                        {usernameStatus === "checking" && (
+                          <div className="absolute right-3 top-3">
+                            <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+                          </div>
+                        )}
+                        {usernameStatus === "available" && (
+                          <div className="absolute right-3 top-3 text-green-500 text-xl">
+                            ✓
+                          </div>
+                        )}
+                        {usernameStatus === "taken" && (
+                          <div className="absolute right-3 top-3 text-red-500 text-xl">
+                            ✗
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={generateUsername}
+                        className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm whitespace-nowrap"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Generate from name
+                      </button>
+                    </div>
+                    <div className="mt-1 flex justify-between items-center">
+                      <p
+                        className="text-xs text-gray-500"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        Your storefront: /sellers/{username || "..."}
+                      </p>
+                      {usernameError && (
+                        <p className="text-xs text-red-500">{usernameError}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Store Tagline */}
+                  <div className="mb-6">
+                    <GrammarChecker
+                      text={storeTagline}
+                      onTextChange={setStoreTagline}
+                      type="tagline"
+                      label="Store Tagline *"
+                      maxLength={100}
+                    />
+                    <p
+                      className="text-xs text-gray-500 mt-1"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      A catchy one-liner (10-100 chars)
+                    </p>
+                  </div>
+
+                  {/* Bio */}
+                  <div>
+                    <GrammarChecker
+                      text={bio}
+                      onTextChange={setBio}
+                      type="bio"
+                      label="Store Bio *"
+                      maxLength={500}
+                    />
+                    <p
+                      className="text-xs text-gray-500 mt-1"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Tell buyers about yourself and what you sell (50-500
+                      chars)
+                    </p>
+                  </div>
+                </div>
+
+                {/* SECTION 2: Visual Branding (NEW - Optional) */}
+                <div className="border-b border-gray-200 pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-6"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Visual Branding (Optional)
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Store Logo */}
+                    <div>
+                      <ImageUpload
+                        onUploadComplete={setLogoUrl}
+                        currentImageUrl={logoUrl}
+                        label="Store Logo (Optional)"
+                        helpText="Square image recommended (e.g., 300x300px)"
+                      />
+                    </div>
+
+                    {/* Banner Image */}
+                    <div>
+                      <ImageUpload
+                        onUploadComplete={setBannerImageUrl}
+                        currentImageUrl={bannerImageUrl}
+                        label="Banner Image (Optional)"
+                        helpText="Wide image recommended (e.g., 1200x400px)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Store Screenshot */}
+                  <div className="mt-6">
+                    <ImageUpload
+                      onUploadComplete={setStoreScreenshotUrl}
+                      currentImageUrl={storeScreenshotUrl}
+                      label="Store Screenshot (Optional - for verification)"
+                      helpText="Screenshot of your store or previous sales (if any)"
+                    />
+                  </div>
+                </div>
+
+                {/* SECTION 2.5: Choose Your Theme (NEW) */}
+                <div className="border-b border-gray-200 pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Choose Your Theme
+                  </h3>
+                  <p
+                    className="text-gray-600 mb-6"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Select a theme that represents your brand. You can customize
+                    colors to match your style.
+                  </p>
+
+                  <ThemeSelector
+                    selectedTheme={selectedTheme}
+                    onThemeChange={handleThemeChange}
+                    customColors={{
+                      primary: primaryColor,
+                      secondary: secondaryColor,
+                    }}
+                  />
+                </div>
+
+                {/* SECTION 3: Contact Information (NEW - Optional) */}
+                <div className="border-b border-gray-200 pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-6"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Contact Information (Optional)
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Phone Number */}
+                    <div>
+                      <label
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Phone Number (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) =>
+                          setPhoneNumber(
+                            e.target.value.replace(/\D/g, "").slice(0, 11)
+                          )
+                        }
+                        placeholder="08012345678"
+                        maxLength={11}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">11 digits</p>
+                    </div>
+
+                    {/* WhatsApp Number */}
+                    <div>
+                      <label
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        WhatsApp Number (Optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={whatsappNumber}
+                        onChange={(e) =>
+                          setWhatsappNumber(
+                            e.target.value.replace(/\D/g, "").slice(0, 11)
+                          )
+                        }
+                        placeholder="08012345678"
+                        maxLength={11}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">11 digits</p>
+                    </div>
+
+                    {/* Instagram Handle */}
+                    <div>
+                      <label
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Instagram Handle (Optional)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-3 text-gray-500">
+                          @
+                        </span>
+                        <input
+                          type="text"
+                          value={instagramHandle}
+                          onChange={(e) =>
+                            setInstagramHandle(
+                              e.target.value.replace(/[^a-zA-Z0-9_.]/g, "")
+                            )
+                          }
+                          placeholder="yourusername"
+                          className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                          style={{
+                            fontFamily: "Clash Display",
+                            fontWeight: 400,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Twitter Handle */}
+                    <div>
+                      <label
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Twitter Handle (Optional)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-3 text-gray-500">
+                          @
+                        </span>
+                        <input
+                          type="text"
+                          value={twitterHandle}
+                          onChange={(e) =>
+                            setTwitterHandle(
+                              e.target.value.replace(/[^a-zA-Z0-9_]/g, "")
+                            )
+                          }
+                          placeholder="yourusername"
+                          className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                          style={{
+                            fontFamily: "Clash Display",
+                            fontWeight: 400,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 4: Business Information (Optional) */}
+                <div className="border-b border-gray-200 pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-6"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Business Information (Optional)
+                  </h3>
+
+                  {/* Business Name */}
+                  <div className="mb-6">
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Business Name (Optional)
+                    </label>
                     <input
                       type="text"
-                      value={username}
-                      onChange={(e) =>
-                        setUsername(
-                          e.target.value
-                            .toLowerCase()
-                            .replace(/[^a-z0-9-]/g, "")
-                        )
-                      }
-                      placeholder="your-store-name"
-                      maxLength={50}
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="e.g., John's Used Books"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
                       style={{
                         fontFamily: "Clash Display",
                         fontWeight: 400,
                       }}
                     />
-                    {usernameStatus === "checking" && (
-                      <div className="absolute right-3 top-3">
-                        <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
-                      </div>
-                    )}
-                    {usernameStatus === "available" && (
-                      <div className="absolute right-3 top-3 text-green-500 text-xl">
-                        ✓
-                      </div>
-                    )}
-                    {usernameStatus === "taken" && (
-                      <div className="absolute right-3 top-3 text-red-500 text-xl">
-                        ✗
-                      </div>
-                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={generateUsername}
-                    className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm whitespace-nowrap"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Generate from name
-                  </button>
-                </div>
-                <div className="mt-1 flex justify-between items-center">
-                  <p
-                    className="text-xs text-gray-500"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    Your storefront: /sellers/{username || "..."}
-                  </p>
-                  {usernameError && (
-                    <p className="text-xs text-red-500">{usernameError}</p>
-                  )}
-                </div>
-              </div>
 
-              {/* Store Tagline */}
-              <div className="mb-6">
-                <GrammarChecker
-                  text={storeTagline}
-                  onTextChange={setStoreTagline}
-                  type="tagline"
-                  label="Store Tagline *"
-                  maxLength={100}
-                />
-                <p
-                  className="text-xs text-gray-500 mt-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  A catchy one-liner (10-100 chars)
-                </p>
-              </div>
-
-              {/* Bio */}
-              <div>
-                <GrammarChecker
-                  text={bio}
-                  onTextChange={setBio}
-                  type="bio"
-                  label="Store Bio *"
-                  maxLength={500}
-                />
-                <p
-                  className="text-xs text-gray-500 mt-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Tell buyers about yourself and what you sell (50-500 chars)
-                </p>
-              </div>
-            </div>
-
-            {/* SECTION 2: Visual Branding (NEW - Optional) */}
-            <div className="border-b border-gray-200 pb-8">
-              <h3
-                className="text-2xl font-semibold text-black mb-6"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Visual Branding (Optional)
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Store Logo */}
-                <div>
-                  <ImageUpload
-                    onUploadComplete={setLogoUrl}
-                    currentImageUrl={logoUrl}
-                    label="Store Logo (Optional)"
-                    helpText="Square image recommended (e.g., 300x300px)"
-                  />
-                </div>
-
-                {/* Banner Image */}
-                <div>
-                  <ImageUpload
-                    onUploadComplete={setBannerImageUrl}
-                    currentImageUrl={bannerImageUrl}
-                    label="Banner Image (Optional)"
-                    helpText="Wide image recommended (e.g., 1200x400px)"
-                  />
-                </div>
-              </div>
-
-              {/* Store Screenshot */}
-              <div className="mt-6">
-                <ImageUpload
-                  onUploadComplete={setStoreScreenshotUrl}
-                  currentImageUrl={storeScreenshotUrl}
-                  label="Store Screenshot (Optional - for verification)"
-                  helpText="Screenshot of your store or previous sales (if any)"
-                />
-              </div>
-            </div>
-
-            {/* SECTION 3: Contact Information (NEW - Optional) */}
-            <div className="border-b border-gray-200 pb-8">
-              <h3
-                className="text-2xl font-semibold text-black mb-6"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Contact Information (Optional)
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Phone Number */}
-                <div>
-                  <label
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Phone Number (Optional)
-                  </label>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) =>
-                      setPhoneNumber(
-                        e.target.value.replace(/\D/g, "").slice(0, 11)
-                      )
-                    }
-                    placeholder="08012345678"
-                    maxLength={11}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">11 digits</p>
-                </div>
-
-                {/* WhatsApp Number */}
-                <div>
-                  <label
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    WhatsApp Number (Optional)
-                  </label>
-                  <input
-                    type="tel"
-                    value={whatsappNumber}
-                    onChange={(e) =>
-                      setWhatsappNumber(
-                        e.target.value.replace(/\D/g, "").slice(0, 11)
-                      )
-                    }
-                    placeholder="08012345678"
-                    maxLength={11}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">11 digits</p>
-                </div>
-
-                {/* Instagram Handle */}
-                <div>
-                  <label
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Instagram Handle (Optional)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-gray-500">
-                      @
-                    </span>
+                  {/* Campus Address */}
+                  <div>
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Campus Address (Optional)
+                    </label>
                     <input
                       type="text"
-                      value={instagramHandle}
-                      onChange={(e) =>
-                        setInstagramHandle(
-                          e.target.value.replace(/[^a-zA-Z0-9_.]/g, "")
-                        )
-                      }
-                      placeholder="yourusername"
-                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                      value={campusAddress}
+                      onChange={(e) => setCampusAddress(e.target.value)}
+                      placeholder="e.g., Male Hostel Block B, Room 205"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
                       style={{
                         fontFamily: "Clash Display",
                         fontWeight: 400,
@@ -1075,368 +1233,291 @@ function SellerActivationForm({
                   </div>
                 </div>
 
-                {/* Twitter Handle */}
-                <div>
-                  <label
-                    className="block text-sm font-medium text-gray-700 mb-2"
+                {/* SECTION 5: Bank Account Details (Required) */}
+                <div className="border-b border-gray-200 pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-6"
                     style={{
                       fontFamily: "Clash Display",
-                      fontWeight: 500,
+                      fontWeight: 600,
                     }}
                   >
-                    Twitter Handle (Optional)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-gray-500">
-                      @
-                    </span>
+                    Bank Account Details (Required)
+                  </h3>
+
+                  {/* Bank Name */}
+                  <div className="mb-6">
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Bank Name <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={bankName}
+                      onChange={(e) => {
+                        const selected = banks.find(
+                          (b) => b.name === e.target.value
+                        );
+                        setBankName(e.target.value);
+                        setBankCode(selected?.code || "");
+                        setAccountNumber("");
+                        setAccountName("");
+                        setValidationStatus("idle");
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      <option value="">Select a bank</option>
+                      {banks.map((bank) => (
+                        <option key={bank.code} value={bank.name}>
+                          {bank.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Account Number */}
+                  <div className="mb-6">
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Account Number <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) =>
+                          setAccountNumber(e.target.value.slice(0, 10))
+                        }
+                        placeholder="0123456789"
+                        maxLength={10}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                        disabled={!bankCode}
+                      />
+                      {validationStatus === "validating" && (
+                        <div className="absolute right-3 top-3">
+                          <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+                        </div>
+                      )}
+                      {validationStatus === "valid" && (
+                        <div className="absolute right-3 top-3 text-green-500 text-xl">
+                          ✓
+                        </div>
+                      )}
+                      {validationStatus === "invalid" && (
+                        <div className="absolute right-3 top-3 text-red-500 text-xl">
+                          ✗
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">10 digits</p>
+                  </div>
+
+                  {/* Account Name */}
+                  <div className="mb-6">
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      Account Name
+                    </label>
                     <input
                       type="text"
-                      value={twitterHandle}
-                      onChange={(e) =>
-                        setTwitterHandle(
-                          e.target.value.replace(/[^a-zA-Z0-9_]/g, "")
-                        )
-                      }
-                      placeholder="yourusername"
-                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                      value={accountName}
+                      disabled
+                      placeholder="Auto-filled after validation"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-900"
                       style={{
                         fontFamily: "Clash Display",
                         fontWeight: 400,
                       }}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Auto-filled when account is validated
+                    </p>
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p
+                      className="text-sm text-gray-700"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 500,
+                      }}
+                    >
+                      ℹ️ Why we need this:
+                    </p>
+                    <p
+                      className="text-sm text-gray-600 mt-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Your sales revenue will be sent directly to this account
+                      within 24-48 hours after each sale.
+                    </p>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* SECTION 4: Business Information (Optional) */}
-            <div className="border-b border-gray-200 pb-8">
-              <h3
-                className="text-2xl font-semibold text-black mb-6"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Business Information (Optional)
-              </h3>
-
-              {/* Business Name */}
-              <div className="mb-6">
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Business Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="e.g., John's Used Books"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                />
-              </div>
-
-              {/* Campus Address */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Campus Address (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={campusAddress}
-                  onChange={(e) => setCampusAddress(e.target.value)}
-                  placeholder="e.g., Male Hostel Block B, Room 205"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* SECTION 5: Bank Account Details (Required) */}
-            <div className="border-b border-gray-200 pb-8">
-              <h3
-                className="text-2xl font-semibold text-black mb-6"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Bank Account Details (Required)
-              </h3>
-
-              {/* Bank Name */}
-              <div className="mb-6">
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Bank Name <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={bankName}
-                  onChange={(e) => {
-                    const selected = banks.find(
-                      (b) => b.name === e.target.value
-                    );
-                    setBankName(e.target.value);
-                    setBankCode(selected?.code || "");
-                    setAccountNumber("");
-                    setAccountName("");
-                    setValidationStatus("idle");
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  <option value="">Select a bank</option>
-                  {banks.map((bank) => (
-                    <option key={bank.code} value={bank.name}>
-                      {bank.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Account Number */}
-              <div className="mb-6">
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Account Number <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={accountNumber}
-                    onChange={(e) =>
-                      setAccountNumber(e.target.value.slice(0, 10))
-                    }
-                    placeholder="0123456789"
-                    maxLength={10}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
+                {/* SECTION 6: Terms & Conditions */}
+                <div className="pb-8">
+                  <h3
+                    className="text-2xl font-semibold text-black mb-6"
                     style={{
                       fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                    disabled={!bankCode}
-                  />
-                  {validationStatus === "validating" && (
-                    <div className="absolute right-3 top-3">
-                      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
-                    </div>
-                  )}
-                  {validationStatus === "valid" && (
-                    <div className="absolute right-3 top-3 text-green-500 text-xl">
-                      ✓
-                    </div>
-                  )}
-                  {validationStatus === "invalid" && (
-                    <div className="absolute right-3 top-3 text-red-500 text-xl">
-                      ✗
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">10 digits</p>
-              </div>
-
-              {/* Account Name */}
-              <div className="mb-6">
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Account Name
-                </label>
-                <input
-                  type="text"
-                  value={accountName}
-                  disabled
-                  placeholder="Auto-filled after validation"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-900"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Auto-filled when account is validated
-                </p>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p
-                  className="text-sm text-gray-700"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  ℹ️ Why we need this:
-                </p>
-                <p
-                  className="text-sm text-gray-600 mt-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Your sales revenue will be sent directly to this account
-                  within 24-48 hours after each sale.
-                </p>
-              </div>
-            </div>
-
-            {/* SECTION 6: Terms & Conditions */}
-            <div className="pb-8">
-              <h3
-                className="text-2xl font-semibold text-black mb-6"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Terms & Conditions
-              </h3>
-
-              <div className="space-y-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="mt-1 w-5 h-5"
-                  />
-                  <span
-                    className="text-gray-700"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
+                      fontWeight: 600,
                     }}
                   >
-                    I agree to the Seller Terms & Conditions{" "}
-                    <span className="text-red-500">*</span>
-                  </span>
-                </label>
+                    Terms & Conditions
+                  </h3>
 
-                <div
-                  className="text-xs text-gray-500 ml-8 space-y-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  <p>• I understand the 10% commission on each sale</p>
-                  <p>• I will only sell items allowed by campus rules</p>
-                  <p>• I understand my bank details are encrypted and secure</p>
-                  <p>• I agree to maintain accurate product listings</p>
+                  <div className="space-y-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        className="mt-1 w-5 h-5"
+                      />
+                      <span
+                        className="text-gray-700"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        I agree to the Seller Terms & Conditions{" "}
+                        <span className="text-red-500">*</span>
+                      </span>
+                    </label>
+
+                    <div
+                      className="text-xs text-gray-500 ml-8 space-y-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      <p>• I understand the 10% commission on each sale</p>
+                      <p>• I will only sell items allowed by campus rules</p>
+                      <p>
+                        • I understand my bank details are encrypted and secure
+                      </p>
+                      <p>• I agree to maintain accurate product listings</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Validation Errors */}
-            {(usernameStatus !== "available" ||
-              validationStatus !== "valid") && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p
-                  className="text-sm font-semibold text-yellow-800 mb-2"
+                {/* Validation Errors */}
+                {(usernameStatus !== "available" ||
+                  validationStatus !== "valid") && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p
+                      className="text-sm font-semibold text-yellow-800 mb-2"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 600,
+                      }}
+                    >
+                      ⚠️ Please complete the following before submitting:
+                    </p>
+                    <ul
+                      className="text-sm text-yellow-700 space-y-1 ml-4"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      {usernameStatus !== "available" && (
+                        <li>• Choose a valid and available username</li>
+                      )}
+                      {validationStatus !== "valid" && (
+                        <li>
+                          • Validate your bank account number (must be 10 digits
+                          and match selected bank)
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={
+                    isLoading ||
+                    usernameStatus !== "available" ||
+                    validationStatus !== "valid"
+                  }
+                  className="w-full py-4 px-6 bg-black hover:bg-gray-900 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                   style={{
                     fontFamily: "Clash Display",
-                    fontWeight: 600,
+                    fontWeight: 700,
                   }}
                 >
-                  ⚠️ Please complete the following before submitting:
-                </p>
-                <ul
-                  className="text-sm text-yellow-700 space-y-1 ml-4"
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                      Activating...
+                    </>
+                  ) : (
+                    <>
+                      Activate Seller Account & Create Storefront
+                      <span>→</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Footer Text */}
+                <p
+                  className="text-xs text-gray-600 text-center"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 400,
                   }}
                 >
-                  {usernameStatus !== "available" && (
-                    <li>• Choose a valid and available username</li>
-                  )}
-                  {validationStatus !== "valid" && (
-                    <li>
-                      • Validate your bank account number (must be 10 digits and
-                      match selected bank)
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
+                  By clicking, you agree to our Seller Agreement & Privacy
+                  Policy. Your information is encrypted and secure.
+                </p>
+              </form>
+            </div>
+          </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={
-                isLoading ||
-                usernameStatus !== "available" ||
-                validationStatus !== "valid"
-              }
-              className="w-full py-4 px-6 bg-black hover:bg-gray-900 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 700,
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                  Activating...
-                </>
-              ) : (
-                <>
-                  Activate Seller Account & Create Storefront
-                  <span>→</span>
-                </>
-              )}
-            </button>
-
-            {/* Footer Text */}
-            <p
-              className="text-xs text-gray-600 text-center"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
-            >
-              By clicking, you agree to our Seller Agreement & Privacy Policy.
-              Your information is encrypted and secure.
-            </p>
-          </form>
+          {/* Live Preview Sidebar - Takes 1 column */}
+          <div className="hidden lg:block">
+            <StorefrontPreview
+              username={username || "your-store"}
+              businessName={businessName || username || "Your Store"}
+              storeTagline={storeTagline}
+              bio={bio}
+              theme={selectedTheme}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
+              logoUrl={logoUrl}
+              bannerImageUrl={bannerImageUrl}
+            />
+          </div>
         </div>
       </div>
     </section>
