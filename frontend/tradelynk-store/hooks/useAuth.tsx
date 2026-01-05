@@ -109,12 +109,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       console.error("Login error:", error);
 
-      // Check for specific error messages
-      if (error.response?.data?.message === "EMAIL_NOT_VERIFIED") {
+      // Extract user-friendly message from backend response
+      const backendMessage = error.response?.data?.message;
+      const backendError = error.response?.data?.error;
+
+      // Check for email verification error
+      if (
+        backendMessage &&
+        backendMessage.toLowerCase().includes("verify your email")
+      ) {
         throw new Error("EMAIL_NOT_VERIFIED");
       }
 
-      throw error;
+      // If backend provides a message, use it
+      if (backendMessage) {
+        throw new Error(backendMessage);
+      }
+
+      // Fallback to generic message
+      throw new Error("Login failed. Please check your credentials.");
     }
   };
 

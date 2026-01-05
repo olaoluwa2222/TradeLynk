@@ -123,7 +123,11 @@ export default function StorefrontSettingsPage() {
     }
   }, [isAuthenticated, username]);
 
-  const handleThemeChange = (theme: Theme, primary: string, secondary: string) => {
+  const handleThemeChange = (
+    theme: Theme,
+    primary: string,
+    secondary: string
+  ) => {
     setSelectedTheme(theme);
     setPrimaryColor(primary);
     setSecondaryColor(secondary);
@@ -189,7 +193,9 @@ export default function StorefrontSettingsPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h2>
           <p className="text-gray-500 mb-6">{error}</p>
           <Link
             href={`/sellers/${username}`}
@@ -294,7 +300,10 @@ export default function StorefrontSettingsPage() {
             {/* Store Info Section */}
             {activeSection === "store" && (
               <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-900 mb-6" style={{ fontFamily: "Clash Display" }}>
+                <h2
+                  className="text-lg font-bold text-gray-900 mb-6"
+                  style={{ fontFamily: "Clash Display" }}
+                >
                   Store Information
                 </h2>
 
@@ -350,8 +359,12 @@ export default function StorefrontSettingsPage() {
                       Store URL
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">tradelynk.com/sellers/</span>
-                      <span className="font-medium text-gray-900">{profile?.username}</span>
+                      <span className="text-gray-500">
+                        tradelynk.com/sellers/
+                      </span>
+                      <span className="font-medium text-gray-900">
+                        {profile?.username}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Your store URL cannot be changed
@@ -366,7 +379,10 @@ export default function StorefrontSettingsPage() {
               <div className="space-y-6">
                 {/* Logo & Banner */}
                 <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6" style={{ fontFamily: "Clash Display" }}>
+                  <h2
+                    className="text-lg font-bold text-gray-900 mb-6"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Logo & Banner
                   </h2>
 
@@ -401,7 +417,10 @@ export default function StorefrontSettingsPage() {
 
                 {/* Theme Selection */}
                 <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900 mb-6" style={{ fontFamily: "Clash Display" }}>
+                  <h2
+                    className="text-lg font-bold text-gray-900 mb-6"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Theme & Colors
                   </h2>
 
@@ -420,7 +439,10 @@ export default function StorefrontSettingsPage() {
             {/* Contact Section */}
             {activeSection === "contact" && (
               <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-900 mb-6" style={{ fontFamily: "Clash Display" }}>
+                <h2
+                  className="text-lg font-bold text-gray-900 mb-6"
+                  style={{ fontFamily: "Clash Display" }}
+                >
                   Contact Information
                 </h2>
 
@@ -462,7 +484,10 @@ export default function StorefrontSettingsPage() {
             {/* Social Media Section */}
             {activeSection === "social" && (
               <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100">
-                <h2 className="text-lg font-bold text-gray-900 mb-6" style={{ fontFamily: "Clash Display" }}>
+                <h2
+                  className="text-lg font-bold text-gray-900 mb-6"
+                  style={{ fontFamily: "Clash Display" }}
+                >
                   Social Media Links
                 </h2>
 
@@ -512,7 +537,10 @@ export default function StorefrontSettingsPage() {
             <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold mb-1" style={{ fontFamily: "Clash Display" }}>
+                  <h3
+                    className="font-bold mb-1"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Preview Your Storefront
                   </h3>
                   <p className="text-sm text-gray-300">

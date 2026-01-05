@@ -218,10 +218,10 @@ export default function RegisterPage() {
                     We've sent a verification link to:
                   </p>
                   <p
-                    className="text-sm font-mono bg-gray-100 p-2 rounded"
+                    className="text-sm font-mono bg-gray-100 p-3 rounded text-gray-900 font-semibold"
                     style={{
                       fontFamily: "Clash Display",
-                      fontWeight: 400,
+                      fontWeight: 600,
                     }}
                   >
                     {email}

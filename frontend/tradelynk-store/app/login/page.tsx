@@ -91,14 +91,22 @@ export default function LoginPage() {
       await login(email, password);
       // Router redirect happens in login function
     } catch (err: any) {
-      // ✅ NEW: Check for email not verified error
-      if (err.message === "EMAIL_NOT_VERIFIED") {
+      const errorMessage =
+        err.message || "Login failed. Please check your credentials.";
+
+      // Check if error is about email verification
+      if (
+        errorMessage === "EMAIL_NOT_VERIFIED" ||
+        errorMessage.toLowerCase().includes("verify your email")
+      ) {
         setError(
-          "Your email is not verified. Check your inbox or click below to resend verification email."
+          "⚠️ Your email is not verified. Please check your inbox or click below to resend the verification email."
         );
         setShowResendVerification(true);
       } else {
-        setError(err.message || "Login failed. Please check your credentials.");
+        // Show the actual error message from backend
+        setError(errorMessage);
+        setShowResendVerification(false);
       }
     } finally {
       setIsLoading(false);
@@ -153,7 +161,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
                 {error}
               </div>
             )}
