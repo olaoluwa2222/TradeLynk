@@ -24,8 +24,10 @@ public class RegisterRequest {
      */
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
-    @Pattern(regexp = "^[A-Za-z0-9._%+-]+@(lmu\\\\.edu\\\\.ng|gmail\\\\.com|outlook\\\\.com|hotmail\\\\.com|live\\\\.com)$",
-            message = "Email must be a valid Landmark University email (@lmu.edu.ng)")
+    @Pattern(
+            regexp = "^[A-Za-z0-9._%+-]+@(lmu\\.edu\\.ng|gmail\\.com|outlook\\.com|hotmail\\.com|live\\.com)$",
+            message = "Email domain not supported"
+    )
     private String email;
 
     /**
