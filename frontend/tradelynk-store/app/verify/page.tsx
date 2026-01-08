@@ -16,11 +16,12 @@ type VerificationState =
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { verifyEmail, resendVerification } = useAuth();
+  const { verifyEmail, resendVerification, user } = useAuth();
 
   const [state, setState] = useState<VerificationState>("loading");
   const [message, setMessage] = useState("");
   const [resendLoading, setResendLoading] = useState(false);
+  const [email, setEmail] = useState("");
 
   useEffect(() => {
     const token = searchParams.get("token");
@@ -61,10 +62,18 @@ function VerifyEmailContent() {
   };
 
   const handleResendVerification = async () => {
+    // Use user email if logged in, otherwise use the email input
+    const emailToUse = user?.email || email;
+    
+    if (!emailToUse) {
+      alert("Please enter your email address");
+      return;
+    }
+
     setResendLoading(true);
 
     try {
-      await resendVerification();
+      await resendVerification(emailToUse);
       alert("Verification email sent! Please check your inbox.");
     } catch (error: any) {
       alert(error.message || "Failed to resend verification email");
@@ -179,6 +188,20 @@ function VerifyEmailContent() {
                 ⚠️ Verification Link Expired
               </h3>
               <p className="text-gray-600 mb-6">{message}</p>
+              
+              {/* Email input if user is not logged in */}
+              {!user && (
+                <div className="mb-4">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+              
               <button
                 onClick={handleResendVerification}
                 disabled={resendLoading}
@@ -217,6 +240,20 @@ function VerifyEmailContent() {
                 ❌ Verification Failed
               </h3>
               <p className="text-gray-600 mb-6">{message}</p>
+              
+              {/* Email input if user is not logged in */}
+              {!user && (
+                <div className="mb-4">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+              
               <button
                 onClick={handleResendVerification}
                 disabled={resendLoading}

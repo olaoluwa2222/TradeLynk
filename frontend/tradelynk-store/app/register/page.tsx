@@ -69,7 +69,7 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      await resendVerification();
+      await resendVerification(email);
       setError("");
       alert("Verification email sent! Please check your inbox.");
     } catch (err: any) {

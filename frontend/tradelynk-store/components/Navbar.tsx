@@ -22,7 +22,7 @@ export default function Navbar() {
 
   // Hide navbar on storefront pages (they have their own navigation)
   const isStorefrontPage = pathname?.startsWith("/sellers/");
-  
+
   // Notification counts
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
@@ -48,10 +48,11 @@ export default function Navbar() {
         // Use getMySellerProfile which returns username from /sellers/me/profile
         const profileResponse = await sellersApi.getMySellerProfile();
         console.log("🏪 Seller profile response:", profileResponse);
-        
+
         // Handle the response structure: { success: true, data: { username: "..." } }
-        const username = profileResponse.data?.username || profileResponse.username;
-        
+        const username =
+          profileResponse.data?.username || profileResponse.username;
+
         if (profileResponse.success && username) {
           console.log("🏪 Setting seller username:", username);
           setSellerUsername(username);
@@ -475,7 +476,9 @@ export default function Navbar() {
                         // If seller but username not loaded yet, prevent navigation
                         if (isSeller && !sellerUsername) {
                           e.preventDefault();
-                          console.log("🏪 Waiting for storefront username to load...");
+                          console.log(
+                            "🏪 Waiting for storefront username to load..."
+                          );
                         }
                       }}
                       className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
@@ -485,7 +488,8 @@ export default function Navbar() {
                         fontWeight: 400,
                       }}
                     >
-                      🌐 My Website {isSeller && !sellerUsername && "(Loading...)"}
+                      🌐 My Website{" "}
+                      {isSeller && !sellerUsername && "(Loading...)"}
                     </Link>
 
                     {/* My Sales - Only for sellers */}

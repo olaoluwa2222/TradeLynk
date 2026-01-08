@@ -153,9 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ✅ Resend verification email
-  const resendVerification = async () => {
+  const resendVerification = async (email: string) => {
     try {
-      const response = await authApi.resendVerification();
+      const response = await authApi.resendVerification(email);
       return response.message;
     } catch (error: any) {
       const message =

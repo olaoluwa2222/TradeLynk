@@ -53,7 +53,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const message = await resendVerification();
+      const message = await resendVerification(email);
       setResendSuccess(true);
       setError("");
     } catch (err: any) {

@@ -18,11 +18,16 @@ export default function UnverifiedBanner() {
   }
 
   const handleResend = async () => {
+    if (!user?.email) {
+      alert("Email not found. Please log in again.");
+      return;
+    }
+
     setIsLoading(true);
     setShowSuccess(false);
 
     try {
-      await resendVerification();
+      await resendVerification(user.email);
       setShowSuccess(true);
 
       // Auto-hide success message after 5 seconds
