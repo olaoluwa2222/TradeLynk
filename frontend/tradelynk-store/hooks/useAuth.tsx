@@ -145,6 +145,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyEmail = async (token: string): Promise<string> => {
     try {
       const response = await authApi.verifyEmail(token);
+      // ✅ Clear pending verification email from localStorage on success
+      localStorage.removeItem("pendingVerificationEmail");
       return response.message;
     } catch (error: any) {
       const message = error.response?.data?.message || "Verification failed";

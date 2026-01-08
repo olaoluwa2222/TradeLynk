@@ -64,7 +64,7 @@ function VerifyEmailContent() {
   const handleResendVerification = async () => {
     // Use user email if logged in, otherwise use the email input
     const emailToUse = user?.email || email;
-    
+
     if (!emailToUse) {
       alert("Please enter your email address");
       return;
@@ -188,7 +188,7 @@ function VerifyEmailContent() {
                 ⚠️ Verification Link Expired
               </h3>
               <p className="text-gray-600 mb-6">{message}</p>
-              
+
               {/* Email input if user is not logged in */}
               {!user && (
                 <div className="mb-4">
@@ -201,7 +201,7 @@ function VerifyEmailContent() {
                   />
                 </div>
               )}
-              
+
               <button
                 onClick={handleResendVerification}
                 disabled={resendLoading}
@@ -240,7 +240,7 @@ function VerifyEmailContent() {
                 ❌ Verification Failed
               </h3>
               <p className="text-gray-600 mb-6">{message}</p>
-              
+
               {/* Email input if user is not logged in */}
               {!user && (
                 <div className="mb-4">
@@ -253,7 +253,7 @@ function VerifyEmailContent() {
                   />
                 </div>
               )}
-              
+
               <button
                 onClick={handleResendVerification}
                 disabled={resendLoading}

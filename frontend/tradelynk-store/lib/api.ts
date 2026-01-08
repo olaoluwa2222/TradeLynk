@@ -224,9 +224,10 @@ export const authApi = {
   },
 
   // ✅ NEW: Resend verification email (requires authentication)
-  resendVerification: async (): Promise<{ message: string }> => {
+  resendVerification: async (email: string): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
-      "/auth/resend-verification"
+      "/auth/resend-verification",
+      { email }
     );
     return response.data;
   },

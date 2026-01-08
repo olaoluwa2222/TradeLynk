@@ -33,6 +33,15 @@ export default function RegisterPage() {
     }
   }, [isAuthenticated, router]);
 
+  // ✅ Check for pending verification on mount
+  useEffect(() => {
+    const pendingEmail = localStorage.getItem("pendingVerificationEmail");
+    if (pendingEmail && !success) {
+      setEmail(pendingEmail);
+      setSuccess(true); // Show success state with resend option
+    }
+  }, []);
+
   // Image carousel effect
   useEffect(() => {
     const interval = setInterval(() => {
@@ -79,6 +88,12 @@ export default function RegisterPage() {
     }
   };
 
+  // ✅ Clear pending verification when navigating to login
+  const handleGoToLogin = () => {
+    localStorage.removeItem("pendingVerificationEmail");
+    router.push("/login");
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -116,6 +131,8 @@ export default function RegisterPage() {
     try {
       await register(email, name, password);
       setSuccess(true);
+      // ✅ Store email in localStorage for recovery if page reloads
+      localStorage.setItem("pendingVerificationEmail", email);
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {
@@ -239,6 +256,16 @@ export default function RegisterPage() {
                     Please check your inbox and click the link to verify your
                     account.
                   </p>
+                  <p
+                    className="text-xs text-gray-600 mt-2"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    💡 Didn't receive it? You can resend the email below or try
+                    again from the login page.
+                  </p>
                 </div>
 
                 <button
@@ -255,16 +282,16 @@ export default function RegisterPage() {
                     : "📧 Resend Verification Email"}
                 </button>
 
-                <Link
-                  href="/login"
-                  className="block w-full py-2 px-4 bg-black hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
+                <button
+                  onClick={handleGoToLogin}
+                  className="w-full py-2 px-4 bg-black hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 500,
                   }}
                 >
                   Go to Login
-                </Link>
+                </button>
               </div>
             </div>
           ) : (
