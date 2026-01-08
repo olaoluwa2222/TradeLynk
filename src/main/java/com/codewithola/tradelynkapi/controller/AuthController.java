@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.controller;
 
-
 import com.codewithola.tradelynkapi.dtos.requests.LoginRequest;
 import com.codewithola.tradelynkapi.dtos.requests.RegisterRequest;
 import com.codewithola.tradelynkapi.dtos.response.ApiResponse;
@@ -42,7 +41,11 @@ public class AuthController {
     private Long jwtExpirationMs;
 
     @Autowired
-    public AuthController(UserService userService, JwtTokenProvider jwtTokenProvider,VerificationTokenRepository verificationTokenRepository,VerificationService verificationService,UserRepository userRepository) {
+    public AuthController(UserService userService,
+                          JwtTokenProvider jwtTokenProvider,
+                          VerificationTokenRepository verificationTokenRepository,
+                          VerificationService verificationService,
+                          UserRepository userRepository) {
         this.userService = userService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.verificationTokenRepository = verificationTokenRepository;
@@ -110,7 +113,6 @@ public class AuthController {
                 .body(ApiResponse.success("User registered successfully. Verification email sent.", authResponse));
     }
 
-
     /**
      * Login user
      * POST /api/v1/auth/login
@@ -163,7 +165,6 @@ public class AuthController {
         );
 
         log.info("User logged in successfully: {}", user.getEmail());
-
         return ResponseEntity
                 .ok(ApiResponse.success("Login successful", authResponse));
     }
@@ -173,7 +174,7 @@ public class AuthController {
      * POST /api/v1/auth/refresh-token
      *
      * Request Header:
-     * Authorization: Bearer <old_token>
+     * Authorization: Bearer <token>
      *
      * Response: 200 OK
      * {
@@ -220,7 +221,6 @@ public class AuthController {
         );
 
         log.info("Token refreshed successfully for user: {}", email);
-
         return ResponseEntity
                 .ok(ApiResponse.success("Token refreshed successfully", authResponse));
     }
@@ -239,18 +239,15 @@ public class AuthController {
      * }
      */
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
+    public ResponseEntity<ApiResponse<Object>> logout(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-
             try {
                 // Validate token first before extracting username
                 if (jwtTokenProvider.validateToken(token)) {
                     String email = jwtTokenProvider.getUsernameFromToken(token);
                     log.info("User logged out: {}", email);
-
                     // TODO: Add token to blacklist if you're implementing that
                     // tokenBlacklistService.blacklistToken(token);
                 } else {
@@ -284,9 +281,7 @@ public class AuthController {
     @GetMapping("/check-email")
     public ResponseEntity<ApiResponse<Boolean>> checkEmail(@RequestParam String email) {
         log.debug("Email availability check for: {}", email);
-
         boolean exists = userService.emailExists(email);
-
         return ResponseEntity
                 .ok(ApiResponse.success("Email availability checked", exists));
     }
@@ -307,6 +302,21 @@ public class AuthController {
                 .ok(ApiResponse.success("Auth service is running", "OK"));
     }
 
+    /**
+     * Verify email with token
+     * GET /api/v1/auth/verify?token=<verification_token>
+     *
+     * Response: 200 OK
+     * {
+     *   "success": true,
+     *   "message": "Email verified successfully!",
+     *   "data": "verified"
+     * }
+     *
+     * Error Responses:
+     * - 400 BAD REQUEST: Token expired
+     * - 404 NOT FOUND: Invalid token
+     */
     @GetMapping("/verify")
     public ResponseEntity<ApiResponse<String>> verifyEmail(@RequestParam("token") String token) {
         log.info("Received email verification request with token: {}", token);
@@ -331,7 +341,71 @@ public class AuthController {
         verificationTokenRepository.delete(verificationToken);
 
         log.info("✅ Email verified successfully for user: {}", user.getEmail());
+
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully!", "verified"));
     }
 
+    /**
+     * Resend verification email
+     * POST /api/v1/auth/resend-verification
+     *
+     * Request Body:
+     * {
+     *   "email": "student@landmark.edu.ng"
+     * }
+     *
+     * Response: 200 OK
+     * {
+     *   "success": true,
+     *   "message": "Verification email sent successfully",
+     *   "data": {
+     *     "email": "student@landmark.edu.ng",
+     *     "message": "Please check your email for the verification link. It will expire in 24 hours."
+     *   }
+     * }
+     *
+     * Error Responses:
+     * - 400 BAD REQUEST: Email already verified or email is required
+     * - 404 NOT FOUND: User not found
+     * - 500 INTERNAL SERVER ERROR: Server error
+     */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<ApiResponse<Object>> resendVerificationEmail(
+            @RequestBody java.util.Map<String, String> request) {
+        String email = request.get("email");
+
+        if (email == null || email.trim().isEmpty()) {
+            log.warn("Resend verification attempted with empty email");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Email is required"));
+        }
+
+        log.info("Resend verification email request received for: {}", email);
+
+        // 1️⃣ Check if user exists
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+
+        // 2️⃣ Check if email is already verified
+        if (user.getIsEmailVerified()) {
+            log.warn("Resend verification attempted for already verified email: {}", email);
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Email is already verified. You can proceed to login."));
+        }
+
+        // 3️⃣ Send new verification email (this will delete old token and create new one)
+        verificationService.sendVerificationEmail(user);
+
+        log.info("✅ Verification email resent successfully to: {}", email);
+
+        // 4️⃣ Build response
+        java.util.Map<String, String> responseData = new java.util.HashMap<>();
+        responseData.put("email", email);
+        responseData.put("message", "Please check your email for the verification link. It will expire in 24 hours.");
+
+        return ResponseEntity
+                .ok(ApiResponse.success("Verification email sent successfully", responseData));
+    }
 }
