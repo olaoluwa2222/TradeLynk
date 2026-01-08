@@ -65,5 +65,5 @@ export interface AuthContextType {
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   verifyEmail: (token: string) => Promise<string>;
-  resendVerification: () => Promise<string>;
+  resendVerification: (email: string) => Promise<string>;
 }
