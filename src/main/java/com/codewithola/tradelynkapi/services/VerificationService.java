@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.services;
 
-
 import com.codewithola.tradelynkapi.entity.User;
 import com.codewithola.tradelynkapi.entity.VerificationToken;
 import com.codewithola.tradelynkapi.exception.InvalidTokenException;
@@ -21,17 +20,20 @@ public class VerificationService {
 
     private final VerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService; // 🔹 Now injected here
+    private final EmailService emailService;
 
     @Transactional
     public void sendVerificationEmail(User user) {
-        // Delete existing token (optional cleanup)
-        tokenRepository.findByUser(user).ifPresent(tokenRepository::delete);
+        // 1️⃣ Delete existing token for this user (CRITICAL FIX)
+        tokenRepository.deleteByUserId(user.getId());
 
-        // Generate unique token
+        // Force flush to ensure delete happens before insert
+        tokenRepository.flush();
+
+        // 2️⃣ Generate unique token
         String token = UUID.randomUUID().toString();
 
-        // Create token entity
+        // 3️⃣ Create token entity
         VerificationToken verificationToken = VerificationToken.builder()
                 .token(token)
                 .user(user)
@@ -40,10 +42,10 @@ public class VerificationService {
 
         tokenRepository.save(verificationToken);
 
-        // 🔹 Delegate email sending to EmailService
+        // 4️⃣ Delegate email sending to EmailService
         emailService.sendVerificationEmail(user.getEmail(), token);
 
-        log.info("Verification email sent to {}", user.getEmail());
+        log.info("✅ Verification email sent to {}", user.getEmail());
     }
 
     @Transactional
