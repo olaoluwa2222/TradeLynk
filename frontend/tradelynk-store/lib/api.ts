@@ -359,8 +359,12 @@ export const itemsApi = {
     condition?: string,
     sort: string = "RECENT"
   ) => {
+    // If category is specified, use the category-specific endpoint
+    if (category) {
+      return itemsApi.getItemsByCategory(category, page, size);
+    }
+
     const params: any = { page, size, sort };
-    if (category) params.category = category;
     if (minPrice) params.minPrice = minPrice;
     if (maxPrice) params.maxPrice = maxPrice;
     if (condition) params.condition = condition;
