@@ -385,9 +385,9 @@ export default function Home() {
 
               {/* Clothing */}
               <Link
-                href="/category/CLOTHING"
-                className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
-              >
+      href="/items?category=CLOTHING"
+      className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
+      >
                 <Image
                   src="/woman-orange-oversized-jacket-street-style-apparel-rear-view.jpg"
                   alt="Clothing"
