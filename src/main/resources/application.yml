@@ -166,3 +166,11 @@ cors:
 #   allowed-origins: https://yourdomain.com,https://api.yourdomain.com
 #   allow-credentials: true
 #   max-age: 86400
+
+# ============================================
+# OpenAI Configuration
+# ============================================
+openai:
+  api-key: ${OPENAI_API_KEY}
+  model: gpt-4o-mini
+  timeout: 30000  # 30 seconds
