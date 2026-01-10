@@ -92,7 +92,7 @@ public class AITextImprovementService {
                     "6. Don't add false claims " +
                     "7. Return ONLY the improved text, no explanations";
         } else { // tagline
-            return "You are a professional copywriter helping student sellers create catchy store taglines. " +
+            return "You are a professional copywriter helping users sellers create catchy store taglines. " +
                     "Your task is to improve their tagline while keeping it short and punchy. " +
                     "Rules: " +
                     "1. Keep it between 10-100 characters " +
