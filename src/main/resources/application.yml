@@ -131,7 +131,7 @@ app:
   version: 1.0.0
   university-domain: lmu.edu.ng
   frontend:
-    url: https://trade-lynk-ten.vercel.app
+    url: https://tradelynk.app
 
 # ============================================
 # Logging Configuration
