@@ -9,6 +9,11 @@ import { Toaster } from "react-hot-toast";
 export const metadata: Metadata = {
   title: "TradeLynk - Campus Marketplace",
   description: "Buy and sell items on campus with TradeLynk",
+  icons: {
+    icon: "/Logo Icon.png",
+    shortcut: "/Logo Icon.png",
+    apple: "/Logo Icon.png",
+  },
 };
 
 export default function RootLayout({
