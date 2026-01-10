@@ -24,10 +24,10 @@ export default function MobileHome({
   user,
 }: MobileHomeProps) {
   const categories = [
-    { name: "Electronics", href: "/category/electronics", emoji: "📱" },
-    { name: "Books", href: "/category/books", emoji: "📚" },
-    { name: "Food", href: "/category/food", emoji: "🍕" },
-    { name: "Fashion", href: "/category/fashion", emoji: "👔" },
+    { name: "Electronics", href: "/category/ELECTRONICS", emoji: "📱" },
+    { name: "Books", href: "/category/BOOKS", emoji: "📚" },
+    { name: "Food", href: "/category/FOOD", emoji: "🍕" },
+    { name: "Clothing", href: "/category/CLOTHING", emoji: "👔" },
   ];
 
   // Determine CTA link and text based on user status
@@ -251,7 +251,7 @@ export default function MobileHome({
         <div className="flex gap-3 overflow-x-auto pb-2 px-4 scrollbar-hide">
           {/* Electronics */}
           <Link
-            href="/category/electronics"
+            href="/category/ELECTRONICS"
             className="group relative flex-shrink-0 w-64 h-48 rounded-xl overflow-hidden"
           >
             <Image
@@ -293,7 +293,7 @@ export default function MobileHome({
 
           {/* Books */}
           <Link
-            href="/category/books"
+            href="/category/BOOKS"
             className="group relative flex-shrink-0 w-64 h-48 rounded-xl overflow-hidden"
           >
             <Image
@@ -335,7 +335,7 @@ export default function MobileHome({
 
           {/* Food */}
           <Link
-            href="/category/food"
+            href="/category/FOOD"
             className="group relative flex-shrink-0 w-64 h-48 rounded-xl overflow-hidden"
           >
             <Image
@@ -377,7 +377,7 @@ export default function MobileHome({
 
           {/* Fashion */}
           <Link
-            href="/category/fashion"
+            href="/category/CLOTHING"
             className="group relative flex-shrink-0 w-64 h-48 rounded-xl overflow-hidden"
           >
             <Image

@@ -56,14 +56,14 @@ function ItemsPageContent() {
   // Sidebar visibility (mobile)
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Categories list
+  // Categories list (matching backend enum)
   const categories = [
-    "Electronics",
-    "Books",
-    "Clothing",
-    "Furniture",
-    "Sports",
-    "Other",
+    "ELECTRONICS",
+    "BOOKS",
+    "CLOTHING",
+    "FOOD",
+    "LIGHT",
+    "TRANSPORTATION",
   ];
 
   const conditions = ["NEW", "LIKE_NEW", "GOOD", "FAIR"];
@@ -351,7 +351,7 @@ function ItemsPageContent() {
                           fontWeight: 400,
                         }}
                       >
-                        {cat}
+                        {cat.charAt(0) + cat.slice(1).toLowerCase()}
                       </span>
                     </label>
                   ))}

@@ -259,7 +259,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Electronics */}
               <Link
-                href="/category/electronics"
+                href="/category/ELECTRONICS"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
@@ -301,7 +301,7 @@ export default function Home() {
 
               {/* Books */}
               <Link
-                href="/category/books"
+                href="/category/BOOKS"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
@@ -343,7 +343,7 @@ export default function Home() {
 
               {/* Food */}
               <Link
-                href="/category/food"
+                href="/category/FOOD"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
@@ -383,14 +383,14 @@ export default function Home() {
                 </div>
               </Link>
 
-              {/* Fashion */}
+              {/* Clothing */}
               <Link
-                href="/category/fashion"
+                href="/category/CLOTHING"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
                   src="/woman-orange-oversized-jacket-street-style-apparel-rear-view.jpg"
-                  alt="Fashion"
+                  alt="Clothing"
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-300"
                 />
@@ -404,7 +404,7 @@ export default function Home() {
                         fontWeight: 600,
                       }}
                     >
-                      Fashion
+                      Clothing
                     </p>
                     <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:bg-gray-200 transition-colors">
                       <svg
