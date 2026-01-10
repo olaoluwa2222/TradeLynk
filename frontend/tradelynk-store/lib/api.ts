@@ -804,4 +804,22 @@ export const imagesApi = {
   },
 };
 
+// AI API methods
+export const aiApi = {
+  // Improve text using AI (bio or tagline)
+  improveText: async (text: string, type: "bio" | "tagline") => {
+    const response = await api.post("/ai/improve-text", {
+      text,
+      type,
+    });
+    return response.data;
+  },
+
+  // Check if AI service is available
+  checkHealth: async () => {
+    const response = await api.get("/ai/health");
+    return response.data;
+  },
+};
+
 export default api;

@@ -663,6 +663,11 @@ function SellerActivationForm({
       return;
     }
 
+    if (!bannerImageUrl) {
+      setError("Please upload a banner image for your storefront");
+      return;
+    }
+
     if (!bankName || !accountNumber || !agreedToTerms) {
       setError("Please fill in all required fields and agree to terms");
       return;
@@ -993,48 +998,148 @@ function SellerActivationForm({
                   </div>
                 </div>
 
-                {/* SECTION 2: Visual Branding (NEW - Optional) */}
+                {/* SECTION 2: Visual Branding */}
                 <div className="border-b border-gray-200 pb-8">
                   <h3
-                    className="text-2xl font-semibold text-black mb-6"
+                    className="text-2xl font-semibold text-black mb-2"
                     style={{
                       fontFamily: "Clash Display",
                       fontWeight: 600,
                     }}
                   >
-                    Visual Branding (Optional)
+                    Visual Branding
                   </h3>
+                  <p
+                    className="text-gray-600 mb-6"
+                    style={{
+                      fontFamily: "Clash Display",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Make your storefront stand out with professional visuals
+                  </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Store Logo */}
-                    <div>
-                      <ImageUpload
-                        onUploadComplete={setLogoUrl}
-                        currentImageUrl={logoUrl}
-                        label="Store Logo (Optional)"
-                        helpText="Square image recommended (e.g., 300x300px)"
-                      />
-                    </div>
-
-                    {/* Banner Image */}
-                    <div>
+                  {/* Banner Image - Required */}
+                  <div className="mb-8">
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xl">🖼️</span>
+                        </div>
+                        <div>
+                          <h4
+                            className="text-lg font-semibold text-black"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Store Banner <span className="text-red-500">*</span>
+                          </h4>
+                          <p
+                            className="text-sm text-gray-600 mt-1"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            A beautiful banner makes your store look
+                            professional and attracts more buyers. This is the
+                            first thing customers see!
+                          </p>
+                        </div>
+                      </div>
                       <ImageUpload
                         onUploadComplete={setBannerImageUrl}
                         currentImageUrl={bannerImageUrl}
-                        label="Banner Image (Optional)"
-                        helpText="Wide image recommended (e.g., 1200x400px)"
+                        label=""
+                        helpText="Upload a wide image (1200x400px recommended) that represents your brand"
                       />
+                      {!bannerImageUrl && (
+                        <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                          <span>⚠️</span> Banner image is required to create
+                          your storefront
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Store Screenshot */}
-                  <div className="mt-6">
-                    <ImageUpload
-                      onUploadComplete={setStoreScreenshotUrl}
-                      currentImageUrl={storeScreenshotUrl}
-                      label="Store Screenshot (Optional - for verification)"
-                      helpText="Screenshot of your store or previous sales (if any)"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Store Logo - Optional */}
+                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <span className="text-base">🏪</span>
+                        </div>
+                        <div>
+                          <h4
+                            className="text-base font-semibold text-black"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Store Logo
+                          </h4>
+                          <p
+                            className="text-xs text-gray-500"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            Optional • Square image (300x300px)
+                          </p>
+                        </div>
+                      </div>
+                      <ImageUpload
+                        onUploadComplete={setLogoUrl}
+                        currentImageUrl={logoUrl}
+                        label=""
+                        helpText="Your store's logo or profile picture"
+                      />
+                    </div>
+
+                    {/* Instagram Profile - Optional for verification */}
+                    <div className="bg-gradient-to-br from-pink-50 to-orange-50 rounded-xl p-5 border border-pink-100">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                          <svg
+                            className="w-4 h-4 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4
+                            className="text-base font-semibold text-black"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Instagram Profile
+                          </h4>
+                          <p
+                            className="text-xs text-gray-500"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            Optional • Helps verify your business
+                          </p>
+                        </div>
+                      </div>
+                      <ImageUpload
+                        onUploadComplete={setStoreScreenshotUrl}
+                        currentImageUrl={storeScreenshotUrl}
+                        label=""
+                        helpText="Screenshot of your Instagram profile or business page"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1470,7 +1575,8 @@ function SellerActivationForm({
 
                 {/* Validation Errors */}
                 {(usernameStatus !== "available" ||
-                  validationStatus !== "valid") && (
+                  validationStatus !== "valid" ||
+                  !bannerImageUrl) && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p
                       className="text-sm font-semibold text-yellow-800 mb-2"
@@ -1491,6 +1597,9 @@ function SellerActivationForm({
                       {usernameStatus !== "available" && (
                         <li>• Choose a valid and available username</li>
                       )}
+                      {!bannerImageUrl && (
+                        <li>• Upload a banner image for your storefront</li>
+                      )}
                       {validationStatus !== "valid" && (
                         <li>
                           • Validate your bank account number (must be 10 digits
@@ -1507,7 +1616,8 @@ function SellerActivationForm({
                   disabled={
                     isLoading ||
                     usernameStatus !== "available" ||
-                    validationStatus !== "valid"
+                    validationStatus !== "valid" ||
+                    !bannerImageUrl
                   }
                   className="w-full py-4 px-6 bg-black hover:bg-gray-900 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                   style={{
