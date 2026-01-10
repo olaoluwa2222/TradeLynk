@@ -231,7 +231,7 @@ export default function Home() {
                 Shop By Category
               </h2>
               <Link
-                href="/categories"
+                href="/items"
                 className="flex items-center gap-2 px-6 py-2 rounded-full bg-black text-white hover:bg-gray-900 transition-colors"
                 style={{
                   fontFamily: "Clash Display",
@@ -259,7 +259,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Electronics */}
               <Link
-                href="/category/ELECTRONICS"
+                href="/items?category=ELECTRONICS"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
@@ -301,7 +301,7 @@ export default function Home() {
 
               {/* Books */}
               <Link
-                href="/category/BOOKS"
+                href="/items?category=BOOKS"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
@@ -343,7 +343,7 @@ export default function Home() {
 
               {/* Food */}
               <Link
-                href="/category/FOOD"
+                href="/items?category=FOOD"
                 className="group relative h-96 rounded-2xl overflow-hidden cursor-pointer"
               >
                 <Image
