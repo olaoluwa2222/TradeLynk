@@ -48,19 +48,6 @@ public class ItemController {
 
         log.info("POST /api/items - Creating item for user: {}", userPrincipal.getEmail());
 
-        // ✅ CHECK IF SELLER IS VERIFIED BEFORE CREATING ITEM
-        if (!sellerProfileService.isVerified(userPrincipal.getId())) {
-            log.warn("User {} attempted to create item without verification", userPrincipal.getId());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("message", "You must be a verified seller of tradelynk to be able to create items");
-            response.put("error", "SELLER_NOT_VERIFIED");
-            response.put("hint", "Please complete seller verification or send a mail to start selling");
-
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-        }
-
         // If verified, proceed to create item
         ItemDTO createdItem = itemService.createItem(userPrincipal.getId(), request);
 
