@@ -62,7 +62,8 @@ export async function uploadToCloudinary(
 
       // Handle completion
       xhr.addEventListener("load", () => {
-        if (xhr.status === 200) {
+        // Accept both 200 and 201 as success status codes
+        if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const response = JSON.parse(xhr.responseText);
             if (response.success && response.data) {

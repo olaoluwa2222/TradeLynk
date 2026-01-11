@@ -26,6 +26,7 @@ export default function ImageUpload({
     currentImageUrl
   );
   const [error, setError] = useState<string>("");
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -65,6 +66,7 @@ export default function ImageUpload({
 
   const handleFile = async (file: File) => {
     setError("");
+    setUploadSuccess(false);
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -86,10 +88,12 @@ export default function ImageUpload({
     setIsUploading(false);
 
     if (result.success && result.url) {
+      setUploadSuccess(true);
       onUploadComplete(result.url);
     } else {
       const errorMsg = result.error || "Upload failed";
       setError(errorMsg);
+      setUploadSuccess(false);
       setPreviewUrl(undefined);
       if (onUploadError) {
         onUploadError(errorMsg);
@@ -105,6 +109,7 @@ export default function ImageUpload({
     setPreviewUrl(undefined);
     setError("");
     setUploadProgress(0);
+    setUploadSuccess(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -187,8 +192,29 @@ export default function ImageUpload({
           <img
             src={previewUrl}
             alt="Preview"
-            className="w-full h-48 object-cover rounded-lg border border-gray-300"
+            className={`w-full h-48 object-cover rounded-lg border-2 ${
+              uploadSuccess ? "border-green-500" : "border-gray-300"
+            }`}
           />
+          {/* Success Badge */}
+          {uploadSuccess && (
+            <div className="absolute top-2 left-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 shadow-md">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Uploaded
+            </div>
+          )}
           <button
             onClick={handleRemove}
             type="button"
@@ -209,6 +235,20 @@ export default function ImageUpload({
             </svg>
           </button>
         </div>
+      )}
+
+      {/* Success Message */}
+      {uploadSuccess && !error && (
+        <p className="mt-2 text-sm text-green-600 flex items-center">
+          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Image uploaded successfully!
+        </p>
       )}
 
       {/* Error Message */}
