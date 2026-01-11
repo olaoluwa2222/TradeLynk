@@ -40,7 +40,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     // Rate limit configurations (requests per time window)
     private static final int AUTH_REQUESTS_PER_MINUTE = 10;
     private static final int ITEM_CREATE_REQUESTS_PER_HOUR = 10;
-    private static final int IMAGE_UPLOAD_REQUESTS_PER_HOUR = 20;
+    private static final int IMAGE_UPLOAD_REQUESTS_PER_HOUR = 30;
     private static final int DEFAULT_REQUESTS_PER_MINUTE = 60;
 
     // Time windows in milliseconds
