@@ -22,7 +22,7 @@ public class ImageService {
     private final Cloudinary cloudinary;
 
     // Maximum file size: 2 MB (in bytes)
-    private static final long MAX_FILE_SIZE = 2 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     // Allowed image formats
     private static final List<String> ALLOWED_FORMATS = Arrays.asList("jpg", "jpeg", "png", "webp");
