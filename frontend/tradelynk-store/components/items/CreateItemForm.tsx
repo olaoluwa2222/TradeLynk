@@ -160,14 +160,6 @@ export const CreateItemForm: React.FC = () => {
         }
       } catch (error: any) {
         console.error(`❌ Failed to upload image ${i + 1}:`, error);
-
-        // Check if error is due to unverified seller
-        if (error.response?.data?.error === "SELLER_NOT_VERIFIED") {
-          const verificationError: any = new Error("SELLER_NOT_VERIFIED");
-          verificationError.response = error.response;
-          throw verificationError;
-        }
-
         throw new Error(`Failed to upload image: ${file.name}`);
       }
     }
@@ -223,74 +215,7 @@ export const CreateItemForm: React.FC = () => {
           console.log("✅ All images uploaded successfully:", imageUrls);
         } catch (uploadError: any) {
           console.error("❌ Image upload failed:", uploadError);
-
-          // Check if it's a verification error
-          const isVerificationError =
-            uploadError?.message === "SELLER_NOT_VERIFIED" ||
-            uploadError?.response?.data?.error === "SELLER_NOT_VERIFIED";
-
-          console.log("🔍 Upload error verification check:", {
-            isVerificationError,
-            message: uploadError?.message,
-            status: uploadError?.response?.status,
-            errorCode: uploadError?.response?.data?.error,
-            responseData: uploadError?.response?.data,
-          });
-
-          if (isVerificationError) {
-            toast.dismiss("upload");
-
-            const errorMessage =
-              uploadError.response?.data?.message ||
-              "You must be a verified seller before you can upload images";
-            const hint =
-              uploadError.response?.data?.hint ||
-              "Please complete seller verification or send a mail to start selling";
-
-            // Single compact popup
-            toast.error(
-              () => (
-                <div className="flex items-start gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500/20 shrink-0">
-                    <span className="text-lg">🚫</span>
-                  </div>
-                  <div className="flex-1 pt-0.5">
-                    <p className="font-semibold text-white text-sm mb-1">
-                      Verification Required
-                    </p>
-                    <p className="text-xs text-gray-300 leading-relaxed">
-                      {errorMessage.replace(
-                        "uploading images",
-                        "upload images"
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                      💡 {hint}
-                    </p>
-                  </div>
-                </div>
-              ),
-              {
-                duration: 7000,
-                style: {
-                  maxWidth: "380px",
-                  background: "#0F172A",
-                  color: "#FFFFFF",
-                  border: "1px solid #EF4444",
-                  borderRadius: "10px",
-                  padding: "14px 16px",
-                  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
-                },
-              }
-            );
-
-            // Don't continue with item creation
-            return;
-          }
-
-          // Non-verification upload error
           toast.error("Failed to upload images", { id: "upload" });
-
           throw uploadError;
         }
       }

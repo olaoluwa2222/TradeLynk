@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { aiApi } from "@/lib/api";
 
 interface BasicInfoStepProps {
   title: string;
@@ -37,6 +38,64 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
   const titleMax = 100;
   const descriptionLength = description.length;
   const descriptionMax = 500;
+
+  // AI Improvement state
+  const [isImproving, setIsImproving] = useState(false);
+  const [improveError, setImproveError] = useState<string>("");
+  const [improveSuccess, setImproveSuccess] = useState<string>("");
+
+  // Handle AI improve description
+  const handleImproveDescription = async () => {
+    if (!description.trim()) {
+      setImproveError("Please enter a description first");
+      return;
+    }
+
+    if (description.length < 10) {
+      setImproveError(
+        "Description is too short. Please write at least 10 characters."
+      );
+      return;
+    }
+
+    setIsImproving(true);
+    setImproveError("");
+    setImproveSuccess("");
+
+    try {
+      // Use "bio" type as it's similar to description improvement
+      const response = await aiApi.improveText(description, "bio");
+
+      if (response.success && response.data) {
+        const improvedText = response.data.improvedText;
+        onDescriptionChange(improvedText.slice(0, descriptionMax));
+        setImproveSuccess("✨ Description improved successfully!");
+
+        // Clear success message after 3 seconds
+        setTimeout(() => setImproveSuccess(""), 3000);
+      } else {
+        setImproveError("Failed to improve description. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("AI improvement error:", err);
+
+      if (err.response?.status === 400) {
+        setImproveError(
+          err.response.data.message || "Invalid description format"
+        );
+      } else if (err.response?.status === 500) {
+        setImproveError(
+          "AI service is temporarily unavailable. Please try again."
+        );
+      } else {
+        setImproveError(
+          "Failed to improve description. Please check your connection."
+        );
+      }
+    } finally {
+      setIsImproving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -81,9 +140,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
         </label>
         <textarea
           value={description}
-          onChange={(e) =>
-            onDescriptionChange(e.target.value.slice(0, descriptionMax))
-          }
+          onChange={(e) => {
+            onDescriptionChange(e.target.value.slice(0, descriptionMax));
+            setImproveError("");
+            setImproveSuccess("");
+          }}
           placeholder="Describe your item in detail... (condition, features, etc.)"
           maxLength={descriptionMax}
           rows={4}
@@ -110,6 +171,100 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             {descriptionLength}/{descriptionMax}
           </span>
         </div>
+
+        {/* AI Improve Button */}
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={handleImproveDescription}
+            disabled={
+              isImproving || !description.trim() || description.length < 10
+            }
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            {isImproving ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Improving with AI...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
+                </svg>
+                Improve with AI
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {improveError && (
+          <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div className="flex items-start gap-2">
+              <svg
+                className="w-5 h-5 shrink-0 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>{improveError}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {improveSuccess && (
+          <div className="mt-3 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+            <div className="flex items-start gap-2">
+              <svg
+                className="w-5 h-5 shrink-0 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>{improveSuccess}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Category Field */}
