@@ -542,11 +542,11 @@ export default function OrderDetailPage() {
                 Contact support for any issues with this order
               </p>
               <a
-                href="mailto:support@campus-marketplace.com"
+                href="mailto:support@tradelynk.com"
                 className="text-sm text-blue-600 hover:underline font-semibold"
                 style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                support@campus-marketplace.com
+                support@tradelynk.com
               </a>
             </div>
           </div>

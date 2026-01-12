@@ -402,7 +402,7 @@ export default function ItemDetailPage() {
                       fontWeight: 400,
                     }}
                   >
-                    Campus Seller
+                    Verified Seller
                   </p>
                 </div>
               </div>

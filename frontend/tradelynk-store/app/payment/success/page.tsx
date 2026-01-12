@@ -408,10 +408,10 @@ function PaymentSuccessContent() {
           >
             Need help? Contact us at{" "}
             <a
-              href="mailto:support@campus-marketplace.com"
+              href="mailto:support@tradelynk.com"
               className="text-black font-semibold hover:underline"
             >
-              support@campus-marketplace.com
+              support@tradelynk.com
             </a>
           </p>
         </div>

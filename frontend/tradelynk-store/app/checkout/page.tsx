@@ -364,7 +364,7 @@ function CheckoutContent() {
                         fontWeight: 400,
                       }}
                     >
-                      Campus Seller
+                      Verified Seller
                     </p>
                   </div>
                 </div>

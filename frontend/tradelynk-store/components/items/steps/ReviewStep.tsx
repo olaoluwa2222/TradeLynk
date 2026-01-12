@@ -187,9 +187,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             className="mt-1 w-5 h-5 border-2 border-blue-500 rounded cursor-pointer accent-blue-600"
           />
           <span className="text-sm text-gray-700">
-            I confirm that this item complies with campus marketplace policies,
-            is not prohibited, and the information provided is accurate and
-            truthful.
+            I confirm that this item complies with marketplace policies, is not
+            prohibited, and the information provided is accurate and truthful.
           </span>
         </label>
         {errors.terms && (
@@ -207,9 +206,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
           <h3 className="text-lg font-semibold text-black">Ready to Publish</h3>
         </div>
         <p className="text-sm text-gray-600 mb-2">
-          Your item will be visible to other students on the Landmark University
-          campus marketplace. Make sure all information is accurate before
-          publishing.
+          Your item will be visible to buyers on the TradeLynk marketplace. Make
+          sure all information is accurate before publishing.
         </p>
         {imageFiles.length > 0 && (
           <p className="text-xs text-blue-600 bg-blue-50 border border-blue-200 rounded p-2 mt-3">

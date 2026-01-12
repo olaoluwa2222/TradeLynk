@@ -116,7 +116,7 @@ export default function Home() {
           <div className="absolute inset-0 z-0">
             <Image
               src="/growtika-mlpsHpUUCHY-unsplash.jpg"
-              alt="Campus Marketplace Hero"
+              alt="TradeLynk Marketplace Hero"
               fill
               className="object-cover"
               priority
@@ -670,7 +670,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Why Students Love TradeLynk Section */}
+        {/* Why Users Love TradeLynk Section */}
         <section className="w-full py-20 relative overflow-hidden">
           {/* Background Image with Overlay */}
           <div
@@ -865,7 +865,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How Landmark Marketplace Works Section */}
+        {/* How TradeLynk Marketplace Works Section */}
         <section className="w-full py-20 bg-black">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Section Title */}

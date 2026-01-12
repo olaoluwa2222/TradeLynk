@@ -71,7 +71,7 @@ export default function BecomeASellerPage() {
                     fontWeight: 700,
                   }}
                 >
-                  💰 Start Selling & Earn Money on Campus
+                  💰 Start Selling & Earn Money Online
                 </h1>
               </div>
 
@@ -84,8 +84,8 @@ export default function BecomeASellerPage() {
                     fontWeight: 400,
                   }}
                 >
-                  Turn your unused items into cash. Join 50+ student sellers
-                  making ₦50,000+ per month on TradeLynk Marketplace.
+                  Turn your unused items into cash. Join 50+ sellers making
+                  ₦50,000+ per month on TradeLynk Marketplace.
                 </p>
               </div>
 
@@ -202,7 +202,7 @@ export default function BecomeASellerPage() {
                     fontWeight: 400,
                   }}
                 >
-                  Active student sellers on campus
+                  Active sellers on TradeLynk
                 </p>
 
                 <div className="space-y-4">
@@ -1564,7 +1564,9 @@ function SellerActivationForm({
                       }}
                     >
                       <p>• I understand the 10% commission on each sale</p>
-                      <p>• I will only sell items allowed by campus rules</p>
+                      <p>
+                        • I will only sell items allowed by marketplace policies
+                      </p>
                       <p>
                         • I understand my bank details are encrypted and secure
                       </p>

@@ -122,7 +122,7 @@ function VerifyEmailContent() {
               </h3>
               <p className="text-gray-600 mb-6">
                 Your account has been verified. You can now login and start
-                using Campus Marketplace.
+                using TradeLynk.
               </p>
               <Link
                 href="/login"

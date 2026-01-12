@@ -7,8 +7,9 @@ import InAppNotifications from "@/components/InAppNotifications";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "TradeLynk - Campus Marketplace",
-  description: "Buy and sell items on campus with TradeLynk",
+  title: "TradeLynk - Online Marketplace",
+  description:
+    "Buy and sell items online with TradeLynk - Nigeria's trusted marketplace",
   icons: {
     icon: "/Logo Icon.png",
     shortcut: "/Logo Icon.png",

@@ -180,7 +180,7 @@ export default function RegisterPage() {
                 fontWeight: 400,
               }}
             >
-              Join Landmark University Marketplace
+              Start buying and selling with ease
             </p>
           </div>
 
