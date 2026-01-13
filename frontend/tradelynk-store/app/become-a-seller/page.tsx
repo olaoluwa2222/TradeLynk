@@ -486,6 +486,8 @@ function SellerActivationForm({
     "idle" | "checking" | "available" | "taken"
   >("idle");
   const [usernameError, setUsernameError] = useState("");
+  const [linkValidationError, setLinkValidationError] = useState("");
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
 
   const [storeTagline, setStoreTagline] = useState("");
   const [bio, setBio] = useState("");
@@ -881,7 +883,7 @@ function SellerActivationForm({
                     Store Identity (Required)
                   </h3>
 
-                  {/* Username */}
+                  {/* Store Link */}
                   <div className="mb-6">
                     <label
                       className="block text-sm font-medium text-gray-700 mb-2"
@@ -890,38 +892,64 @@ function SellerActivationForm({
                         fontWeight: 500,
                       }}
                     >
-                      Store Username <span className="text-red-500">*</span>
+                      Store Link <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <div className="flex-1 relative">
-                        <input
-                          type="text"
-                          value={username}
-                          onChange={(e) =>
-                            setUsername(
-                              e.target.value
-                                .toLowerCase()
-                                .replace(/[^a-z0-9-]/g, "")
-                            )
-                          }
-                          placeholder="your-store-name"
-                          maxLength={50}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 400,
-                          }}
-                        />
+                        <div className="flex items-center">
+                          <span
+                            className="inline-flex items-center px-3 py-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-500 text-sm"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            tradelynk.com/sellers/
+                          </span>
+                          <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => {
+                              const value = e.target.value.toLowerCase();
+                              // Check for invalid characters and show specific error
+                              const invalidChars = value.match(/[^a-z0-9-]/g);
+                              if (invalidChars) {
+                                const uniqueInvalid = [
+                                  ...new Set(invalidChars),
+                                ].join(", ");
+                                setLinkValidationError(
+                                  `Invalid characters: "${uniqueInvalid}" — Only lowercase letters (a-z), numbers (0-9), and hyphens (-) are allowed in your store link.`
+                                );
+                              } else {
+                                setLinkValidationError("");
+                              }
+                              // Only set valid characters
+                              setUsername(value.replace(/[^a-z0-9-]/g, ""));
+                            }}
+                            placeholder="your-store-name"
+                            maxLength={50}
+                            className={`flex-1 w-full px-4 py-3 border rounded-r-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 ${
+                              linkValidationError
+                                ? "border-red-500 bg-red-50"
+                                : "border-gray-300"
+                            }`}
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          />
+                        </div>
                         {usernameStatus === "checking" && (
                           <div className="absolute right-3 top-3">
                             <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
                           </div>
                         )}
-                        {usernameStatus === "available" && (
-                          <div className="absolute right-3 top-3 text-green-500 text-xl">
-                            ✓
-                          </div>
-                        )}
+                        {usernameStatus === "available" &&
+                          !linkValidationError && (
+                            <div className="absolute right-3 top-3 text-green-500 text-xl">
+                              ✓
+                            </div>
+                          )}
                         {usernameStatus === "taken" && (
                           <div className="absolute right-3 top-3 text-red-500 text-xl">
                             ✗
@@ -940,7 +968,38 @@ function SellerActivationForm({
                         Generate from name
                       </button>
                     </div>
-                    <div className="mt-1 flex justify-between items-center">
+
+                    {/* Validation Error Message */}
+                    {linkValidationError && (
+                      <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <span className="text-red-500 mt-0.5">⚠️</span>
+                          <div>
+                            <p
+                              className="text-sm text-red-600 font-medium"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 500,
+                              }}
+                            >
+                              {linkValidationError}
+                            </p>
+                            <p
+                              className="text-xs text-red-500 mt-1"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 400,
+                              }}
+                            >
+                              Examples of valid links: my-store, john-shop,
+                              tech-gadgets-ng
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
                       <p
                         className="text-xs text-gray-500"
                         style={{
@@ -948,7 +1007,8 @@ function SellerActivationForm({
                           fontWeight: 400,
                         }}
                       >
-                        Your storefront: /sellers/{username || "..."}
+                        Your full store link: tradelynk.com/sellers/
+                        {username || "..."}
                       </p>
                       {usernameError && (
                         <p className="text-xs text-red-500">{usernameError}</p>
@@ -1578,7 +1638,8 @@ function SellerActivationForm({
                 {/* Validation Errors */}
                 {(usernameStatus !== "available" ||
                   validationStatus !== "valid" ||
-                  !bannerImageUrl) && (
+                  !bannerImageUrl ||
+                  linkValidationError) && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <p
                       className="text-sm font-semibold text-yellow-800 mb-2"
@@ -1596,9 +1657,13 @@ function SellerActivationForm({
                         fontWeight: 400,
                       }}
                     >
-                      {usernameStatus !== "available" && (
-                        <li>• Choose a valid and available username</li>
+                      {linkValidationError && (
+                        <li>• Fix the invalid characters in your store link</li>
                       )}
+                      {usernameStatus !== "available" &&
+                        !linkValidationError && (
+                          <li>• Choose a valid and available store link</li>
+                        )}
                       {!bannerImageUrl && (
                         <li>• Upload a banner image for your storefront</li>
                       )}
@@ -1619,7 +1684,8 @@ function SellerActivationForm({
                     isLoading ||
                     usernameStatus !== "available" ||
                     validationStatus !== "valid" ||
-                    !bannerImageUrl
+                    !bannerImageUrl ||
+                    !!linkValidationError
                   }
                   className="w-full py-4 px-6 bg-black hover:bg-gray-900 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                   style={{
@@ -1655,7 +1721,7 @@ function SellerActivationForm({
             </div>
           </div>
 
-          {/* Live Preview Sidebar - Takes 1 column */}
+          {/* Live Preview Sidebar - Takes 1 column (Desktop) */}
           <div className="hidden lg:block">
             <StorefrontPreview
               username={username || "your-store"}
@@ -1670,7 +1736,313 @@ function SellerActivationForm({
             />
           </div>
         </div>
+
+        {/* Mobile/Tablet Preview Button - Fixed at bottom */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-4 bg-linear-to-t from-white via-white to-transparent">
+          <button
+            type="button"
+            onClick={() => setShowMobilePreview(true)}
+            className="w-full py-4 px-6 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-[1.02]"
+            style={{
+              fontFamily: "Clash Display",
+              fontWeight: 600,
+            }}
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+            Preview Your Store
+            <span className="bg-white/20 px-2 py-1 rounded-full text-xs">
+              Live
+            </span>
+          </button>
+        </div>
+
+        {/* Mobile Preview Modal */}
+        {showMobilePreview && (
+          <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden animate-slide-up">
+              {/* Modal Header */}
+              <div className="sticky top-0 z-10 bg-linear-to-r from-indigo-600 to-purple-600 px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <svg
+                      className="w-5 h-5 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3
+                      className="text-white font-semibold text-lg"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Store Preview
+                    </h3>
+                    <p
+                      className="text-white/70 text-xs"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      See how your store will look
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowMobilePreview(false)}
+                  className="w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Preview Content */}
+              <div
+                className="overflow-y-auto"
+                style={{ maxHeight: "calc(90vh - 80px)" }}
+              >
+                {/* Mini Store Card Preview */}
+                <div className="p-4">
+                  {/* Store URL Preview */}
+                  <div className="bg-gray-100 rounded-xl p-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                        <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                      </div>
+                      <div className="flex-1 bg-white rounded-lg px-3 py-1.5">
+                        <p
+                          className="text-xs text-gray-500 truncate"
+                          style={{
+                            fontFamily: "Clash Display",
+                            fontWeight: 400,
+                          }}
+                        >
+                          tradelynk.com/sellers/{username || "your-store"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Banner Preview */}
+                  <div className="relative rounded-xl overflow-hidden mb-4 shadow-md">
+                    {bannerImageUrl ? (
+                      <img
+                        src={bannerImageUrl}
+                        alt="Store Banner"
+                        className="w-full h-32 object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-32 flex items-center justify-center"
+                        style={{ backgroundColor: primaryColor || "#000000" }}
+                      >
+                        <div className="text-center">
+                          <span className="text-3xl">🏪</span>
+                          <p
+                            className="text-white/70 text-xs mt-1"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            Add a banner image
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Logo Overlay */}
+                    <div className="absolute -bottom-6 left-4">
+                      {logoUrl ? (
+                        <img
+                          src={logoUrl}
+                          alt="Store Logo"
+                          className="w-16 h-16 rounded-xl border-4 border-white object-cover shadow-lg"
+                        />
+                      ) : (
+                        <div
+                          className="w-16 h-16 rounded-xl border-4 border-white flex items-center justify-center shadow-lg"
+                          style={{ backgroundColor: primaryColor || "#000000" }}
+                        >
+                          <span className="text-2xl">🏪</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Store Info */}
+                  <div className="pt-6 px-1">
+                    <h4
+                      className="text-xl font-bold text-gray-900"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {businessName || username || "Your Store Name"}
+                    </h4>
+
+                    {storeTagline && (
+                      <p
+                        className="text-gray-600 text-sm mt-1"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        {storeTagline}
+                      </p>
+                    )}
+
+                    {bio && (
+                      <p
+                        className="text-gray-500 text-sm mt-3 line-clamp-3"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        {bio}
+                      </p>
+                    )}
+
+                    {/* Theme Preview Badge */}
+                    <div className="mt-4 flex items-center gap-2">
+                      <span
+                        className="text-xs bg-gray-100 px-3 py-1.5 rounded-full text-gray-600"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Theme:{" "}
+                        {selectedTheme
+                          .replace(/-/g, " ")
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <div
+                          className="w-4 h-4 rounded-full border border-gray-200"
+                          style={{ backgroundColor: primaryColor }}
+                        ></div>
+                        <div
+                          className="w-4 h-4 rounded-full border border-gray-200"
+                          style={{ backgroundColor: secondaryColor }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sample Products Placeholder */}
+                  <div className="mt-6">
+                    <h5
+                      className="text-sm font-semibold text-gray-700 mb-3"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Your Products Will Appear Here
+                    </h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="bg-gray-100 rounded-xl p-3 animate-pulse"
+                        >
+                          <div className="bg-gray-200 rounded-lg aspect-square mb-2"></div>
+                          <div className="bg-gray-200 rounded h-3 w-3/4 mb-1"></div>
+                          <div className="bg-gray-200 rounded h-3 w-1/2"></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-3">
+                <button
+                  onClick={() => setShowMobilePreview(false)}
+                  className="w-full py-3 bg-gray-900 hover:bg-black text-white font-semibold rounded-xl transition-colors"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 600,
+                  }}
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Add animation styles */}
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
     </section>
   );
 }

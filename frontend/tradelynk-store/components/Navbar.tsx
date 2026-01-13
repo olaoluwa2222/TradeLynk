@@ -19,6 +19,7 @@ export default function Navbar() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hide navbar on storefront pages (they have their own navigation)
   const isStorefrontPage = pathname?.startsWith("/sellers/");
@@ -191,7 +192,7 @@ export default function Navbar() {
           >
             <Image
               src="/Logo Icon.png"
-              alt="Campus Marketplace Logo"
+              alt="TradeLynk Logo"
               width={32}
               height={32}
               className="h-8 w-8"
@@ -391,8 +392,18 @@ export default function Navbar() {
               <div
                 ref={profileRef}
                 className="relative flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-gray-300"
-                onMouseEnter={() => setShowProfileDropdown(true)}
-                onMouseLeave={() => setShowProfileDropdown(false)}
+                onMouseEnter={() => {
+                  if (dropdownTimeoutRef.current) {
+                    clearTimeout(dropdownTimeoutRef.current);
+                    dropdownTimeoutRef.current = null;
+                  }
+                  setShowProfileDropdown(true);
+                }}
+                onMouseLeave={() => {
+                  dropdownTimeoutRef.current = setTimeout(() => {
+                    setShowProfileDropdown(false);
+                  }, 300);
+                }}
               >
                 {/* Profile Button */}
                 <button className="flex items-center gap-2 hover:opacity-75 transition-opacity py-2">
