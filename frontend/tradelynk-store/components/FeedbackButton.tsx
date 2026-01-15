@@ -80,7 +80,7 @@ const FEEDBACK_TYPES: {
   },
 ];
 
-const WHATSAPP_PHONE = "2348012345678"; // Replace with actual number
+const WHATSAPP_PHONE = "2349123328780"; // Replace with actual number
 
 // ============================================
 // WHATSAPP ICON COMPONENT
