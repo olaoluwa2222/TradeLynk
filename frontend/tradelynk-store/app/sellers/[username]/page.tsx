@@ -32,6 +32,7 @@ import {
   LayoutGrid,
   Plus,
 } from "lucide-react";
+import FeedbackButton from "@/components/FeedbackButton";
 
 export default function SellerStorefrontPage() {
   const params = useParams();
@@ -187,6 +188,9 @@ export default function SellerStorefrontPage() {
         primaryColor={primaryColor}
         theme={theme}
       />
+
+      {/* Feedback Button - Visible to store owner */}
+      {isOwner && <FeedbackButton username={username} />}
     </div>
   );
 }
