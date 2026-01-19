@@ -57,7 +57,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor - Handle 401 errors and refresh token
@@ -122,7 +122,7 @@ api.interceptors.response.use(
         // Try to refresh the token
         const response = await axios.post<AuthResponse>(
           "https://tradelynk-api-t598w.ondigitalocean.app/api/v1/auth/refresh",
-          { refreshToken }
+          { refreshToken },
         );
 
         const { token } = response.data.data;
@@ -158,7 +158,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 api.interceptors.response.use(
@@ -184,7 +184,7 @@ api.interceptors.response.use(
       const delay = 1000 * config.__retryCount; // 1s, 2s, 3s
       console.log(
         `🔄 Retrying request (attempt ${config.__retryCount}/3) after ${delay}ms:`,
-        config.url
+        config.url,
       );
 
       await new Promise((resolve) => setTimeout(resolve, delay));
@@ -193,7 +193,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // Auth API methods
@@ -210,7 +210,7 @@ export const authApi = {
   register: async (data: RegisterRequest): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
       "/auth/register",
-      data
+      data,
     );
     return response.data;
   },
@@ -218,7 +218,7 @@ export const authApi = {
   // ✅ NEW: Verify email with token
   verifyEmail: async (token: string): Promise<VerifyEmailResponse> => {
     const response = await api.get<VerifyEmailResponse>(
-      `/auth/verify?token=${token}`
+      `/auth/verify?token=${token}`,
     );
     return response.data;
   },
@@ -227,7 +227,7 @@ export const authApi = {
   resendVerification: async (email: string): Promise<{ message: string }> => {
     const response = await api.post<{ message: string }>(
       "/auth/resend-verification",
-      { email }
+      { email },
     );
     return response.data;
   },
@@ -317,14 +317,19 @@ export const itemsApi = {
   },
 
   getItemById: async (id: string | number) => {
+    console.log(`🔍 Fetching item ${id} from: /items/${id}`);
     const response = await api.get(`/items/${id}`);
+    console.log(
+      `📦 Item ${id} response:`,
+      JSON.stringify(response.data, null, 2),
+    );
     return response.data;
   },
 
   getCategoryItems: async (
     category: string,
     page: number = 0,
-    limit: number = 20
+    limit: number = 20,
   ) => {
     const response = await api.get("/items/category", {
       params: { category, page, limit },
@@ -357,7 +362,7 @@ export const itemsApi = {
     minPrice?: number,
     maxPrice?: number,
     condition?: string,
-    sort: string = "RECENT"
+    sort: string = "RECENT",
   ) => {
     // If category is specified, use the category-specific endpoint
     if (category) {
@@ -377,7 +382,7 @@ export const itemsApi = {
   getItemsByCategory: async (
     category: string,
     page: number = 0,
-    size: number = 20
+    size: number = 20,
   ) => {
     const response = await api.get(`/items/category/${category}`, {
       params: { page, size },
@@ -385,18 +390,91 @@ export const itemsApi = {
     return response.data;
   },
 
-  // Create new item
+  // Create new item (with full variant support)
   createItem: async (data: {
     title: string;
     description: string;
     category: string;
     price: number;
     condition: string;
-    quantity: number;
-    expiryDate?: string;
+    quantity?: number;
+    hasVariants?: boolean;
+    variants?: {
+      variantName: string;
+      price?: number;
+      stock: number;
+      variantOptions: Record<string, string>;
+      imageUrl?: string;
+    }[];
     imageUrls?: string[];
+    tags?: string[];
+    weightInGrams?: number;
+    lengthInCm?: number;
+    widthInCm?: number;
+    heightInCm?: number;
+    expiryDate?: string;
+    compareAtPrice?: number;
+    costPrice?: number;
+    isTaxable?: boolean;
+    isDigital?: boolean;
+    trackInventory?: boolean;
+    lowStockThreshold?: number;
+    allowBackorders?: boolean;
+    isFeatured?: boolean;
+    metaTitle?: string;
+    metaDescription?: string;
+    vendor?: string;
+    productType?: string;
+    shippingProfileId?: number;
   }) => {
     const response = await api.post("/items", data);
+    return response.data;
+  },
+
+  // Update existing item
+  updateItem: async (
+    id: number,
+    data: {
+      title?: string;
+      description?: string;
+      category?: string;
+      price?: number;
+      condition?: string;
+      quantity?: number;
+      hasVariants?: boolean;
+      variants?: {
+        id?: number;
+        variantName: string;
+        price?: number;
+        stock: number;
+        variantOptions: Record<string, string>;
+        imageUrl?: string;
+      }[];
+      imageUrls?: string[];
+      tags?: string[];
+      weightInGrams?: number;
+      expiryDate?: string;
+      isFeatured?: boolean;
+      metaTitle?: string;
+      metaDescription?: string;
+      status?: string;
+    },
+  ) => {
+    const response = await api.put(`/items/${id}`, data);
+    return response.data;
+  },
+
+  // Delete an item
+  deleteItem: async (itemId: number) => {
+    const response = await api.delete(`/items/${itemId}`);
+    return response.data;
+  },
+
+  // Get seller's own items
+  getMyItems: async (page: number = 0, size: number = 20, status?: string) => {
+    const params: Record<string, any> = { page, size };
+    if (status) params.status = status;
+    const response = await api.get("/items/my-items", { params });
     return response.data;
   },
 
@@ -407,8 +485,167 @@ export const itemsApi = {
   },
 
   // Get items by seller ID
-  getItemsBySeller: async (sellerId: number) => {
-    const response = await api.get(`/items/seller/${sellerId}`);
+  getItemsBySeller: async (
+    sellerId: number,
+    page: number = 0,
+    size: number = 20,
+  ) => {
+    const response = await api.get(`/items/seller/${sellerId}`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Duplicate an item
+  duplicateItem: async (itemId: number) => {
+    const response = await api.post(`/items/${itemId}/duplicate`);
+    return response.data;
+  },
+
+  // Toggle featured status
+  toggleFeatured: async (itemId: number) => {
+    const response = await api.put(`/items/${itemId}/toggle-featured`);
+    return response.data;
+  },
+
+  // Update item status (ACTIVE, HIDDEN, etc.)
+  updateStatus: async (itemId: number, status: string) => {
+    const response = await api.put(`/items/${itemId}/status`, { status });
+    return response.data;
+  },
+
+  // Get items by tag
+  getItemsByTag: async (tag: string, page: number = 0, size: number = 20) => {
+    const response = await api.get(`/items/tag/${encodeURIComponent(tag)}`, {
+      params: { page, size },
+    });
+    return response.data;
+  },
+
+  // Get related items
+  getRelatedItems: async (itemId: number, limit: number = 8) => {
+    const response = await api.get(`/items/${itemId}/related`, {
+      params: { limit },
+    });
+    return response.data;
+  },
+};
+
+// Collections API methods
+export const collectionsApi = {
+  // Get seller's collections
+  getMyCollections: async (activeOnly?: boolean) => {
+    const params = activeOnly !== undefined ? { activeOnly } : {};
+    const response = await api.get("/collections/my-collections", { params });
+    return response.data;
+  },
+
+  // Get collection by ID
+  getById: async (id: number) => {
+    const response = await api.get(`/collections/${id}`);
+    return response.data;
+  },
+
+  // Get collection by slug
+  getBySlug: async (slug: string) => {
+    const response = await api.get(`/collections/slug/${slug}`);
+    return response.data;
+  },
+
+  // Get seller's public collections
+  getSellerCollections: async (
+    sellerId: number,
+    activeOnly: boolean = true,
+  ) => {
+    const response = await api.get(`/collections/seller/${sellerId}`, {
+      params: { activeOnly },
+    });
+    return response.data;
+  },
+
+  // Get seller's featured collections
+  getFeaturedCollections: async (sellerId: number) => {
+    const response = await api.get(`/collections/seller/${sellerId}/featured`);
+    return response.data;
+  },
+
+  // Create new collection
+  createCollection: async (data: {
+    name: string;
+    description?: string;
+    imageUrl?: string;
+    isActive?: boolean;
+    isFeatured?: boolean;
+    displayOrder?: number;
+    metaTitle?: string;
+    metaDescription?: string;
+    itemIds?: number[];
+  }) => {
+    const response = await api.post("/collections", data);
+    return response.data;
+  },
+
+  // Update collection
+  updateCollection: async (
+    id: number,
+    data: {
+      name?: string;
+      description?: string;
+      imageUrl?: string;
+      isActive?: boolean;
+      isFeatured?: boolean;
+      displayOrder?: number;
+      metaTitle?: string;
+      metaDescription?: string;
+      itemIds?: number[];
+    },
+  ) => {
+    const response = await api.put(`/collections/${id}`, data);
+    return response.data;
+  },
+
+  // Add items to collection
+  addItems: async (id: number, itemIds: number[]) => {
+    const response = await api.post(`/collections/${id}/items`, { itemIds });
+    return response.data;
+  },
+
+  // Remove items from collection
+  removeItems: async (id: number, itemIds: number[]) => {
+    const response = await api.delete(`/collections/${id}/items`, {
+      data: { itemIds },
+    });
+    return response.data;
+  },
+
+  // Delete collection
+  deleteCollection: async (id: number) => {
+    const response = await api.delete(`/collections/${id}`);
+    return response.data;
+  },
+};
+
+// Shipping Profiles API methods
+export const shippingProfilesApi = {
+  // Get seller's shipping profiles
+  getMyShippingProfiles: async () => {
+    const response = await api.get("/shipping-profiles/my-profiles");
+    return response.data;
+  },
+
+  // Create new shipping profile
+  createShippingProfile: async (data: {
+    name: string;
+    shippingMethod: string;
+    flatRateCost?: number;
+    costPerKg?: number;
+    freeShippingThreshold?: number;
+    minDeliveryDays?: number;
+    maxDeliveryDays?: number;
+    isDefault?: boolean;
+    notes?: string;
+  }) => {
+    const response = await api.post("/shipping-profiles", data);
     return response.data;
   },
 };
@@ -718,7 +955,7 @@ export const disputesApi = {
   // Create a dispute for an order (buyer only)
   createDispute: async (
     orderId: number,
-    data: { reason: string; description: string }
+    data: { reason: string; description: string },
   ) => {
     const response = await api.post(`/disputes/orders/${orderId}`, data);
     return response.data;

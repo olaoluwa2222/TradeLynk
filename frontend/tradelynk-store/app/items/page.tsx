@@ -1,830 +1,449 @@
+// app/items/page.tsx - Redesigned Product Listing Page
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  SlidersHorizontal,
+  X,
+  Grid3X3,
+  LayoutGrid,
+  Search,
+} from "lucide-react";
 import { itemsApi } from "@/lib/api";
+import {
+  Item,
+  ItemCategory,
+  ItemCondition,
+  SortOption,
+  PaginatedResponse,
+} from "@/types/items";
+import { ProductGrid, Pagination } from "@/components/product/ProductGrid";
+import {
+  ProductFilters,
+  FilterToggle,
+} from "@/components/product/ProductFilters";
 
-interface Item {
-  id: number;
-  title: string;
-  price: number;
-  image?: string;
-  imageUri?: string;
-  imageUrls?: string[];
-  category: string;
-  condition: string;
-  likeCount: number;
-  viewCount: number;
-  isLiked: boolean;
-  sellerId: number;
-  sellerName: string;
+interface FilterState {
+  category: ItemCategory | "";
+  condition: ItemCondition | "";
+  minPrice: number | undefined;
+  maxPrice: number | undefined;
+  tags: string[];
+  inStock: boolean;
+  sort: SortOption;
 }
 
-interface PaginationData {
-  content: Item[];
-  totalPages: number;
-  totalElements: number;
-  currentPage: number;
-  pageSize: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
+const DEFAULT_FILTERS: FilterState = {
+  category: "",
+  condition: "",
+  minPrice: undefined,
+  maxPrice: undefined,
+  tags: [],
+  inStock: false,
+  sort: "RECENT",
+};
 
 function ItemsPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const pageSize = 12;
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
 
   // Filter state
-  const [category, setCategory] = useState<string>("");
-  const [minPrice, setMinPrice] = useState<number | undefined>();
-  const [maxPrice, setMaxPrice] = useState<number | undefined>();
-  const [condition, setCondition] = useState<string>("");
-  const [sort, setSort] = useState<string>("RECENT");
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
-  // Search state from URL (?search=...)
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  // Available tags for filter
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
-  // Sidebar visibility (mobile)
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Grid columns
+  const [columns, setColumns] = useState<3 | 4>(4);
 
-  // Categories list (matching backend enum)
-  const categories = [
-    "ELECTRONICS",
-    "BOOKS",
-    "CLOTHING",
-    "FOOD",
-    "LIGHT",
-    "TRANSPORTATION",
-  ];
-
-  const conditions = ["NEW", "LIKE_NEW", "GOOD", "FAIR"];
-
-  const sorts = [
-    { value: "RECENT", label: "Newest First" },
-    { value: "PRICE_LOW", label: "Price: Low to High" },
-    { value: "PRICE_HIGH", label: "Price: High to Low" },
-    { value: "TRENDING", label: "Trending" },
-  ];
-
-  // Fetch items based on filters and search
-  const fetchItems = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      let data;
-
-      if (searchQuery && searchQuery.trim().length > 0) {
-        // Use backend search when a search query is present
-        data = await itemsApi.searchItems(
-          searchQuery.trim(),
-          currentPage,
-          pageSize
-        );
-      } else {
-        // Otherwise load regular items list
-        data = await itemsApi.getAllItems(
-          currentPage,
-          pageSize,
-          category || undefined,
-          minPrice,
-          maxPrice,
-          condition || undefined,
-          sort
-        );
-      }
-
-      if (data.success && data.data) {
-        const pageData = data.data as PaginationData & {
-          size?: number;
-        };
-        setItems(pageData.content || []);
-        setTotalPages(pageData.totalPages || 0);
-        setPageSize(pageData.size ?? pageData.pageSize ?? 10);
-      } else {
-        setError(data.message || "Failed to load items");
-      }
-    } catch (err: any) {
-      setError(err.message || "An error occurred while loading items");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initialize filters from URL params
+  // Initialize from URL params
   useEffect(() => {
     const search = searchParams.get("search");
-    const categoryParam = searchParams.get("category");
+    const category = searchParams.get("category");
+    const tag = searchParams.get("tag");
+    const condition = searchParams.get("condition");
+    const sort = searchParams.get("sort");
+    const page = searchParams.get("page");
 
     if (search) {
       setSearchQuery(search);
+      setSearchInput(search);
     }
 
-    if (categoryParam) {
-      // Decode the category param and set it
-      const decodedCategory = decodeURIComponent(categoryParam);
-      setCategory(decodedCategory);
+    const newFilters: Partial<FilterState> = {};
+    if (category) newFilters.category = category as ItemCategory;
+    if (condition) newFilters.condition = condition as ItemCondition;
+    if (sort) newFilters.sort = sort as SortOption;
+    if (tag) newFilters.tags = [decodeURIComponent(tag)];
+
+    if (Object.keys(newFilters).length > 0) {
+      setFilters((prev) => ({ ...prev, ...newFilters }));
     }
+
+    if (page) setCurrentPage(parseInt(page));
   }, [searchParams]);
 
-  // Fetch items when filters or search change
+  // Fetch items
+  const fetchItems = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      let response;
+
+      if (searchQuery && searchQuery.trim().length > 0) {
+        response = await itemsApi.searchItems(
+          searchQuery.trim(),
+          currentPage,
+          pageSize,
+        );
+      } else {
+        response = await itemsApi.getAllItems(
+          currentPage,
+          pageSize,
+          filters.category || undefined,
+          filters.minPrice,
+          filters.maxPrice,
+          filters.condition || undefined,
+          filters.sort,
+        );
+      }
+
+      if (response.success && response.data) {
+        const data = response.data as PaginatedResponse<Item>;
+        setItems(data.content || []);
+        setTotalPages(data.totalPages || 0);
+        setTotalItems(data.totalElements || 0);
+
+        // Extract unique tags from items
+        const tags = new Set<string>();
+        (data.content || []).forEach((item: Item) => {
+          item.tags?.forEach((tag) => tags.add(tag));
+        });
+        setAvailableTags(Array.from(tags));
+      } else {
+        setError(response.message || "Failed to load products");
+      }
+    } catch (err: any) {
+      console.error("Error fetching items:", err);
+      setError(err.message || "An error occurred while loading products");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, searchQuery, filters]);
+
   useEffect(() => {
     fetchItems();
-  }, [category, minPrice, maxPrice, condition, sort, currentPage, searchQuery]);
+  }, [fetchItems]);
 
-  // Handle like/unlike
-  const handleLike = async (itemId: number, isLiked: boolean) => {
+  // Handle filter change
+  const handleFilterChange = (newFilters: Partial<FilterState>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setCurrentPage(0);
+  };
+
+  // Handle filter reset
+  const handleResetFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+    setSearchQuery("");
+    setSearchInput("");
+    setCurrentPage(0);
+  };
+
+  // Handle search
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchQuery(searchInput);
+    setCurrentPage(0);
+  };
+
+  // Handle like
+  const handleLike = async (itemId: number) => {
     try {
-      if (isLiked) {
+      const item = items.find((i) => i.id === itemId);
+      if (!item) return;
+
+      if (item.likedByCurrentUser) {
         await itemsApi.unlikeItem(itemId);
       } else {
         await itemsApi.likeItem(itemId);
       }
 
-      // Update local state
-      setItems(
-        items.map((item) =>
-          item.id === itemId
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === itemId
             ? {
-                ...item,
-                isLiked: !isLiked,
-                likeCount: isLiked ? item.likeCount - 1 : item.likeCount + 1,
+                ...i,
+                likedByCurrentUser: !i.likedByCurrentUser,
+                likeCount: i.likedByCurrentUser
+                  ? i.likeCount - 1
+                  : i.likeCount + 1,
               }
-            : item
-        )
+            : i,
+        ),
       );
     } catch (err) {
       console.error("Error toggling like:", err);
     }
   };
 
-  // Handle filter reset
-  const handleResetFilters = () => {
-    setCategory("");
-    setMinPrice(undefined);
-    setMaxPrice(undefined);
-    setCondition("");
-    setSort("RECENT");
-    setCurrentPage(0);
-    setSearchQuery("");
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Count active filters
+  const activeFilterCount = [
+    filters.category,
+    filters.condition,
+    filters.minPrice !== undefined || filters.maxPrice !== undefined,
+    filters.tags.length > 0,
+    filters.inStock,
+  ].filter(Boolean).length;
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1
-                className="text-3xl md:text-4xl font-bold text-black"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 700,
-                }}
-              >
-                Browse Items
-              </h1>
-              <p
-                className="text-gray-600 mt-1"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 400,
-                }}
-              >
-                {items.length > 0
-                  ? `Showing ${items.length} items`
-                  : "No items found"}
-              </p>
+          <div className="flex flex-col gap-4">
+            {/* Title Row */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1
+                  className="text-3xl md:text-4xl font-bold text-gray-900"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  Browse Products
+                </h1>
+                <p
+                  className="text-gray-500 mt-1"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  {loading ? "Loading..." : `${totalItems} products available`}
+                </p>
+              </div>
+
+              {/* Grid Toggle (Desktop) */}
+              <div className="hidden lg:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setColumns(3)}
+                  className={`p-2 rounded-md transition-colors ${
+                    columns === 3 ? "bg-white shadow-sm" : "hover:bg-gray-200"
+                  }`}
+                >
+                  <Grid3X3 size={18} className="text-gray-600" />
+                </button>
+                <button
+                  onClick={() => setColumns(4)}
+                  className={`p-2 rounded-md transition-colors ${
+                    columns === 4 ? "bg-white shadow-sm" : "hover:bg-gray-200"
+                  }`}
+                >
+                  <LayoutGrid size={18} className="text-gray-600" />
+                </button>
+              </div>
             </div>
 
-            {/* Mobile sidebar toggle */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 500,
-              }}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+            {/* Search & Filter Row */}
+            <div className="flex items-center gap-3">
+              {/* Search Bar */}
+              <form onSubmit={handleSearch} className="flex-1 max-w-xl">
+                <div className="relative">
+                  <Search
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={20}
+                  />
+                  <input
+                    type="text"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Search products..."
+                    className="w-full pl-12 pr-4 py-3 bg-gray-100 border-0 rounded-xl focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                    style={{ fontFamily: "Clash Display" }}
+                  />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchInput("");
+                        setSearchQuery("");
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* Mobile Filter Toggle */}
+              <div className="lg:hidden">
+                <FilterToggle
+                  activeCount={activeFilterCount}
+                  onClick={() => setSidebarOpen(true)}
                 />
-              </svg>
-              {sidebarOpen ? "Hide Filters" : "Filters"}
-            </button>
+              </div>
+            </div>
+
+            {/* Active Filters Pills */}
+            {(filters.category ||
+              filters.condition ||
+              searchQuery ||
+              filters.tags.length > 0) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-500">Active filters:</span>
+
+                {searchQuery && (
+                  <span className="inline-flex items-center gap-1 text-sm bg-black text-white px-3 py-1 rounded-full">
+                    Search: {searchQuery}
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSearchInput("");
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                )}
+
+                {filters.category && (
+                  <span className="inline-flex items-center gap-1 text-sm bg-gray-200 text-gray-800 px-3 py-1 rounded-full">
+                    {filters.category}
+                    <button
+                      onClick={() => handleFilterChange({ category: "" })}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                )}
+
+                {filters.condition && (
+                  <span className="inline-flex items-center gap-1 text-sm bg-gray-200 text-gray-800 px-3 py-1 rounded-full">
+                    {filters.condition}
+                    <button
+                      onClick={() => handleFilterChange({ condition: "" })}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                )}
+
+                {filters.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 text-sm bg-gray-200 text-gray-800 px-3 py-1 rounded-full"
+                  >
+                    #{tag}
+                    <button
+                      onClick={() =>
+                        handleFilterChange({
+                          tags: filters.tags.filter((t) => t !== tag),
+                        })
+                      }
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+
+                <button
+                  onClick={handleResetFilters}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar - Filters */}
-          <aside
-            className={`lg:col-span-1 ${
-              sidebarOpen
-                ? "block fixed inset-0 z-50 bg-white lg:relative lg:inset-auto lg:z-auto overflow-y-auto"
-                : "hidden"
-            } lg:block`}
-          >
-            <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-24 min-h-screen lg:min-h-0">
-              {/* Filter Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h2
-                  className="text-xl font-bold text-black"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  Filters
-                </h2>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleResetFilters}
-                    className="text-sm text-gray-600 hover:text-black underline"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Reset
-                  </button>
-                  {/* Mobile close button */}
-                  <button
-                    onClick={() => setSidebarOpen(false)}
-                    className="lg:hidden p-1 hover:bg-gray-100 rounded-lg"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Sort */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <label
-                  className="block text-sm font-semibold text-black mb-3"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 600,
-                  }}
-                >
-                  Sort By
-                </label>
-                <select
-                  value={sort}
-                  onChange={(e) => {
-                    setSort(e.target.value);
-                    setCurrentPage(0);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  {sorts.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Category */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <label
-                  className="block text-sm font-semibold text-black mb-3"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 600,
-                  }}
-                >
-                  Category
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="category"
-                      value=""
-                      checked={category === ""}
-                      onChange={(e) => {
-                        setCategory(e.target.value);
-                        setCurrentPage(0);
-                      }}
-                      className="w-4 h-4"
-                    />
-                    <span
-                      className="text-sm text-gray-700"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      All Categories
-                    </span>
-                  </label>
-
-                  {categories.map((cat) => (
-                    <label
-                      key={cat}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="category"
-                        value={cat}
-                        checked={category === cat}
-                        onChange={(e) => {
-                          setCategory(e.target.value);
-                          setCurrentPage(0);
-                        }}
-                        className="w-4 h-4"
-                      />
-                      <span
-                        className="text-sm text-gray-700"
-                        style={{
-                          fontFamily: "Clash Display",
-                          fontWeight: 400,
-                        }}
-                      >
-                        {cat.charAt(0) + cat.slice(1).toLowerCase()}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <label
-                  className="block text-sm font-semibold text-black mb-3"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 600,
-                  }}
-                >
-                  Price Range
-                </label>
-                <div className="space-y-3">
-                  <div>
-                    <label
-                      className="text-xs text-gray-600 block mb-1"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      Min Price (₦)
-                    </label>
-                    <input
-                      type="number"
-                      value={minPrice || ""}
-                      onChange={(e) => {
-                        setMinPrice(
-                          e.target.value ? Number(e.target.value) : undefined
-                        );
-                        setCurrentPage(0);
-                      }}
-                      placeholder="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      className="text-xs text-gray-600 block mb-1"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      Max Price (₦)
-                    </label>
-                    <input
-                      type="number"
-                      value={maxPrice || ""}
-                      onChange={(e) => {
-                        setMaxPrice(
-                          e.target.value ? Number(e.target.value) : undefined
-                        );
-                        setCurrentPage(0);
-                      }}
-                      placeholder="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Condition */}
-              <div className="mb-8">
-                <label
-                  className="block text-sm font-semibold text-black mb-3"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 600,
-                  }}
-                >
-                  Condition
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="condition"
-                      value=""
-                      checked={condition === ""}
-                      onChange={(e) => {
-                        setCondition(e.target.value);
-                        setCurrentPage(0);
-                      }}
-                      className="w-4 h-4"
-                    />
-                    <span
-                      className="text-sm text-gray-700"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      All Conditions
-                    </span>
-                  </label>
-
-                  {conditions.map((cond) => (
-                    <label
-                      key={cond}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="condition"
-                        value={cond}
-                        checked={condition === cond}
-                        onChange={(e) => {
-                          setCondition(e.target.value);
-                          setCurrentPage(0);
-                        }}
-                        className="w-4 h-4"
-                      />
-                      <span
-                        className="text-sm text-gray-700"
-                        style={{
-                          fontFamily: "Clash Display",
-                          fontWeight: 400,
-                        }}
-                      >
-                        {cond === "LIKE_NEW" ? "Like New" : cond}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mobile Apply Button */}
-              <div className="lg:hidden mt-6 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="w-full py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 600,
-                  }}
-                >
-                  Apply Filters
-                </button>
-              </div>
+        <div className="flex gap-8">
+          {/* Desktop Sidebar */}
+          <aside className="hidden lg:block w-72 flex-shrink-0">
+            <div className="sticky top-32">
+              <ProductFilters
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onReset={handleResetFilters}
+                availableTags={availableTags}
+              />
             </div>
           </aside>
 
-          {/* Items Grid */}
-          <main className="lg:col-span-3">
-            {/* Loading State */}
-            {loading && (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p
-                    className="text-gray-600"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    Loading items...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
+          {/* Products Grid */}
+          <main className="flex-1 min-w-0">
             {error && !loading && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
                 {error}
               </div>
             )}
 
-            {/* Items Grid */}
-            {!loading && items.length > 0 && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {items.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/items/${item.id}`}
-                      className="group cursor-pointer"
-                    >
-                      <div className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-black hover:shadow-lg transition-all duration-300 h-full flex flex-col">
-                        {/* Image Container */}
-                        <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
-                          <Image
-                            src={
-                              item.imageUrls?.[0] ||
-                              item.image ||
-                              "https://via.placeholder.com/300x200"
-                            }
-                            alt={item.title}
-                            fill
-                            className="object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
+            <ProductGrid
+              items={items}
+              loading={loading}
+              onLike={handleLike}
+              emptyMessage="No products found"
+              emptyAction={handleResetFilters}
+              emptyActionLabel="Clear Filters"
+              columns={columns}
+            />
 
-                          {/* Like Button */}
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleLike(item.id, item.isLiked);
-                            }}
-                            className="absolute top-3 right-3 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow"
-                          >
-                            <span className="text-xl">
-                              {item.isLiked ? "❤️" : "🤍"}
-                            </span>
-                          </button>
-
-                          {/* Condition Badge */}
-                          <div className="absolute top-3 left-3">
-                            <span
-                              className="px-3 py-1 bg-black text-white text-xs font-bold rounded-full"
-                              style={{
-                                fontFamily: "Clash Display",
-                                fontWeight: 700,
-                              }}
-                            >
-                              {item.condition === "LIKE_NEW"
-                                ? "Like New"
-                                : item.condition}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-4 flex-1 flex flex-col">
-                          {/* Category */}
-                          <p
-                            className="text-xs text-gray-500 mb-2"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 400,
-                            }}
-                          >
-                            {item.category}
-                          </p>
-
-                          {/* Title */}
-                          <h3
-                            className="font-bold text-black mb-3 line-clamp-2 group-hover:text-gray-700"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {item.title}
-                          </h3>
-
-                          {/* Seller Info */}
-                          <p
-                            className="text-xs text-gray-600 mb-3"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 400,
-                            }}
-                          >
-                            by {item.sellerName}
-                          </p>
-
-                          {/* Stats - at bottom */}
-                          <div className="flex items-center gap-4 justify-between mb-3 mt-auto text-xs text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <span>❤️</span>
-                              <span
-                                style={{
-                                  fontFamily: "Clash Display",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {item.likeCount}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span>👁️</span>
-                              <span
-                                style={{
-                                  fontFamily: "Clash Display",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {item.viewCount}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Price */}
-                          <p
-                            className="text-lg font-bold text-black"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 700,
-                            }}
-                          >
-                            ₦{item.price.toLocaleString()}
-                          </p>
-
-                          {/* Buy Now Button */}
-                          <Link
-                            href={`/items/${item.id}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.location.href = `/items/${item.id}`;
-                            }}
-                            className="mt-3 w-full py-2 bg-black text-white font-bold rounded-lg hover:bg-gray-900 transition-colors text-center text-sm"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 700,
-                            }}
-                          >
-                            Buy Now
-                          </Link>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-12 flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-                    disabled={currentPage === 0}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 600,
-                    }}
-                  >
-                    ← Previous
-                  </button>
-
-                  <div
-                    className="flex items-center gap-2"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {Array.from({ length: Math.min(5, totalPages) }).map(
-                      (_, i) => {
-                        const pageNum =
-                          totalPages <= 5
-                            ? i
-                            : Math.max(0, currentPage - 2) + i;
-                        if (pageNum >= totalPages) return null;
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`w-8 h-8 rounded-lg transition-colors ${
-                              pageNum === currentPage
-                                ? "bg-black text-white"
-                                : "border border-gray-300 hover:bg-gray-100"
-                            }`}
-                          >
-                            {pageNum + 1}
-                          </button>
-                        );
-                      }
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      setCurrentPage(Math.min(totalPages - 1, currentPage + 1))
-                    }
-                    disabled={currentPage >= totalPages - 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Next →
-                  </button>
-                </div>
-
-                {/* Page Info */}
-                <div className="text-center mt-4">
-                  <p
-                    className="text-sm text-gray-600"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    Page {currentPage + 1} of {totalPages}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Empty State */}
-            {!loading && items.length === 0 && !error && (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="text-6xl mb-4">📦</div>
-                <h3
-                  className="text-2xl font-bold text-black mb-2"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  No items found
-                </h3>
-                <p
-                  className="text-gray-600 text-center max-w-md"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Try adjusting your filters or check back later for new items.
-                </p>
-                <button
-                  onClick={handleResetFilters}
-                  className="mt-6 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 600,
-                  }}
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              totalItems={totalItems}
+              pageSize={pageSize}
+            />
           </main>
         </div>
       </div>
+
+      {/* Mobile Filter Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          {/* Sidebar */}
+          <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl">
+            <ProductFilters
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onReset={handleResetFilters}
+              availableTags={availableTags}
+              isMobile
+              onClose={() => setSidebarOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -833,17 +452,14 @@ export default function ItemsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4"></div>
+            <div className="animate-spin h-12 w-12 border-4 border-black border-t-transparent rounded-full mx-auto mb-4" />
             <p
               className="text-gray-600"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
+              style={{ fontFamily: "Clash Display" }}
             >
-              Loading items...
+              Loading products...
             </p>
           </div>
         </div>

@@ -11,6 +11,8 @@ export interface User {
   verified: boolean;
   profilePictureUrl?: string;
   isEmailVerified?: boolean;
+  sellerId?: number;
+  sellerUsername?: string;
 }
 
 export interface LoginRequest {

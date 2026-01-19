@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { CreateItemForm } from "@/components/items/CreateItemForm";
+import { ProductForm } from "@/components/product";
 import { tokenStorage, authApi } from "@/lib/api";
 
 export default function CreateItemPage() {
@@ -64,10 +64,15 @@ export default function CreateItemPage() {
   // Show loading state while checking
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-          <p className="text-gray-600 font-medium">Loading...</p>
+          <p
+            className="text-gray-600 font-medium"
+            style={{ fontFamily: "Clash Display" }}
+          >
+            Loading...
+          </p>
         </div>
       </div>
     );
@@ -78,9 +83,5 @@ export default function CreateItemPage() {
     return null;
   }
 
-  return (
-    <div>
-      <CreateItemForm />
-    </div>
-  );
+  return <ProductForm mode="create" />;
 }

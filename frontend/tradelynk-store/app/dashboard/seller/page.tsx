@@ -6,6 +6,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { analyticsApi, ordersApi } from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
+import { ProductsTable } from "@/components/product";
+import { CollectionManager } from "@/components/collections";
+import {
+  LayoutDashboard,
+  Package,
+  Tag,
+  ShoppingBag,
+  TrendingUp,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -21,6 +30,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+
+type DashboardTab = "overview" | "products" | "collections";
 
 interface TopItem {
   itemId: number;
@@ -88,6 +99,7 @@ export default function SellerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
 
   // Check if user is seller
   const isSeller =
@@ -125,14 +137,14 @@ export default function SellerDashboard() {
               (order: any) =>
                 order.status === "DELIVERED" ||
                 order.status === "COMPLETED" ||
-                order.status === "PAID"
-            )
+                order.status === "PAID",
+            ),
           );
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         setError(
-          "Failed to load dashboard data. Please check your connection and try again."
+          "Failed to load dashboard data. Please check your connection and try again.",
         );
       } finally {
         setLoading(false);
@@ -438,696 +450,753 @@ export default function SellerDashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Revenue Card - Black background */}
-          <div className="bg-black text-white rounded-lg p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-default">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p
-                  className="text-gray-400 text-sm mb-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Total Revenue
-                </p>
-                <p
-                  className="text-3xl font-bold"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatCurrency(netRevenue)}
-                </p>
-              </div>
-              <span className="text-3xl">💰</span>
-            </div>
-            <p
-              className="text-gray-400 text-xs"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
+      {/* Tab Navigation */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex gap-1 -mb-px overflow-x-auto scrollbar-hide">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+                activeTab === "overview"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              style={{ fontFamily: "Clash Display" }}
             >
-              Your earnings after 10% commission
-            </p>
-            <p
-              className="text-gray-300 text-xs mt-3 pt-3 border-t border-gray-700"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
+              <LayoutDashboard size={18} />
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+                activeTab === "products"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              style={{ fontFamily: "Clash Display" }}
             >
-              Gross: {formatCurrency(analytics.totalRevenue)} | Commission:{" "}
-              {formatCurrency(commission)}
-            </p>
-          </div>
-
-          {/* Total Sales Card */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg hover:border-gray-400 transition-all duration-300 hover:scale-105">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p
-                  className="text-gray-600 text-sm mb-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Total Sales
-                </p>
-                <p
-                  className="text-3xl font-bold text-black"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  {analytics.totalSales}
-                </p>
-              </div>
-              <span className="text-3xl">📦</span>
-            </div>
-            <p
-              className="text-gray-500 text-xs"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
+              <Package size={18} />
+              Products
+            </button>
+            <button
+              onClick={() => setActiveTab("collections")}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+                activeTab === "collections"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              style={{ fontFamily: "Clash Display" }}
             >
-              Completed orders
-            </p>
-          </div>
-
-          {/* Active Items Card */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg hover:border-gray-400 transition-all duration-300 hover:scale-105">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p
-                  className="text-gray-600 text-sm mb-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Active Items
-                </p>
-                <p
-                  className="text-3xl font-bold text-black"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  {analytics.activeItems}
-                </p>
-              </div>
-              <span className="text-3xl">🛍️</span>
-            </div>
-            <p
-              className="text-gray-500 text-xs"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
-            >
-              Currently listed
-            </p>
-          </div>
-
-          {/* Conversion Rate Card */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg hover:border-gray-400 transition-all duration-300 hover:scale-105">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p
-                  className="text-gray-600 text-sm mb-1"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 400,
-                  }}
-                >
-                  Conversion Rate
-                </p>
-                <p
-                  className="text-3xl font-bold text-black"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  {(analytics.conversionRate * 100).toFixed(2)}%
-                </p>
-              </div>
-              <span className="text-3xl">📈</span>
-            </div>
-            <p
-              className="text-gray-500 text-xs"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
-            >
-              Views to sales
-            </p>
+              <Tag size={18} />
+              Collections
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Revenue & Engagement Charts - Left Column (60%) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Revenue Over Time Chart */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <h2
-                className="text-xl font-bold mb-4"
-                style={{
-                  color: "#0C0A09",
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Revenue Over Time
-              </h2>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Collections Tab */}
+        {activeTab === "collections" && user && (
+          <CollectionManager sellerId={user.userId} sellerUsername="" />
+        )}
 
-              {revenueData.length > 0 ? (
+        {/* Products Tab */}
+        {activeTab === "products" && <ProductsTable />}
+
+        {/* Overview Tab */}
+        {activeTab === "overview" && (
+          <>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {/* Revenue Card - Black background */}
+              <div className="bg-black text-white rounded-lg p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-default">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p
+                      className="text-gray-400 text-sm mb-1"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Total Revenue
+                    </p>
+                    <p
+                      className="text-3xl font-bold"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatCurrency(netRevenue)}
+                    </p>
+                  </div>
+                  <span className="text-3xl">💰</span>
+                </div>
+                <p
+                  className="text-gray-400 text-xs"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Your earnings after 10% commission
+                </p>
+                <p
+                  className="text-gray-300 text-xs mt-3 pt-3 border-t border-gray-700"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Gross: {formatCurrency(analytics.totalRevenue)} | Commission:{" "}
+                  {formatCurrency(commission)}
+                </p>
+              </div>
+
+              {/* Total Sales Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg hover:border-gray-400 transition-all duration-300 hover:scale-105">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p
+                      className="text-gray-600 text-sm mb-1"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Total Sales
+                    </p>
+                    <p
+                      className="text-3xl font-bold text-black"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {analytics.totalSales}
+                    </p>
+                  </div>
+                  <span className="text-3xl">📦</span>
+                </div>
+                <p
+                  className="text-gray-500 text-xs"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Completed orders
+                </p>
+              </div>
+
+              {/* Active Items Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg hover:border-gray-400 transition-all duration-300 hover:scale-105">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p
+                      className="text-gray-600 text-sm mb-1"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Active Items
+                    </p>
+                    <p
+                      className="text-3xl font-bold text-black"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {analytics.activeItems}
+                    </p>
+                  </div>
+                  <span className="text-3xl">🛍️</span>
+                </div>
+                <p
+                  className="text-gray-500 text-xs"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Currently listed
+                </p>
+              </div>
+
+              {/* Conversion Rate Card */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg hover:border-gray-400 transition-all duration-300 hover:scale-105">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p
+                      className="text-gray-600 text-sm mb-1"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      Conversion Rate
+                    </p>
+                    <p
+                      className="text-3xl font-bold text-black"
+                      style={{
+                        fontFamily: "Clash Display",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {(analytics.conversionRate * 100).toFixed(2)}%
+                    </p>
+                  </div>
+                  <span className="text-3xl">📈</span>
+                </div>
+                <p
+                  className="text-gray-500 text-xs"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 400,
+                  }}
+                >
+                  Views to sales
+                </p>
+              </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* Revenue & Engagement Charts - Left Column (60%) */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Revenue Over Time Chart */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h2
+                    className="text-xl font-bold mb-4"
+                    style={{
+                      color: "#0C0A09",
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Revenue Over Time
+                  </h2>
+
+                  {revenueData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={revenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis
+                          dataKey="date"
+                          stroke="#6B7280"
+                          style={{ fontSize: 12 }}
+                        />
+                        <YAxis stroke="#6B7280" style={{ fontSize: 12 }} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#fff",
+                            border: "1px solid #E5E7EB",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value: any) => [
+                            formatCurrency(value as number),
+                            "Revenue",
+                          ]}
+                        />
+                        <Legend />
+                        <Line
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#10B981"
+                          strokeWidth={2}
+                          dot={{ fill: "#10B981", r: 4 }}
+                          activeDot={{ r: 6 }}
+                          name="Revenue (₦)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-80 flex items-center justify-center bg-gray-50 rounded">
+                      <p
+                        className="text-gray-500"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        No sales yet. Post an item to get started!
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Engagement Overview Chart */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h2
+                    className="text-xl font-bold mb-4"
+                    style={{
+                      color: "#0C0A09",
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Engagement Overview
+                  </h2>
+
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={engagementData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#6B7280"
+                        style={{ fontSize: 12 }}
+                      />
+                      <YAxis stroke="#6B7280" style={{ fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#fff",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="value"
+                        fill="#3B82F6"
+                        name="Count"
+                        radius={[8, 8, 0, 0]}
+                      >
+                        {engagementData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Status Distribution Chart - Right Column (40%) */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h2
+                  className="text-xl font-bold mb-6"
+                  style={{
+                    color: "#0C0A09",
+                    fontFamily: "Clash Display",
+                    fontWeight: 600,
+                  }}
+                >
+                  Item Status
+                </h2>
+
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis
-                      dataKey="date"
-                      stroke="#6B7280"
-                      style={{ fontSize: 12 }}
-                    />
-                    <YAxis stroke="#6B7280" style={{ fontSize: 12 }} />
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }: any) =>
+                        `${name} ${((percent || 0) * 100).toFixed(0)}%`
+                      }
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#fff",
                         border: "1px solid #E5E7EB",
                         borderRadius: "8px",
                       }}
-                      formatter={(value: any) => [
-                        formatCurrency(value as number),
-                        "Revenue",
-                      ]}
                     />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#10B981"
-                      strokeWidth={2}
-                      dot={{ fill: "#10B981", r: 4 }}
-                      activeDot={{ r: 6 }}
-                      name="Revenue (₦)"
-                    />
-                  </LineChart>
+                  </PieChart>
                 </ResponsiveContainer>
-              ) : (
-                <div className="h-80 flex items-center justify-center bg-gray-50 rounded">
-                  <p
-                    className="text-gray-500"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    No sales yet. Post an item to get started!
-                  </p>
+
+                {/* Status Legend */}
+                <div className="mt-6 space-y-2">
+                  {statusData.map((status) => (
+                    <div key={status.name} className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: status.color }}
+                      ></div>
+                      <span
+                        className="text-sm text-gray-600"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        {status.name}: {status.value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Engagement Overview Chart */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            {/* Top Performing Items Section */}
+            <div className="mb-8">
               <h2
-                className="text-xl font-bold mb-4"
+                className="text-2xl font-bold mb-6"
                 style={{
                   color: "#0C0A09",
                   fontFamily: "Clash Display",
                   fontWeight: 600,
                 }}
               >
-                Engagement Overview
+                Top Performing Items
               </h2>
 
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={engagementData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#6B7280"
-                    style={{ fontSize: 12 }}
-                  />
-                  <YAxis stroke="#6B7280" style={{ fontSize: 12 }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#fff",
-                      border: "1px solid #E5E7EB",
-                      borderRadius: "8px",
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Most Liked Items */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{
+                      color: "#0C0A09",
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
                     }}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="value"
-                    fill="#3B82F6"
-                    name="Count"
-                    radius={[8, 8, 0, 0]}
                   >
-                    {engagementData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                    ❤️ Most Liked
+                  </h3>
+
+                  <div className="space-y-4">
+                    {analytics.topLikedItems &&
+                    analytics.topLikedItems.length > 0 ? (
+                      analytics.topLikedItems.slice(0, 3).map((item) => (
+                        <Link
+                          key={item.itemId}
+                          href={`/items/${item.itemId}`}
+                          className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        >
+                          <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
+                            {item.imageUrl ? (
+                              <Image
+                                src={item.imageUrl}
+                                alt={item.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
+                                <svg
+                                  className="w-6 h-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="font-semibold text-sm truncate"
+                              style={{
+                                color: "#0C0A09",
+                                fontFamily: "Clash Display",
+                              }}
+                            >
+                              {item.title}
+                            </p>
+                            <p
+                              className="text-xs text-gray-500 mt-1"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 400,
+                              }}
+                            >
+                              ❤️ {item.likeCount || 0} likes
+                            </p>
+                            <p
+                              className="text-xs text-gray-500"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 400,
+                              }}
+                            >
+                              👁️ {item.viewCount || 0} views
+                            </p>
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <p
+                        className="text-gray-500 text-sm"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        No liked items yet
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Most Viewed Items */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{
+                      color: "#0C0A09",
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    👁️ Most Viewed
+                  </h3>
+
+                  <div className="space-y-4">
+                    {analytics.topViewedItems &&
+                    analytics.topViewedItems.length > 0 ? (
+                      analytics.topViewedItems.slice(0, 3).map((item) => (
+                        <Link
+                          key={item.itemId}
+                          href={`/items/${item.itemId}`}
+                          className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        >
+                          <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
+                            {item.imageUrl ? (
+                              <Image
+                                src={item.imageUrl}
+                                alt={item.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
+                                <svg
+                                  className="w-6 h-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="font-semibold text-sm truncate"
+                              style={{
+                                color: "#0C0A09",
+                                fontFamily: "Clash Display",
+                              }}
+                            >
+                              {item.title}
+                            </p>
+                            <p
+                              className="text-xs text-gray-500 mt-1"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 400,
+                              }}
+                            >
+                              👁️ {item.viewCount || 0} views
+                            </p>
+                            <p
+                              className="text-xs text-green-600 font-semibold"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 500,
+                              }}
+                            >
+                              {formatCurrency(item.price)}
+                            </p>
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <p
+                        className="text-gray-500 text-sm"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        No views yet
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Top Revenue Items */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <h3
+                    className="text-lg font-bold mb-4"
+                    style={{
+                      color: "#0C0A09",
+                      fontFamily: "Clash Display",
+                      fontWeight: 600,
+                    }}
+                  >
+                    💰 Top Revenue
+                  </h3>
+
+                  <div className="space-y-4">
+                    {analytics.topRevenueItems &&
+                    analytics.topRevenueItems.length > 0 ? (
+                      analytics.topRevenueItems.slice(0, 3).map((item) => (
+                        <Link
+                          key={item.itemId}
+                          href={`/items/${item.itemId}`}
+                          className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        >
+                          <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
+                            {item.imageUrl ? (
+                              <Image
+                                src={item.imageUrl}
+                                alt={item.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
+                                <svg
+                                  className="w-6 h-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="font-semibold text-sm truncate"
+                              style={{
+                                color: "#0C0A09",
+                                fontFamily: "Clash Display",
+                              }}
+                            >
+                              {item.title}
+                            </p>
+                            <p
+                              className="text-xs text-gray-500 mt-1"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 400,
+                              }}
+                            >
+                              Status: {item.status}
+                            </p>
+                            <p
+                              className="text-xs text-green-600 font-bold"
+                              style={{
+                                fontFamily: "Clash Display",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {formatCurrency((item.revenue || 0) * 0.9)}
+                            </p>
+                          </div>
+                        </Link>
+                      ))
+                    ) : (
+                      <p
+                        className="text-gray-500 text-sm"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        No sales yet
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Status Distribution Chart - Right Column (40%) */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <h2
-              className="text-xl font-bold mb-6"
-              style={{
-                color: "#0C0A09",
-                fontFamily: "Clash Display",
-                fontWeight: 600,
-              }}
-            >
-              Item Status
-            </h2>
-
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }: any) =>
-                    `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: "8px",
+            {/* Recent Activity Section */}
+            {(analytics.lastItemPosted || analytics.lastSale) && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h2
+                  className="text-xl font-bold mb-4"
+                  style={{
+                    color: "#0C0A09",
+                    fontFamily: "Clash Display",
+                    fontWeight: 600,
                   }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                >
+                  Recent Activity
+                </h2>
 
-            {/* Status Legend */}
-            <div className="mt-6 space-y-2">
-              {statusData.map((status) => (
-                <div key={status.name} className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: status.color }}
-                  ></div>
-                  <span
-                    className="text-sm text-gray-600"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    {status.name}: {status.value}
-                  </span>
+                <div className="space-y-3">
+                  {analytics.lastItemPosted && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <p
+                        style={{
+                          color: "#0C0A09",
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        📤 Last item posted
+                      </p>
+                      <p
+                        className="text-sm text-gray-600"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {getTimeAgo(analytics.lastItemPosted)}
+                      </p>
+                    </div>
+                  )}
+
+                  {analytics.lastSale && (
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <p
+                        style={{
+                          color: "#0C0A09",
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        💰 Last sale
+                      </p>
+                      <p
+                        className="text-sm text-gray-600"
+                        style={{
+                          fontFamily: "Clash Display",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {getTimeAgo(analytics.lastSale)}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Top Performing Items Section */}
-        <div className="mb-8">
-          <h2
-            className="text-2xl font-bold mb-6"
-            style={{
-              color: "#0C0A09",
-              fontFamily: "Clash Display",
-              fontWeight: 600,
-            }}
-          >
-            Top Performing Items
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Most Liked Items */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <h3
-                className="text-lg font-bold mb-4"
-                style={{
-                  color: "#0C0A09",
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                ❤️ Most Liked
-              </h3>
-
-              <div className="space-y-4">
-                {analytics.topLikedItems &&
-                analytics.topLikedItems.length > 0 ? (
-                  analytics.topLikedItems.slice(0, 3).map((item) => (
-                    <Link
-                      key={item.itemId}
-                      href={`/items/${item.itemId}`}
-                      className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                    >
-                      <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
-                        {item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
-                            <svg
-                              className="w-6 h-6"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="font-semibold text-sm truncate"
-                          style={{
-                            color: "#0C0A09",
-                            fontFamily: "Clash Display",
-                          }}
-                        >
-                          {item.title}
-                        </p>
-                        <p
-                          className="text-xs text-gray-500 mt-1"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 400,
-                          }}
-                        >
-                          ❤️ {item.likeCount || 0} likes
-                        </p>
-                        <p
-                          className="text-xs text-gray-500"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 400,
-                          }}
-                        >
-                          👁️ {item.viewCount || 0} views
-                        </p>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <p
-                    className="text-gray-500 text-sm"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    No liked items yet
-                  </p>
-                )}
               </div>
-            </div>
-
-            {/* Most Viewed Items */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <h3
-                className="text-lg font-bold mb-4"
-                style={{
-                  color: "#0C0A09",
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                👁️ Most Viewed
-              </h3>
-
-              <div className="space-y-4">
-                {analytics.topViewedItems &&
-                analytics.topViewedItems.length > 0 ? (
-                  analytics.topViewedItems.slice(0, 3).map((item) => (
-                    <Link
-                      key={item.itemId}
-                      href={`/items/${item.itemId}`}
-                      className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                    >
-                      <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
-                        {item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
-                            <svg
-                              className="w-6 h-6"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="font-semibold text-sm truncate"
-                          style={{
-                            color: "#0C0A09",
-                            fontFamily: "Clash Display",
-                          }}
-                        >
-                          {item.title}
-                        </p>
-                        <p
-                          className="text-xs text-gray-500 mt-1"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 400,
-                          }}
-                        >
-                          👁️ {item.viewCount || 0} views
-                        </p>
-                        <p
-                          className="text-xs text-green-600 font-semibold"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 500,
-                          }}
-                        >
-                          {formatCurrency(item.price)}
-                        </p>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <p
-                    className="text-gray-500 text-sm"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    No views yet
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Top Revenue Items */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <h3
-                className="text-lg font-bold mb-4"
-                style={{
-                  color: "#0C0A09",
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                💰 Top Revenue
-              </h3>
-
-              <div className="space-y-4">
-                {analytics.topRevenueItems &&
-                analytics.topRevenueItems.length > 0 ? (
-                  analytics.topRevenueItems.slice(0, 3).map((item) => (
-                    <Link
-                      key={item.itemId}
-                      href={`/items/${item.itemId}`}
-                      className="flex gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                    >
-                      <div className="relative w-16 h-16 shrink-0 rounded bg-gray-200 overflow-hidden">
-                        {item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-300 text-gray-600">
-                            <svg
-                              className="w-6 h-6"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="font-semibold text-sm truncate"
-                          style={{
-                            color: "#0C0A09",
-                            fontFamily: "Clash Display",
-                          }}
-                        >
-                          {item.title}
-                        </p>
-                        <p
-                          className="text-xs text-gray-500 mt-1"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 400,
-                          }}
-                        >
-                          Status: {item.status}
-                        </p>
-                        <p
-                          className="text-xs text-green-600 font-bold"
-                          style={{
-                            fontFamily: "Clash Display",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {formatCurrency((item.revenue || 0) * 0.9)}
-                        </p>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <p
-                    className="text-gray-500 text-sm"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    No sales yet
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity Section */}
-        {(analytics.lastItemPosted || analytics.lastSale) && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <h2
-              className="text-xl font-bold mb-4"
-              style={{
-                color: "#0C0A09",
-                fontFamily: "Clash Display",
-                fontWeight: 600,
-              }}
-            >
-              Recent Activity
-            </h2>
-
-            <div className="space-y-3">
-              {analytics.lastItemPosted && (
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <p
-                    style={{
-                      color: "#0C0A09",
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    📤 Last item posted
-                  </p>
-                  <p
-                    className="text-sm text-gray-600"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {getTimeAgo(analytics.lastItemPosted)}
-                  </p>
-                </div>
-              )}
-
-              {analytics.lastSale && (
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <p
-                    style={{
-                      color: "#0C0A09",
-                      fontFamily: "Clash Display",
-                      fontWeight: 400,
-                    }}
-                  >
-                    💰 Last sale
-                  </p>
-                  <p
-                    className="text-sm text-gray-600"
-                    style={{
-                      fontFamily: "Clash Display",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {getTimeAgo(analytics.lastSale)}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

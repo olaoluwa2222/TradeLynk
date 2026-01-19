@@ -31,8 +31,10 @@ import {
   Grid3X3,
   LayoutGrid,
   Plus,
+  Tag,
 } from "lucide-react";
 import FeedbackButton from "@/components/FeedbackButton";
+import { StorefrontCollections } from "@/components/collections";
 
 export default function SellerStorefrontPage() {
   const params = useParams();
@@ -72,7 +74,7 @@ export default function SellerStorefrontPage() {
 
           try {
             const itemsResponse = await itemsApi.getItemsBySeller(
-              storefrontData.userId
+              storefrontData.userId,
             );
 
             if (itemsResponse.success && itemsResponse.data) {
@@ -119,7 +121,7 @@ export default function SellerStorefrontPage() {
           }
         });
       },
-      { threshold: 0.1, rootMargin: "0px 0px -50px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px -50px 0px" },
     );
 
     document
@@ -163,6 +165,13 @@ export default function SellerStorefrontPage() {
             theme={theme}
             primaryColor={primaryColor}
             isOwner={isOwner}
+          />
+        )}
+        {activeTab === "collections" && (
+          <CollectionsTab
+            storefront={storefront}
+            theme={theme}
+            primaryColor={primaryColor}
           />
         )}
         {activeTab === "about" && (
@@ -228,6 +237,7 @@ function Navigation({
   const tabs = [
     { id: "home", label: "Home", icon: "🏠" },
     { id: "products", label: "Products", icon: "🛍️" },
+    { id: "collections", label: "Collections", icon: "📁" },
     { id: "about", label: "About", icon: "ℹ️" },
     { id: "contact", label: "Contact", icon: "📧" },
   ];
@@ -390,8 +400,8 @@ function Navigation({
                   activeTab === tab.id
                     ? "text-white shadow-lg"
                     : theme === "product-showcase"
-                    ? "text-gray-300 hover:bg-white/10"
-                    : "text-gray-600 hover:bg-gray-100"
+                      ? "text-gray-300 hover:bg-white/10"
+                      : "text-gray-600 hover:bg-gray-100"
                 }`}
                 style={
                   activeTab === tab.id ? { backgroundColor: primaryColor } : {}
@@ -609,7 +619,7 @@ function HomeTab({
               <a
                 href={`https://wa.me/${storefront.whatsappNumber.replace(
                   /^0/,
-                  "234"
+                  "234",
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -725,7 +735,7 @@ function HomeTab({
               <button
                 onClick={() => {
                   const el = document.querySelector(
-                    '[data-tab="products"]'
+                    '[data-tab="products"]',
                   ) as HTMLElement;
                   el?.click();
                 }}
@@ -755,6 +765,15 @@ function HomeTab({
           </div>
         </section>
       )}
+
+      {/* Featured Collections Section */}
+      <StorefrontCollections
+        sellerId={storefront.userId}
+        sellerUsername={storefront.username}
+        primaryColor={primaryColor}
+        variant="featured"
+        maxItems={4}
+      />
 
       {/* About Preview Section */}
       {storefront.bio && (
@@ -788,7 +807,7 @@ function HomeTab({
                 <button
                   onClick={() => {
                     const el = document.querySelector(
-                      '[data-tab="about"]'
+                      '[data-tab="about"]',
                     ) as HTMLElement;
                     el?.click();
                   }}
@@ -917,6 +936,48 @@ function ProductsTab({ storefront, theme, primaryColor, isOwner }: any) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COLLECTIONS TAB - Show all collections
+// ============================================
+function CollectionsTab({ storefront, theme, primaryColor }: any) {
+  return (
+    <div className="pt-20 pb-20 px-4 sm:px-6 lg:px-8 min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 fade-in-section">
+          <div className="flex items-center gap-3">
+            <div
+              className="p-2.5 rounded-xl"
+              style={{ backgroundColor: `${primaryColor}15` }}
+            >
+              <Tag size={24} style={{ color: primaryColor }} />
+            </div>
+            <div>
+              <h2
+                className="text-3xl md:text-4xl font-bold text-gray-900"
+                style={{ fontFamily: "Clash Display" }}
+              >
+                Collections
+              </h2>
+              <p className="text-gray-500 mt-1">
+                Browse curated product collections
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Collections Grid */}
+        <StorefrontCollections
+          sellerId={storefront.userId}
+          sellerUsername={storefront.username}
+          primaryColor={primaryColor}
+          variant="full"
+        />
       </div>
     </div>
   );
@@ -1112,7 +1173,7 @@ function ContactTab({
     const message = `Hi, I'm ${contactForm.name} (${contactForm.email}). ${contactForm.message}`;
     const whatsappUrl = `https://wa.me/${storefront.whatsappNumber?.replace(
       /^0/,
-      "234"
+      "234",
     )}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };
@@ -1227,7 +1288,7 @@ function ContactTab({
                 <a
                   href={`https://wa.me/${storefront.whatsappNumber.replace(
                     /^0/,
-                    "234"
+                    "234",
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
