@@ -79,6 +79,22 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Public endpoints that don't require authentication - don't redirect to login on 401
+const isPublicEndpoint = (url: string | undefined): boolean => {
+  if (!url) return false;
+  const publicPatterns = [
+    /\/sellers\/[^/]+\/storefront/, // Storefront pages
+    /\/sellers\/[^/]+\/collections/, // Seller collections
+    /\/collections\/[^/]+/, // Collection details
+    /\/items\/seller\/\d+/, // Items by seller
+    /\/items\/\d+/, // Individual item details
+    /\/items$/, // Items list
+    /\/auth\//, // Auth endpoints
+    /\/categories/, // Categories
+  ];
+  return publicPatterns.some((pattern) => pattern.test(url));
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -88,6 +104,11 @@ api.interceptors.response.use(
 
     // If error is 401 and we haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // For public endpoints, don't redirect to login - just reject the error
+      if (isPublicEndpoint(originalRequest.url)) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -110,7 +131,7 @@ api.interceptors.response.use(
       const refreshToken = tokenStorage.getRefreshToken();
 
       if (!refreshToken) {
-        // No refresh token, redirect to login
+        // No refresh token, redirect to login (only for protected endpoints)
         tokenStorage.clearTokens();
         if (typeof window !== "undefined") {
           window.location.href = "/login";
