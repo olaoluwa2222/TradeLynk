@@ -18,7 +18,8 @@ import java.time.LocalDateTime;
         @Index(name = "idx_verified", columnList = "verified"),
         @Index(name = "idx_created_at", columnList = "created_at")
 })
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder

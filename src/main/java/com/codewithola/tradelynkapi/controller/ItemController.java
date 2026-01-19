@@ -10,7 +10,6 @@ import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.ItemFilterService;
 import com.codewithola.tradelynkapi.services.ItemService;
 import com.codewithola.tradelynkapi.services.SearchService;
-import com.codewithola.tradelynkapi.services.SellerProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +34,6 @@ public class ItemController {
     private final ItemService itemService;
     private final ItemFilterService itemFilterService;
     private final SearchService searchService;
-    private final SellerProfileService sellerProfileService;
 
     // ========================================
     // CREATE
@@ -48,7 +46,6 @@ public class ItemController {
 
         log.info("POST /api/items - Creating item for user: {}", userPrincipal.getEmail());
 
-        // If verified, proceed to create item
         ItemDTO createdItem = itemService.createItem(userPrincipal.getId(), request);
 
         Map<String, Object> response = new HashMap<>();
@@ -60,12 +57,11 @@ public class ItemController {
     }
 
     // ========================================
-    // READ - PAGINATED (Using PageResponse)
+    // READ - PAGINATED
     // ========================================
 
     /**
      * GET /api/items (paginated with advanced filtering)
-     * ✅ UPDATED: Now returns PageResponse<ItemDTO>
      */
     @GetMapping
     public ResponseEntity<Map<String, Object>> getAllActiveItems(
@@ -88,7 +84,6 @@ public class ItemController {
                 category, minPrice, maxPrice, condition, sort, currentUserId, pageable
         );
 
-        // ✅ Convert to PageResponse
         PageResponse<ItemDTO> pageResponse = PageResponse.of(itemsPage);
 
         Map<String, Object> response = new HashMap<>();
@@ -100,7 +95,6 @@ public class ItemController {
 
     /**
      * GET /api/items/search
-     * ✅ UPDATED: Now returns PageResponse<ItemDTO>
      */
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> searchItems(
@@ -114,8 +108,7 @@ public class ItemController {
             @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        log.info("GET /api/items/search - query: '{}', category: {}, sort: {}",
-                q, category, sort);
+        log.info("GET /api/items/search - query: '{}', category: {}, sort: {}", q, category, sort);
 
         SearchFilters filters = SearchFilters.builder()
                 .keyword(q)
@@ -131,7 +124,6 @@ public class ItemController {
         Long currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
         Page<ItemDTO> itemsPage = searchService.searchItems(filters, currentUserId);
 
-        // ✅ Convert to PageResponse
         PageResponse<ItemDTO> pageResponse = PageResponse.of(itemsPage);
 
         Map<String, Object> response = new HashMap<>();
@@ -144,7 +136,6 @@ public class ItemController {
 
     /**
      * GET /api/items/category/{category}
-     * ✅ UPDATED: Now returns PageResponse<ItemDTO>
      */
     @GetMapping("/category/{category}")
     public ResponseEntity<Map<String, Object>> getItemsByCategory(
@@ -157,7 +148,6 @@ public class ItemController {
         Pageable pageable = PageRequest.of(page, size);
         Page<ItemDTO> itemsPage = itemService.getItemsByCategory(category, pageable);
 
-        // ✅ Convert to PageResponse
         PageResponse<ItemDTO> pageResponse = PageResponse.of(itemsPage);
 
         Map<String, Object> response = new HashMap<>();
@@ -168,12 +158,12 @@ public class ItemController {
     }
 
     // ========================================
-    // READ - NON-PAGINATED (Keep as-is)
+    // READ - SINGLE ITEM
     // ========================================
 
     /**
      * GET /api/items/{id}
-     * ❌ NOT PAGINATED - Keep as-is
+     * ✅ FIXED: Now properly calls incrementViewCountAndGet which uses enhanced DTO
      */
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getItemById(
@@ -183,6 +173,8 @@ public class ItemController {
         log.info("GET /api/items/{} - Fetching item details", id);
 
         Long viewerId = userPrincipal != null ? userPrincipal.getId() : null;
+
+        // ✅ This increments view count AND returns enhanced DTO
         ItemDTO item = itemService.incrementViewCountAndGet(id, viewerId);
 
         Map<String, Object> response = new HashMap<>();
@@ -194,7 +186,6 @@ public class ItemController {
 
     /**
      * GET /api/items/seller/{sellerId}
-     * ❌ NOT PAGINATED - Keep as-is (returns full list)
      */
     @GetMapping("/seller/{sellerId}")
     public ResponseEntity<Map<String, Object>> getItemsBySeller(@PathVariable Long sellerId) {
@@ -212,7 +203,6 @@ public class ItemController {
 
     /**
      * GET /api/items/my-items
-     * ❌ NOT PAGINATED - Keep as-is (user's own items)
      */
     @GetMapping("/my-items")
     public ResponseEntity<Map<String, Object>> getMyItems(
@@ -232,7 +222,6 @@ public class ItemController {
 
     /**
      * GET /api/items/trending
-     * ❌ NOT PAGINATED - Keep as-is (limited trending list)
      */
     @GetMapping("/trending")
     public ResponseEntity<Map<String, Object>> getTrendingItems(
@@ -256,7 +245,6 @@ public class ItemController {
 
     /**
      * GET /api/items/suggestions
-     * ❌ NOT PAGINATED - Keep as-is (simple suggestion list)
      */
     @GetMapping("/suggestions")
     public ResponseEntity<Map<String, Object>> getSearchSuggestions(

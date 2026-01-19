@@ -18,7 +18,8 @@ import java.util.List;
         @Index(name = "idx_username", columnList = "username", unique = true), // ✅ NEW
         @Index(name = "idx_created_at", columnList = "created_at")
 })
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
