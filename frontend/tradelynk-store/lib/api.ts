@@ -319,6 +319,38 @@ export const authApi = {
 
     return normalizedUser;
   },
+
+  // Password Reset API methods
+  forgotPassword: async (
+    email: string,
+  ): Promise<{ success: boolean; message: string; data: any }> => {
+    const response = await api.post("/auth/forgot-password", { email });
+    return response.data;
+  },
+
+  verifyResetToken: async (
+    token: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: { valid: boolean; email: string };
+  }> => {
+    const response = await api.get(
+      `/auth/reset-password/verify?token=${token}`,
+    );
+    return response.data;
+  },
+
+  resetPassword: async (
+    token: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string; data: any }> => {
+    const response = await api.post("/auth/reset-password", {
+      token,
+      newPassword,
+    });
+    return response.data;
+  },
 };
 
 // Items API methods

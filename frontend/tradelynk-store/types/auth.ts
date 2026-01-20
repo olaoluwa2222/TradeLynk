@@ -69,3 +69,39 @@ export interface AuthContextType {
   verifyEmail: (token: string) => Promise<string>;
   resendVerification: (email: string) => Promise<string>;
 }
+
+// Password Reset Types
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  data: {
+    email: string;
+    message: string;
+  };
+}
+
+export interface VerifyResetTokenResponse {
+  success: boolean;
+  message: string;
+  data: {
+    valid: boolean;
+    email: string;
+  };
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  data: {
+    message: string;
+  };
+}
