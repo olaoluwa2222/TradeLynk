@@ -3,7 +3,14 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, ZoomIn, X, Play, Pause } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  X,
+  Play,
+  Pause,
+} from "lucide-react";
 import { ProductImage } from "@/types/items";
 
 interface ImageGalleryProps {
@@ -52,28 +59,33 @@ export function ImageGallery({
   };
 
   // Smooth transition handler
-  const transitionToImage = useCallback((newIndex: number) => {
-    if (isTransitioning) return;
-    setIsTransitioning(true);
-    setProgress(0);
-    
-    // Small delay for fade out effect
-    setTimeout(() => {
-      setSelectedIndex(newIndex);
-      // Reset transition state after animation completes
+  const transitionToImage = useCallback(
+    (newIndex: number) => {
+      if (isTransitioning) return;
+      setIsTransitioning(true);
+      setProgress(0);
+
+      // Small delay for fade out effect
       setTimeout(() => {
-        setIsTransitioning(false);
-      }, 300);
-    }, 150);
-  }, [isTransitioning]);
+        setSelectedIndex(newIndex);
+        // Reset transition state after animation completes
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 300);
+      }, 150);
+    },
+    [isTransitioning],
+  );
 
   const handlePrevious = useCallback(() => {
-    const newIndex = selectedIndex === 0 ? sortedImages.length - 1 : selectedIndex - 1;
+    const newIndex =
+      selectedIndex === 0 ? sortedImages.length - 1 : selectedIndex - 1;
     transitionToImage(newIndex);
   }, [selectedIndex, sortedImages.length, transitionToImage]);
 
   const handleNext = useCallback(() => {
-    const newIndex = selectedIndex === sortedImages.length - 1 ? 0 : selectedIndex + 1;
+    const newIndex =
+      selectedIndex === sortedImages.length - 1 ? 0 : selectedIndex + 1;
     transitionToImage(newIndex);
   }, [selectedIndex, sortedImages.length, transitionToImage]);
 
@@ -99,10 +111,18 @@ export function ImageGallery({
     }, autoPlayInterval);
 
     return () => {
-      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+      if (progressIntervalRef.current)
+        clearInterval(progressIntervalRef.current);
       if (autoPlayTimeoutRef.current) clearTimeout(autoPlayTimeoutRef.current);
     };
-  }, [isAutoPlaying, selectedIndex, sortedImages.length, autoPlayInterval, handleNext, isLightboxOpen]);
+  }, [
+    isAutoPlaying,
+    selectedIndex,
+    sortedImages.length,
+    autoPlayInterval,
+    handleNext,
+    isLightboxOpen,
+  ]);
 
   // Pause auto-play on hover
   const handleMouseEnter = () => {
@@ -158,7 +178,7 @@ export function ImageGallery({
     <>
       <div className="space-y-4">
         {/* Main Image Container */}
-        <div 
+        <div
           className="relative aspect-square bg-gray-50 rounded-2xl overflow-hidden group"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -174,11 +194,12 @@ export function ImageGallery({
                   <div
                     className="h-full bg-white rounded-full transition-all duration-100 ease-linear"
                     style={{
-                      width: index === selectedIndex 
-                        ? `${progress}%` 
-                        : index < selectedIndex 
-                          ? '100%' 
-                          : '0%',
+                      width:
+                        index === selectedIndex
+                          ? `${progress}%`
+                          : index < selectedIndex
+                            ? "100%"
+                            : "0%",
                     }}
                   />
                 </div>
@@ -193,8 +214,8 @@ export function ImageGallery({
                 key={image.id || index}
                 className={`absolute inset-0 transition-all duration-500 ease-out ${
                   index === selectedIndex
-                    ? 'opacity-100 scale-100'
-                    : 'opacity-0 scale-105'
+                    ? "opacity-100 scale-100"
+                    : "opacity-0 scale-105"
                 }`}
                 style={{ zIndex: index === selectedIndex ? 10 : 1 }}
               >
@@ -279,8 +300,8 @@ export function ImageGallery({
                   onClick={() => handleThumbnailClick(index)}
                   className={`w-2 h-2 rounded-full transition-all ${
                     index === selectedIndex
-                      ? 'bg-white w-6'
-                      : 'bg-white/50 hover:bg-white/70'
+                      ? "bg-white w-6"
+                      : "bg-white/50 hover:bg-white/70"
                   }`}
                 />
               ))}
@@ -315,7 +336,7 @@ export function ImageGallery({
                     onError={() => handleImageError(index)}
                     sizes="80px"
                   />
-                  
+
                   {/* Active Indicator Overlay */}
                   {selectedIndex === index && (
                     <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
@@ -325,7 +346,7 @@ export function ImageGallery({
                 </button>
               ))}
             </div>
-            
+
             {/* Scroll Hint Gradient */}
             {sortedImages.length > 4 && (
               <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none hidden sm:block" />
