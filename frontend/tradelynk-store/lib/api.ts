@@ -338,8 +338,11 @@ export const itemsApi = {
   },
 
   getItemById: async (id: string | number) => {
-    console.log(`🔍 Fetching item ${id} from: /items/${id}`);
-    const response = await api.get(`/items/${id}`);
+    // Check if it's a slug (contains non-numeric characters like letters or hyphens)
+    const isSlug = typeof id === "string" && /[a-zA-Z-]/.test(id);
+    const endpoint = isSlug ? `/items/slug/${id}` : `/items/${id}`;
+    console.log(`🔍 Fetching item ${id} from: ${endpoint}`);
+    const response = await api.get(endpoint);
     console.log(
       `📦 Item ${id} response:`,
       JSON.stringify(response.data, null, 2),
@@ -549,6 +552,30 @@ export const itemsApi = {
       params: { limit },
     });
     return response.data;
+  },
+
+  // Get related items from the same seller (for storefront context)
+  getSellerRelatedItems: async (
+    sellerId: number,
+    excludeItemId: number,
+    limit: number = 4,
+  ) => {
+    try {
+      const response = await api.get(`/items/seller/${sellerId}`, {
+        params: { page: 0, size: limit + 1 },
+      });
+      if (response.data.success && response.data.data) {
+        // Filter out the current item and limit results
+        const items = response.data.data
+          .filter((item: any) => item.id !== excludeItemId)
+          .slice(0, limit);
+        return { success: true, data: items };
+      }
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching seller related items:", error);
+      return { success: false, data: [] };
+    }
   },
 };
 

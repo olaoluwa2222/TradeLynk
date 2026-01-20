@@ -3,9 +3,9 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Store, Sparkles, TrendingUp } from "lucide-react";
 import { itemsApi } from "@/lib/api";
 import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,12 +16,19 @@ import { ProductGrid } from "@/components/product/ProductGrid";
 export default function ItemDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const itemId = params.id as string;
 
+  // Check if user came from a seller's storefront (to show seller-specific related items)
+  const fromStorefront = searchParams.get("from") === "storefront";
+  const sellerUsername = searchParams.get("seller");
+
   const [item, setItem] = useState<Item | null>(null);
   const [relatedItems, setRelatedItems] = useState<Item[]>([]);
+  const [sellerOtherItems, setSellerOtherItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [relatedLoading, setRelatedLoading] = useState(false);
   const [error, setError] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -31,6 +38,7 @@ export default function ItemDetailPage() {
     const fetchItem = async () => {
       try {
         setLoading(true);
+        setRelatedLoading(true);
         const response = await itemsApi.getItemById(itemId);
 
         if (response.success && response.data) {
@@ -40,14 +48,35 @@ export default function ItemDetailPage() {
           );
           setItem(response.data);
 
-          // Fetch related items
+          // Fetch related items - both from same seller and similar category
+          const sellerId = response.data.sellerId;
+
+          // Always fetch seller's other items (for "More from this seller" section)
+          try {
+            const sellerItemsResponse = await itemsApi.getSellerRelatedItems(
+              sellerId,
+              response.data.id,
+              4,
+            );
+            if (sellerItemsResponse.success && sellerItemsResponse.data) {
+              setSellerOtherItems(sellerItemsResponse.data);
+            }
+          } catch (sellerErr) {
+            console.log("Could not fetch seller's other items");
+          }
+
+          // Fetch category-related items (similar products from any seller)
           try {
             const relatedResponse = await itemsApi.getRelatedItems(
               response.data.id,
               4,
             );
             if (relatedResponse.success && relatedResponse.data) {
-              setRelatedItems(relatedResponse.data);
+              // Filter out items from the same seller to avoid duplicates
+              const filteredRelated = relatedResponse.data.filter(
+                (relatedItem: Item) => relatedItem.sellerId !== sellerId,
+              );
+              setRelatedItems(filteredRelated);
             }
           } catch (relatedErr) {
             console.log("Could not fetch related items");
@@ -60,6 +89,7 @@ export default function ItemDetailPage() {
         setError(err.message || "An error occurred while loading the product");
       } finally {
         setLoading(false);
+        setRelatedLoading(false);
       }
     };
 
@@ -133,7 +163,7 @@ export default function ItemDetailPage() {
     router.push(`/checkout?itemId=${itemId}`);
   };
 
-  // Handle like for related items
+  // Handle like for related items (both seller items and similar products)
   const handleRelatedLike = async (relatedItemId: number) => {
     if (!isAuthenticated) {
       toast.error("Please login to like products");
@@ -141,7 +171,10 @@ export default function ItemDetailPage() {
     }
 
     try {
-      const relatedItem = relatedItems.find((i) => i.id === relatedItemId);
+      // Find the item in either array
+      const relatedItem =
+        relatedItems.find((i) => i.id === relatedItemId) ||
+        sellerOtherItems.find((i) => i.id === relatedItemId);
       if (!relatedItem) return;
 
       if (relatedItem.likedByCurrentUser) {
@@ -150,8 +183,9 @@ export default function ItemDetailPage() {
         await itemsApi.likeItem(relatedItemId);
       }
 
-      setRelatedItems((prev) =>
-        prev.map((i) =>
+      // Update function for both arrays
+      const updateLikeState = (items: Item[]) =>
+        items.map((i) =>
           i.id === relatedItemId
             ? {
                 ...i,
@@ -161,10 +195,13 @@ export default function ItemDetailPage() {
                   : i.likeCount + 1,
               }
             : i,
-        ),
-      );
+        );
+
+      setRelatedItems(updateLikeState);
+      setSellerOtherItems(updateLikeState);
     } catch (err) {
       console.error("Error toggling like:", err);
+      toast.error("Failed to update like");
     }
   };
 
@@ -244,26 +281,91 @@ export default function ItemDetailPage() {
         isChatting={chatLoading}
       />
 
-      {/* Related Products */}
+      {/* More from this Seller - Always show first */}
+      {sellerOtherItems.length > 0 && (
+        <section className="bg-gradient-to-b from-gray-50 to-white border-t border-gray-100 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-black rounded-xl">
+                  <Store size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2
+                    className="text-2xl font-bold text-gray-900"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
+                    More from this Seller
+                  </h2>
+                  <p className="text-gray-500 mt-0.5 text-sm">
+                    {item.sellerName
+                      ? `Check out more from ${item.sellerName}`
+                      : "Explore other products from this seller"}
+                  </p>
+                </div>
+              </div>
+              {item.sellerUsername && (
+                <Link
+                  href={`/sellers/${item.sellerUsername}`}
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-all"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  <span>Visit Store</span>
+                  <ArrowLeft size={14} className="rotate-180" />
+                </Link>
+              )}
+            </div>
+
+            <ProductGrid
+              items={sellerOtherItems}
+              onLike={handleRelatedLike}
+              columns={4}
+            />
+
+            {/* Mobile CTA */}
+            {item.sellerUsername && (
+              <div className="mt-6 sm:hidden">
+                <Link
+                  href={`/sellers/${item.sellerUsername}`}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition-all"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  <Store size={18} />
+                  <span>Visit Seller's Store</span>
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Similar Products - From other sellers */}
       {relatedItems.length > 0 && (
         <section className="bg-white border-t border-gray-100 py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2
-                  className="text-2xl font-bold text-gray-900"
-                  style={{ fontFamily: "Clash Display" }}
-                >
-                  Related Products
-                </h2>
-                <p className="text-gray-500 mt-1">You might also like these</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+                  <Sparkles size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2
+                    className="text-2xl font-bold text-gray-900"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
+                    Similar Products
+                  </h2>
+                  <p className="text-gray-500 mt-0.5 text-sm">
+                    Discover similar items you might love
+                  </p>
+                </div>
               </div>
               <Link
                 href={`/items?category=${item.category}`}
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 flex items-center gap-1"
+                className="hidden sm:flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-all"
                 style={{ fontFamily: "Clash Display" }}
               >
-                View All
+                View All in {item.category?.replace(/_/g, " ")}
                 <ArrowLeft size={14} className="rotate-180" />
               </Link>
             </div>
@@ -276,6 +378,63 @@ export default function ItemDetailPage() {
           </div>
         </section>
       )}
+
+      {/* Loading state for related items */}
+      {relatedLoading &&
+        sellerOtherItems.length === 0 &&
+        relatedItems.length === 0 && (
+          <section className="bg-white border-t border-gray-100 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2.5 bg-gray-200 rounded-xl animate-pulse w-10 h-10" />
+                <div>
+                  <div className="h-6 bg-gray-200 rounded w-48 animate-pulse mb-2" />
+                  <div className="h-4 bg-gray-100 rounded w-64 animate-pulse" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-gray-100 rounded-2xl aspect-[4/5] animate-pulse"
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+      {/* Empty state - No related products */}
+      {!relatedLoading &&
+        sellerOtherItems.length === 0 &&
+        relatedItems.length === 0 && (
+          <section className="bg-gradient-to-b from-gray-50 to-white border-t border-gray-100 py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="text-center max-w-md mx-auto">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <TrendingUp size={28} className="text-gray-400" />
+                </div>
+                <h3
+                  className="text-lg font-bold text-gray-900 mb-2"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  Explore More Products
+                </h3>
+                <p className="text-gray-500 mb-6 text-sm">
+                  Discover thousands of amazing products on TradeLynk
+                </p>
+                <Link
+                  href="/items"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  Browse All Products
+                  <ArrowLeft size={16} className="rotate-180" />
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
     </div>
   );
 }

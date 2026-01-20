@@ -757,6 +757,7 @@ function HomeTab({
                     item={item}
                     theme={theme}
                     primaryColor={primaryColor}
+                    sellerUsername={storefront.username}
                     compact
                   />
                 </div>
@@ -930,6 +931,7 @@ function ProductsTab({ storefront, theme, primaryColor, isOwner }: any) {
                   item={item}
                   theme={theme}
                   primaryColor={primaryColor}
+                  sellerUsername={storefront.username}
                   compact={viewMode === "compact"}
                 />
               </div>
@@ -1376,9 +1378,20 @@ function ContactTab({
 // ============================================
 // PRODUCT CARD - Modern compact design
 // ============================================
-function ProductCard({ item, theme, primaryColor, compact = false }: any) {
+function ProductCard({
+  item,
+  theme,
+  primaryColor,
+  compact = false,
+  sellerUsername,
+}: any) {
+  // Add storefront context to the link so the detail page knows to prioritize seller's items
+  const itemLink = sellerUsername
+    ? `/items/${item.id}?from=storefront&seller=${sellerUsername}`
+    : `/items/${item.id}`;
+
   return (
-    <Link href={`/items/${item.id}`}>
+    <Link href={itemLink}>
       <div className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:border-gray-200 transition-all duration-300 hover-lift cursor-pointer">
         {/* Image Container */}
         <div
