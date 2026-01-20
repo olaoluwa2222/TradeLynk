@@ -6,10 +6,13 @@ import com.codewithola.tradelynkapi.dtos.response.ApiResponse;
 import com.codewithola.tradelynkapi.dtos.response.AuthResponse;
 import com.codewithola.tradelynkapi.entity.User;
 import com.codewithola.tradelynkapi.entity.VerificationToken;
+import com.codewithola.tradelynkapi.exception.InvalidTokenException;
 import com.codewithola.tradelynkapi.exception.ResourceNotFoundException;
+import com.codewithola.tradelynkapi.exception.WeakPasswordException;
 import com.codewithola.tradelynkapi.repositories.UserRepository;
 import com.codewithola.tradelynkapi.repositories.VerificationTokenRepository;
 import com.codewithola.tradelynkapi.security.jwt.JwtTokenProvider;
+import com.codewithola.tradelynkapi.services.PasswordResetService;
 import com.codewithola.tradelynkapi.services.UserService;
 import com.codewithola.tradelynkapi.services.VerificationService;
 import jakarta.validation.Valid;
@@ -36,7 +39,7 @@ public class AuthController {
     private final VerificationTokenRepository verificationTokenRepository;
     private final VerificationService verificationService;
     private final UserRepository userRepository;
-
+    private final PasswordResetService passwordResetService;
     @Value("${jwt.expiration}")
     private Long jwtExpirationMs;
 
@@ -45,12 +48,13 @@ public class AuthController {
                           JwtTokenProvider jwtTokenProvider,
                           VerificationTokenRepository verificationTokenRepository,
                           VerificationService verificationService,
-                          UserRepository userRepository) {
+                          UserRepository userRepository, PasswordResetService passwordResetService) {
         this.userService = userService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.verificationTokenRepository = verificationTokenRepository;
         this.verificationService = verificationService;
         this.userRepository = userRepository;
+        this.passwordResetService = passwordResetService;
     }
 
     /**
@@ -408,4 +412,184 @@ public class AuthController {
         return ResponseEntity
                 .ok(ApiResponse.success("Verification email sent successfully", responseData));
     }
+
+    /**
+     * Step 1: Request password reset
+     * POST /api/v1/auth/forgot-password
+     *
+     * Request Body:
+     * {
+     *   "email": "student@lmu.edu.ng"
+     * }
+     *
+     * Response: 200 OK
+     * {
+     *   "success": true,
+     *   "message": "Password reset email sent successfully",
+     *   "data": {
+     *     "email": "student@lmu.edu.ng",
+     *     "message": "If this email exists, you will receive reset instructions shortly."
+     *   }
+     * }
+     *
+     * Note: For security, we don't reveal if email exists or not
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Object>> forgotPassword(
+            @RequestBody java.util.Map<String, String> request) {
+
+        String email = request.get("email");
+
+        if (email == null || email.trim().isEmpty()) {
+            log.warn("Forgot password attempted with empty email");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Email is required"));
+        }
+
+        log.info("Password reset requested for email: {}", email);
+
+        try {
+            // Request password reset
+            passwordResetService.requestPasswordReset(email);
+
+            // Build response (don't reveal if email exists)
+            java.util.Map<String, String> responseData = new java.util.HashMap<>();
+            responseData.put("email", email);
+            responseData.put("message", "If this email exists, you will receive password reset instructions shortly.");
+
+            return ResponseEntity
+                    .ok(ApiResponse.success("Password reset email sent successfully", responseData));
+
+        } catch (ResourceNotFoundException e) {
+            // For security: don't reveal that email doesn't exist
+            // Return same response as success
+            log.warn("Password reset requested for non-existent email: {}", email);
+
+            java.util.Map<String, String> responseData = new java.util.HashMap<>();
+            responseData.put("email", email);
+            responseData.put("message", "If this email exists, you will receive password reset instructions shortly.");
+
+            return ResponseEntity
+                    .ok(ApiResponse.success("Password reset email sent successfully", responseData));
+        }
+    }
+
+    /**
+     * Step 2: Verify password reset token
+     * GET /api/v1/auth/reset-password/verify?token=<reset_token>
+     *
+     * This endpoint verifies if a reset token is valid
+     * Frontend calls this when user clicks reset link
+     *
+     * Response: 200 OK
+     * {
+     *   "success": true,
+     *   "message": "Reset token is valid",
+     *   "data": {
+     *     "valid": true,
+     *     "email": "student@lmu.edu.ng"
+     *   }
+     * }
+     *
+     * Error Responses:
+     * - 400 BAD REQUEST: Token expired or already used
+     * - 404 NOT FOUND: Invalid token
+     */
+    @GetMapping("/reset-password/verify")
+    public ResponseEntity<ApiResponse<Object>> verifyResetToken(@RequestParam("token") String token) {
+        log.info("Verifying password reset token");
+
+        try {
+            // Verify token and get user
+            User user = passwordResetService.verifyResetToken(token);
+
+            // Build response
+            java.util.Map<String, Object> responseData = new java.util.HashMap<>();
+            responseData.put("valid", true);
+            responseData.put("email", user.getEmail());
+
+            return ResponseEntity
+                    .ok(ApiResponse.success("Reset token is valid", responseData));
+
+        } catch (InvalidTokenException e) {
+            log.warn("Invalid reset token verification attempted");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    /**
+     * Step 3: Reset password with token
+     * POST /api/v1/auth/reset-password
+     *
+     * Request Body:
+     * {
+     *   "token": "uuid-token-from-email",
+     *   "newPassword": "NewSecurePass123"
+     * }
+     *
+     * Response: 200 OK
+     * {
+     *   "success": true,
+     *   "message": "Password reset successfully",
+     *   "data": {
+     *     "message": "Your password has been reset successfully. You can now log in with your new password."
+     *   }
+     * }
+     *
+     * Error Responses:
+     * - 400 BAD REQUEST: Weak password or invalid token
+     * - 404 NOT FOUND: Token not found
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Object>> resetPassword(
+            @RequestBody java.util.Map<String, String> request) {
+
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+
+        // Validate inputs
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Reset token is required"));
+        }
+
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("New password is required"));
+        }
+
+        log.info("Processing password reset");
+
+        try {
+            // Reset password
+            passwordResetService.resetPassword(token, newPassword);
+
+            // Build response
+            java.util.Map<String, String> responseData = new java.util.HashMap<>();
+            responseData.put("message", "Your password has been reset successfully. You can now log in with your new password.");
+
+            log.info("✅ Password reset successfully");
+
+            return ResponseEntity
+                    .ok(ApiResponse.success("Password reset successfully", responseData));
+
+        } catch (InvalidTokenException e) {
+            log.warn("Password reset failed: Invalid token");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+
+        } catch (WeakPasswordException e) {
+            log.warn("Password reset failed: Weak password");
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
 }
