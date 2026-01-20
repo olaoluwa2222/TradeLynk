@@ -39,4 +39,29 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     boolean existsByIdAndSellerId(Long id, Long sellerId);
 
     Page<Item> findBySellerIdAndStatus(Long sellerId, Item.Status status, Pageable pageable);
+
+    /**
+     * Find item by slug (for SEO-friendly URLs)
+     */
+    Optional<Item> findBySlug(String slug);
+
+    /**
+     * Find related items (same category, similar price)
+     * Used for "You may also like" recommendations
+     */
+    @Query("""
+        SELECT i FROM Item i 
+        WHERE i.category = :category 
+        AND i.price BETWEEN :minPrice AND :maxPrice 
+        AND i.id != :excludeItemId 
+        AND i.status = :status 
+        ORDER BY i.viewCount DESC, i.likeCount DESC, i.createdAt DESC
+        """)
+    List<Item> findRelatedItems(
+            @Param("category") Item.Category category,
+            @Param("minPrice") Long minPrice,
+            @Param("maxPrice") Long maxPrice,
+            @Param("excludeItemId") Long excludeItemId,
+            @Param("status") Item.Status status
+    );
 }

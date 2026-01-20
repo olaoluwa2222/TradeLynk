@@ -300,4 +300,53 @@ public class ItemController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * GET /api/items/slug/{slug}
+     * Get item by slug (SEO-friendly URL)
+     * Example: /api/items/slug/macbook-pro-m4-20
+     */
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<Map<String, Object>> getItemBySlug(
+            @PathVariable String slug,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        log.info("GET /api/items/slug/{} - Fetching item by slug", slug);
+
+        Long viewerId = userPrincipal != null ? userPrincipal.getId() : null;
+
+        ItemDTO item = itemService.getItemBySlug(slug, viewerId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", item);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/items/{id}/related?limit=4
+     * Get related/similar items
+     * Example: /api/items/20/related?limit=4
+     */
+    @GetMapping("/{id}/related")
+    public ResponseEntity<Map<String, Object>> getRelatedItems(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "4") int limit,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        log.info("GET /api/items/{}/related - Fetching related items (limit: {})", id, limit);
+
+        Long currentUserId = userPrincipal != null ? userPrincipal.getId() : null;
+
+        List<ItemDTO> relatedItems = itemService.getRelatedItems(id, limit, currentUserId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", relatedItems);
+        response.put("count", relatedItems.size());
+
+        return ResponseEntity.ok(response);
+    }
+
 }

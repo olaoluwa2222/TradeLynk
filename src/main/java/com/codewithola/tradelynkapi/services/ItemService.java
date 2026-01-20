@@ -694,4 +694,79 @@ public class ItemService {
     public ItemDTO convertToDTOPublic(Item item, User seller, Set<Long> likedItemIds) {
         return convertToEnhancedDTO(item, seller, likedItemIds);
     }
+
+    /**
+     * Get item by slug (for SEO-friendly URLs)
+     */
+    @Transactional(readOnly = true)
+    public ItemDTO getItemBySlug(String slug, Long viewerId) {
+        log.info("Fetching item by slug: {}", slug);
+
+        Item item = itemRepository.findBySlug(slug)
+                .orElseThrow(() -> new NotFoundException("Item not found"));
+
+        // Increment view count if viewer is not the seller
+        if (viewerId != null && !item.getSeller().getId().equals(viewerId)) {
+            item.incrementViewCount();
+            itemRepository.save(item);
+        }
+
+        User seller = userRepository.findById(item.getSeller().getId())
+                .orElseThrow(() -> new NotFoundException("Seller not found"));
+
+        Set<Long> likedItemIds = viewerId != null
+                ? likeService.getUserLikedItemIdsAsSet(viewerId)
+                : Collections.emptySet();
+
+        return convertToEnhancedDTO(item, seller, likedItemIds);
+    }
+
+    /**
+     * Get related items (similar products)
+     * Algorithm:
+     * 1. Same category
+     * 2. Similar price range (±30%)
+     * 3. Exclude current item
+     * 4. Active status only
+     * 5. Sort by views/likes
+     */
+    @Transactional(readOnly = true)
+    public List<ItemDTO> getRelatedItems(Long itemId, int limit, Long currentUserId) {
+        log.info("Fetching related items for item ID: {} (limit: {})", itemId, limit);
+
+        // 1. Get the current item
+        Item currentItem = itemRepository.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Item not found"));
+
+        // 2. Calculate price range (±30%)
+        Long minPrice = (long) (currentItem.getPrice() * 0.7);
+        Long maxPrice = (long) (currentItem.getPrice() * 1.3);
+
+        // 3. Find related items
+        List<Item> relatedItems = itemRepository.findRelatedItems(
+                currentItem.getCategory(),
+                minPrice,
+                maxPrice,
+                itemId,
+                Item.Status.ACTIVE
+        );
+
+        // 4. Limit results
+        List<Item> limitedItems = relatedItems.stream()
+                .limit(limit)
+                .toList();
+
+        // 5. Convert to DTOs
+        Set<Long> likedItemIds = currentUserId != null
+                ? likeService.getUserLikedItemIdsAsSet(currentUserId)
+                : Collections.emptySet();
+
+        return limitedItems.stream()
+                .map(item -> {
+                    User seller = userRepository.findById(item.getSeller().getId()).orElse(null);
+                    return convertToEnhancedDTO(item, seller, likedItemIds);
+                })
+                .toList();
+    }
+
 }
