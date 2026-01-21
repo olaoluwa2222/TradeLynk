@@ -157,9 +157,13 @@ function CheckoutContent() {
       }
     } catch (err: any) {
       console.error("Payment initialization error:", err);
-      setValidationError(
-        err.message || "Failed to initialize payment. Please try again.",
-      );
+      // Extract error message from axios response or error object
+      const errorMessage =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to initialize payment. Please try again.";
+      setValidationError(errorMessage);
       setPaymentLoading(false);
     }
   };
@@ -344,7 +348,7 @@ function CheckoutContent() {
                       fontWeight: 700,
                     }}
                   >
-                    ₦{item.price.toLocaleString()}
+                    ₦{(item.price / 100).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -532,7 +536,7 @@ function CheckoutContent() {
                       fontWeight: 600,
                     }}
                   >
-                    ₦{item.price.toLocaleString()}
+                    ₦{(item.price / 100).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex justify-between items-center">
@@ -572,7 +576,7 @@ function CheckoutContent() {
                       fontWeight: 700,
                     }}
                   >
-                    ₦{item.price.toLocaleString()}
+                    ₦{(item.price / 100).toLocaleString()}
                   </p>
                 </div>
               </div>
