@@ -98,9 +98,28 @@ export function VariantSelector({
   // Handle option selection
   const handleOptionSelect = (optionName: string, value: string) => {
     const newOptions = { ...selectedOptions, [optionName]: value };
-    setSelectedOptions(newOptions);
 
-    const matchingVariant = findMatchingVariant(newOptions);
+    // Check if this exact combination exists
+    let matchingVariant = findMatchingVariant(newOptions);
+
+    // If no exact match, try to find a variant with this option and update other options
+    if (!matchingVariant) {
+      // Find any variant that has this option value
+      const variantWithOption = variants.find((variant) => {
+        const variantOptions = variant.variantOptions || {};
+        return variantOptions[optionName] === value && variant.isInStock;
+      });
+
+      if (variantWithOption) {
+        // Use this variant's options as the new selection
+        const updatedOptions = { ...variantWithOption.variantOptions };
+        setSelectedOptions(updatedOptions);
+        onSelect(variantWithOption);
+        return;
+      }
+    }
+
+    setSelectedOptions(newOptions);
     if (matchingVariant) {
       onSelect(matchingVariant);
     }
@@ -108,16 +127,10 @@ export function VariantSelector({
 
   // Check if an option value is available (has at least one in-stock variant)
   const isOptionAvailable = (optionName: string, value: string): boolean => {
-    const testOptions = { ...selectedOptions, [optionName]: value };
-
+    // Check if ANY variant with this option value exists and is in stock
     return variants.some((variant) => {
       const variantOptions = variant.variantOptions || {};
-      const matches = Object.entries(testOptions).every(
-        ([key, val]) => key === optionName || variantOptions[key] === val,
-      );
-      return (
-        matches && variantOptions[optionName] === value && variant.isInStock
-      );
+      return variantOptions[optionName] === value && variant.isInStock;
     });
   };
 
