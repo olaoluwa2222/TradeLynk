@@ -1,13 +1,16 @@
 package com.codewithola.tradelynkapi.dtos.requests;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Request DTO for initializing a payment
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,11 +20,15 @@ public class InitializePaymentRequest {
     @NotNull(message = "Item ID is required")
     private Long itemId;
 
+    /**
+     * ✅ NEW: Product variant ID (optional - null for simple products)
+     */
+    private Long variantId;
+
     @NotNull(message = "Amount is required")
-    @Positive(message = "Amount must be positive")
+    @Min(value = 100, message = "Amount must be at least ₦100")
     private Long amount;
 
-    // ✅ NEW: Add delivery address
     @NotBlank(message = "Delivery address is required")
     private String deliveryAddress;
 }

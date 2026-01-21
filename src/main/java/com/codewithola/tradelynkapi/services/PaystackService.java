@@ -8,12 +8,14 @@ import com.codewithola.tradelynkapi.dtos.requests.PaystackSubaccountRequest;
 import com.codewithola.tradelynkapi.dtos.response.*;
 import com.codewithola.tradelynkapi.entity.Item;
 import com.codewithola.tradelynkapi.entity.Payment;
+import com.codewithola.tradelynkapi.entity.ProductVariant;
 import com.codewithola.tradelynkapi.entity.SellerProfile;
 import com.codewithola.tradelynkapi.entity.User;
 import com.codewithola.tradelynkapi.exception.BadRequestException;
 import com.codewithola.tradelynkapi.exception.NotFoundException;
 import com.codewithola.tradelynkapi.repositories.ItemRepository;
 import com.codewithola.tradelynkapi.repositories.PaymentRepository;
+import com.codewithola.tradelynkapi.repositories.ProductVariantRepository;
 import com.codewithola.tradelynkapi.repositories.SellerProfileRepository;
 import com.codewithola.tradelynkapi.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,11 +34,11 @@ import java.util.HexFormat;
 import java.util.Map;
 
 /**
- * UPDATED PaystackService with Escrow Support
+ * UPDATED PaystackService with Variant Support + Escrow
  * KEY CHANGES:
- * 1. Removed subaccount from payment initialization (money goes to platform account)
- * 2. Added refund functionality
- * 3. Payments now held in escrow until delivery confirmation
+ * 1. Added variantId parameter to initializePayment
+ * 2. Stock check now handles both simple products and variants
+ * 3. Payments store variantId for tracking
  */
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,7 @@ public class PaystackService {
     private final RestTemplate restTemplate;
     private final PaymentRepository paymentRepository;
     private final ItemRepository itemRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final NotificationService notificationService;
@@ -55,8 +58,6 @@ public class PaystackService {
 
     /**
      * Create a Paystack subaccount for a seller
-     * Note: Subaccounts are NO LONGER used during payment initialization (escrow system)
-     * They may be used in future for direct transfers
      */
     public String createSubaccount(SellerProfile seller) {
         log.info("Creating Paystack subaccount for seller: {}", seller.getUser().getFullName());
@@ -101,40 +102,77 @@ public class PaystackService {
     }
 
     /**
-     * ✅ UPDATED: Initialize a payment transaction (ESCROW SYSTEM)
-     * KEY CHANGE: NO subaccount - money goes to platform account (escrow)
+     * ✅ UPDATED: Initialize payment with VARIANT SUPPORT
+     *
+     * @param itemId Item ID
+     * @param variantId Variant ID (null for simple products)
+     * @param buyerId Buyer user ID
+     * @param amount Payment amount in Naira
+     * @param deliveryAddress Delivery address
+     * @return Payment initialization response
      */
     @Transactional
-    public InitializePaymentResponse initializePayment(Long itemId, Long buyerId, Long amount, String deliveryAddress) {
-        log.info("🔒 Initializing ESCROW payment for item: {}, buyer: {}, amount: ₦{}, delivery: {}",
-                itemId, buyerId, amount, deliveryAddress);
+    public InitializePaymentResponse initializePayment(
+            Long itemId,
+            Long variantId,
+            Long buyerId,
+            Long amount,
+            String deliveryAddress) {
 
-        // 1. Fetch item and validate
+        log.info("🔒 Initializing ESCROW payment - Item: {}, Variant: {}, Buyer: {}, Amount: ₦{}",
+                itemId, variantId, buyerId, amount);
+
+        // 1. Fetch and validate item
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found"));
 
-        if (item.getQuantity() < 1) {
-            throw new BadRequestException("Item is out of stock");
+        // 2. ✅ NEW: Check stock based on product type
+        ProductVariant selectedVariant = null;
+
+        if (variantId != null) {
+            // Variable product - check variant stock
+            selectedVariant = productVariantRepository.findById(variantId)
+                    .orElseThrow(() -> new NotFoundException("Product variant not found"));
+
+            // Verify variant belongs to this item
+            if (!selectedVariant.getItem().getId().equals(itemId)) {
+                throw new BadRequestException("Variant does not belong to this item");
+            }
+
+            // Check variant stock
+            if (!selectedVariant.isInStock()) {
+                throw new BadRequestException("Selected variant is out of stock");
+            }
+
+            log.info("✅ Variant stock check passed: {} (Stock: {})",
+                    selectedVariant.getVariantName(), selectedVariant.getStock());
+
+        } else {
+            // Simple product - check item quantity
+            if (item.getQuantity() < 1) {
+                throw new BadRequestException("Item is out of stock");
+            }
+
+            log.info("✅ Simple product stock check passed (Stock: {})", item.getQuantity());
         }
 
-        // 2. Fetch buyer
+        // 3. Fetch buyer
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new NotFoundException("Buyer not found"));
 
-        // 3. Fetch seller
+        // 4. Fetch seller
         User seller = userRepository.findById(item.getSeller().getId())
                 .orElseThrow(() -> new NotFoundException("Seller not found"));
 
-        // ❌ REMOVED: Get seller's subaccount (now using escrow system)
-        // Payment will go to platform account, not seller's subaccount
-
         try {
-            // 4. Prepare Paystack initialize request
+            // 5. Prepare Paystack initialize request
             PaymentMetadata metadata = PaymentMetadata.builder()
                     .itemId(itemId)
+                    .variantId(variantId) // ✅ NEW: Include variant ID in metadata
                     .sellerId(item.getSeller().getId())
                     .buyerId(buyerId)
                     .itemTitle(item.getTitle())
+                    .variantName(selectedVariant != null ? selectedVariant.getVariantName() : null) // ✅ NEW
                     .deliveryAddress(deliveryAddress)
                     .build();
 
@@ -145,18 +183,17 @@ public class PaystackService {
             PaystackInitializeRequest request = PaystackInitializeRequest.builder()
                     .amount(String.valueOf(amountInKobo))
                     .email(buyer.getEmail())
-                    // ❌ REMOVED: .subaccount(subaccountCode) - Money goes to platform account
                     .metadata(metadata)
                     .build();
 
-            // 5. Set headers
+            // 6. Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
 
             HttpEntity<PaystackInitializeRequest> entity = new HttpEntity<>(request, headers);
 
-            // 6. Call Paystack API
+            // 7. Call Paystack API
             String url = paystackConfig.getBaseUrl() + "/transaction/initialize";
             ResponseEntity<PaystackInitializeResponse> response = restTemplate.postForEntity(
                     url, entity, PaystackInitializeResponse.class);
@@ -164,9 +201,10 @@ public class PaystackService {
             if (response.getBody() != null && response.getBody().getStatus()) {
                 PaystackInitializeResponse.InitializeData data = response.getBody().getData();
 
-                // 7. Save payment record with PENDING status
+                // 8. Save payment record with PENDING status
                 Payment payment = Payment.builder()
                         .itemId(itemId)
+                        .variantId(variantId) // ✅ NEW: Store variant ID
                         .sellerId(item.getSeller().getId())
                         .buyerId(buyerId)
                         .amount(amount)  // Store in Naira
@@ -178,7 +216,8 @@ public class PaystackService {
 
                 paymentRepository.save(payment);
 
-                log.info("✅ ESCROW payment initialized. Reference: {}", data.getReference());
+                log.info("✅ ESCROW payment initialized. Reference: {}, Variant: {}",
+                        data.getReference(), variantId);
 
                 return InitializePaymentResponse.builder()
                         .paymentUrl(data.getAuthorizationUrl())
@@ -265,14 +304,12 @@ public class PaystackService {
     }
 
     /**
-     * ✅ NEW: Refund a payment (for disputed orders)
-     * Uses Paystack Refund API to return money to buyer's original payment method
+     * Refund a payment (for disputed orders)
      */
     public void refundPayment(String reference) {
         log.info("🔄 Initiating refund for payment reference: {}", reference);
 
         try {
-            // 1. Verify payment exists and is eligible for refund
             Payment payment = paymentRepository.findByPaystackReference(reference)
                     .orElseThrow(() -> new NotFoundException("Payment not found"));
 
@@ -280,7 +317,6 @@ public class PaystackService {
                 throw new BadRequestException("Can only refund successful payments");
             }
 
-            // 2. Call Paystack Refund API
             Map<String, Object> refundRequest = new HashMap<>();
             refundRequest.put("transaction", reference);
 
@@ -296,7 +332,6 @@ public class PaystackService {
             if (response.getBody() != null && Boolean.TRUE.equals(response.getBody().get("status"))) {
                 log.info("✅ Refund successful for reference: {}", reference);
 
-                // Notify buyer about refund
                 notificationService.sendRefundNotification(
                         payment.getBuyerId(),
                         payment.getAmount()

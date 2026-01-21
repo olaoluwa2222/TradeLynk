@@ -6,6 +6,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Payment metadata sent to Paystack
+ * Used for tracking order details in Paystack dashboard
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -14,6 +18,12 @@ public class PaymentMetadata {
 
     @JsonProperty("item_id")
     private Long itemId;
+
+    /**
+     * ✅ NEW: Variant ID for variable products
+     */
+    @JsonProperty("variant_id")
+    private Long variantId;
 
     @JsonProperty("seller_id")
     private Long sellerId;
@@ -24,7 +34,12 @@ public class PaymentMetadata {
     @JsonProperty("item_title")
     private String itemTitle;
 
-    // ✅ NEW: Add delivery address to metadata
+    /**
+     * ✅ NEW: Variant name (e.g., "Large - Red")
+     */
+    @JsonProperty("variant_name")
+    private String variantName;
+
     @JsonProperty("delivery_address")
     private String deliveryAddress;
 }

@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.entity;
 
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +11,11 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+        @Index(name = "idx_paystack_reference", columnList = "paystackReference", unique = true),
+        @Index(name = "idx_buyer_id", columnList = "buyerId"),
+        @Index(name = "idx_seller_id", columnList = "sellerId")
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -26,6 +29,12 @@ public class Payment {
     @Column(nullable = false)
     private Long itemId;
 
+    /**
+     * ✅ NEW: Product variant ID (null for simple products)
+     */
+    @Column
+    private Long variantId;
+
     @Column(nullable = false)
     private Long sellerId;
 
@@ -33,7 +42,7 @@ public class Payment {
     private Long buyerId;
 
     @Column(nullable = false)
-    private Long amount; // Amount in kobo
+    private Long amount; // Amount in Naira (not kobo)
 
     @Column(nullable = false, unique = true, length = 100)
     private String paystackReference;

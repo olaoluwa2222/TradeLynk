@@ -45,19 +45,27 @@ public class PaymentController {
      * POST /api/payments/initialize
      * Initialize a payment transaction (authenticated)
      */
+    /**
+     * POST /api/payments/initialize
+     * Initialize a payment transaction with VARIANT SUPPORT
+     *
+     * ✅ UPDATED: Now accepts variantId for variable products
+     */
     @PostMapping("/initialize")
     public ResponseEntity<Map<String, Object>> initializePayment(
             @Valid @RequestBody InitializePaymentRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        log.info("POST /api/payments/initialize - User: {} initiating payment for item: {}",
-                userPrincipal.getEmail(), request.getItemId());
+        log.info("POST /api/payments/initialize - User: {} initiating payment for item: {}, variant: {}",
+                userPrincipal.getEmail(), request.getItemId(), request.getVariantId());
 
+        // ✅ UPDATED: Pass variantId to service
         InitializePaymentResponse response = paystackService.initializePayment(
                 request.getItemId(),
+                request.getVariantId(), // ✅ NEW parameter
                 userPrincipal.getId(),
                 request.getAmount(),
-                request.getDeliveryAddress() // ✅ NEW: Pass delivery address
+                request.getDeliveryAddress()
         );
 
         Map<String, Object> result = new HashMap<>();
