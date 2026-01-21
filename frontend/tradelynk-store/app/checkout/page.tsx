@@ -177,9 +177,14 @@ function CheckoutContent() {
 
     try {
       // Prepare payment data
+      // ✅ Divide amount by 100: Convert from kobo to naira
+      const amountInNaira = selectedVariant
+        ? Math.floor(selectedVariant.price / 100)
+        : Math.floor(item.price / 100);
+
       const paymentData: any = {
         itemId: item.id,
-        amount: selectedVariant ? selectedVariant.price : item.price,
+        amount: amountInNaira, // ✅ NOW in naira (e.g., 1500000 instead of 150000000)
         deliveryAddress: deliveryAddress.trim(),
       };
 
