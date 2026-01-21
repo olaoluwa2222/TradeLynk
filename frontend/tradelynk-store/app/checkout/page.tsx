@@ -21,6 +21,17 @@ interface ItemDetails {
   quantity: number;
   imageUrls: string[];
   status: string;
+  // Variant-related fields
+  hasVariants?: boolean;
+  totalStock?: number;
+  isInStock?: boolean;
+  variants?: Array<{
+    id: number;
+    stock: number;
+    isInStock: boolean;
+    variantName: string;
+    price: number;
+  }>;
 }
 
 function CheckoutContent() {
@@ -69,7 +80,15 @@ function CheckoutContent() {
           }
 
           // Check if item is sold out
-          if (itemData.quantity <= 0) {
+          // For items with variants, use totalStock or isInStock
+          // For items without variants, use quantity
+          const isOutOfStock = itemData.hasVariants
+            ? itemData.totalStock !== undefined
+              ? itemData.totalStock <= 0
+              : !itemData.isInStock
+            : itemData.quantity <= 0;
+
+          if (isOutOfStock) {
             setError("This item is sold out");
             setLoading(false);
             return;
@@ -139,7 +158,7 @@ function CheckoutContent() {
     } catch (err: any) {
       console.error("Payment initialization error:", err);
       setValidationError(
-        err.message || "Failed to initialize payment. Please try again."
+        err.message || "Failed to initialize payment. Please try again.",
       );
       setPaymentLoading(false);
     }
