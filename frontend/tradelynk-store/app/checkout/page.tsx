@@ -29,6 +29,8 @@ interface ItemDetails {
     id: number;
     stock: number;
     isInStock: boolean;
+    isLowStock?: boolean;
+    isDefault?: boolean;
     variantName: string;
     price: number;
   }>;
@@ -42,6 +44,15 @@ function CheckoutContent() {
   const itemId = searchParams.get("itemId");
 
   const [item, setItem] = useState<ItemDetails | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<{
+    id: number;
+    stock: number;
+    isInStock: boolean;
+    isLowStock?: boolean;
+    isDefault?: boolean;
+    variantName: string;
+    price: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -102,6 +113,17 @@ function CheckoutContent() {
           }
 
           setItem(itemData);
+          // Set default variant for items with variants
+          if (
+            itemData.hasVariants &&
+            itemData.variants &&
+            itemData.variants.length > 0
+          ) {
+            const defaultVariant =
+              itemData.variants.find((v: any) => v.isDefault) ||
+              itemData.variants[0];
+            setSelectedVariant(defaultVariant);
+          }
         } else {
           setError(data.message || "Failed to load item");
         }
@@ -136,16 +158,38 @@ function CheckoutContent() {
       return;
     }
 
+    // Check if variant is required but not selected
+    if (item.hasVariants && !selectedVariant) {
+      setValidationError("Please select a variant before checking out");
+      return;
+    }
+
+    // Validate selected variant has stock
+    if (selectedVariant && !selectedVariant.isInStock) {
+      setValidationError(
+        "Selected variant is out of stock. Please choose another.",
+      );
+      return;
+    }
+
     setValidationError("");
     setPaymentLoading(true);
 
     try {
-      // Initialize payment
-      const response = await paymentsApi.initializePayment({
+      // Prepare payment data
+      const paymentData: any = {
         itemId: item.id,
-        amount: item.price,
+        amount: selectedVariant ? selectedVariant.price : item.price,
         deliveryAddress: deliveryAddress.trim(),
-      });
+      };
+
+      // Add variantId if item has variants
+      if (item.hasVariants && selectedVariant) {
+        paymentData.variantId = selectedVariant.id;
+      }
+
+      // Initialize payment
+      const response = await paymentsApi.initializePayment(paymentData);
 
       console.log("Payment response:", response);
 
@@ -341,6 +385,87 @@ function CheckoutContent() {
                   >
                     {item.description}
                   </p>
+
+                  {/* Variant Selector */}
+                  {item.hasVariants &&
+                    item.variants &&
+                    item.variants.length > 0 && (
+                      <div className="mb-4 p-3 bg-white rounded-lg border border-gray-300">
+                        <p
+                          className="text-xs font-semibold text-gray-700 mb-2"
+                          style={{
+                            fontFamily: "Clash Display",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Select Variant:
+                        </p>
+                        <div className="space-y-2">
+                          {item.variants.map((variant) => (
+                            <button
+                              key={variant.id}
+                              onClick={() => {
+                                if (variant.isInStock) {
+                                  setSelectedVariant(variant);
+                                  setValidationError("");
+                                }
+                              }}
+                              disabled={!variant.isInStock}
+                              className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                                selectedVariant?.id === variant.id
+                                  ? "border-black bg-gray-50"
+                                  : variant.isInStock
+                                    ? "border-gray-200 hover:border-gray-400"
+                                    : "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p
+                                    className="font-medium text-sm"
+                                    style={{
+                                      fontFamily: "Clash Display",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {variant.variantName}
+                                  </p>
+                                  <p
+                                    className={`text-xs ${
+                                      variant.isInStock
+                                        ? variant.isLowStock
+                                          ? "text-orange-600"
+                                          : "text-green-600"
+                                        : "text-red-600"
+                                    }`}
+                                    style={{
+                                      fontFamily: "Clash Display",
+                                      fontWeight: 400,
+                                    }}
+                                  >
+                                    {variant.isInStock
+                                      ? variant.isLowStock
+                                        ? `Only ${variant.stock} left`
+                                        : `${variant.stock} in stock`
+                                      : "Out of stock"}
+                                  </p>
+                                </div>
+                                <p
+                                  className="font-bold"
+                                  style={{
+                                    fontFamily: "Clash Display",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  ₦{(variant.price / 100).toLocaleString()}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                   <p
                     className="text-2xl font-bold text-black"
                     style={{
@@ -348,7 +473,10 @@ function CheckoutContent() {
                       fontWeight: 700,
                     }}
                   >
-                    ₦{(item.price / 100).toLocaleString()}
+                    ₦
+                    {(
+                      (selectedVariant?.price || item.price) / 100
+                    ).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -536,7 +664,10 @@ function CheckoutContent() {
                       fontWeight: 600,
                     }}
                   >
-                    ₦{(item.price / 100).toLocaleString()}
+                    ₦
+                    {(
+                      (selectedVariant?.price || item.price) / 100
+                    ).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex justify-between items-center">
@@ -576,7 +707,10 @@ function CheckoutContent() {
                       fontWeight: 700,
                     }}
                   >
-                    ₦{(item.price / 100).toLocaleString()}
+                    ₦
+                    {(
+                      (selectedVariant?.price || item.price) / 100
+                    ).toLocaleString()}
                   </p>
                 </div>
               </div>
