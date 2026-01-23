@@ -70,7 +70,7 @@ export default function Home() {
             };
           }
           return item;
-        })
+        }),
       );
     } catch (error) {
       console.error("Error toggling like:", error);
@@ -574,7 +574,7 @@ export default function Home() {
                                   fontWeight: 700,
                                 }}
                               >
-                                ₦{item.price?.toLocaleString()}
+                                ₦{(item.price / 100)?.toLocaleString()}
                               </p>
                             </div>
 

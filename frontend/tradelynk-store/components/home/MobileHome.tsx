@@ -174,7 +174,7 @@ export default function MobileHome({
                             fontWeight: 700,
                           }}
                         >
-                          ₦{item.price?.toLocaleString()}
+                          ₦{(item.price / 100)?.toLocaleString()}
                         </p>
 
                         {/* Stats */}

@@ -18,13 +18,19 @@ import {
   Loader2,
   Save,
   Eye,
+  Sparkles,
 } from "lucide-react";
 import { ImageUploader, UploadedImage } from "./ImageUploader";
 import {
   VariantBuilderModern as VariantBuilder,
   Variant,
 } from "./VariantBuilderModern";
-import { itemsApi, collectionsApi, shippingProfilesApi } from "@/lib/api";
+import {
+  itemsApi,
+  collectionsApi,
+  shippingProfilesApi,
+  aiApi,
+} from "@/lib/api";
 import { CreateItemInput, ItemCategory, ItemCondition } from "@/types/items";
 import { CollectionModal } from "@/components/collections";
 
@@ -161,6 +167,53 @@ export function ProductForm({ initialData, itemId, mode }: ProductFormProps) {
     notes: "",
   });
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+
+  // AI Improvement state
+  const [isImprovingDescription, setIsImprovingDescription] = useState(false);
+  const [improveError, setImproveError] = useState<string | null>(null);
+
+  // Handle AI improve description
+  const handleImproveDescription = async () => {
+    const description = formData.description.trim();
+    if (!description || description.length < 10) {
+      setImproveError("Please write at least 10 characters before improving.");
+      return;
+    }
+
+    try {
+      setIsImprovingDescription(true);
+      setImproveError(null);
+
+      const response = await aiApi.improveText(description, "bio");
+
+      if (response.success && response.data?.improvedText) {
+        updateFormData({ description: response.data.improvedText });
+        toast.success("Description improved!");
+      } else {
+        setImproveError(
+          response.message ||
+            "Failed to improve description. Please try again.",
+        );
+      }
+    } catch (err: any) {
+      console.error("AI improvement error:", err);
+      if (err.response?.status === 503) {
+        setImproveError(
+          "AI service is temporarily unavailable. Please try again later.",
+        );
+      } else if (err.response?.status === 429) {
+        setImproveError(
+          "Too many requests. Please wait a moment and try again.",
+        );
+      } else {
+        setImproveError(
+          "Failed to improve description. Please check your connection.",
+        );
+      }
+    } finally {
+      setIsImprovingDescription(false);
+    }
+  };
 
   // Fetch seller's collections and shipping profiles on mount
   useEffect(() => {
@@ -749,6 +802,37 @@ export function ProductForm({ initialData, itemId, mode }: ProductFormProps) {
                 <p className="text-xs text-gray-500">
                   {formData.description.length} characters
                 </p>
+              </div>
+
+              {/* AI Improve Button */}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleImproveDescription}
+                  disabled={
+                    isImprovingDescription || formData.description.length < 10
+                  }
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                  style={{ fontFamily: "Clash Display" }}
+                >
+                  {isImprovingDescription ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Improving...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} />
+                      Improve with AI
+                    </>
+                  )}
+                </button>
+                {improveError && (
+                  <p className="mt-2 text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle size={14} />
+                    {improveError}
+                  </p>
+                )}
               </div>
             </div>
 
