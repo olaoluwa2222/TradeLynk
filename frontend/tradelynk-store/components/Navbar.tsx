@@ -20,6 +20,12 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  // Detect touch device
+  useEffect(() => {
+    setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   // Hide navbar on storefront pages (they have their own navigation)
   const isStorefrontPage = pathname?.startsWith("/sellers/");
@@ -94,7 +100,7 @@ export default function Navbar() {
         const ordersResponse = await ordersApi.getMyPurchases(0, 100);
         if (ordersResponse.success && Array.isArray(ordersResponse.data)) {
           const pendingCount = ordersResponse.data.filter(
-            (order: any) => order.status === "PENDING_DELIVERY"
+            (order: any) => order.status === "PENDING_DELIVERY",
           ).length;
           setPendingOrders(pendingCount);
         }
@@ -155,24 +161,30 @@ export default function Navbar() {
 
   // Click outside to close dropdown
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target as Node)
-      ) {
-        setShowProfileDropdown(false);
-      }
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      // Small delay to allow click events to process first
+      setTimeout(() => {
+        if (
+          profileRef.current &&
+          !profileRef.current.contains(event.target as Node)
+        ) {
+          setShowProfileDropdown(false);
+        }
+        if (
+          searchRef.current &&
+          !searchRef.current.contains(event.target as Node)
+        ) {
+          setShowSuggestions(false);
+        }
+      }, 10);
     };
 
+    // Use touchend for mobile and mousedown for desktop
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchend", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchend", handleClickOutside);
     };
   }, []);
 
@@ -263,8 +275,8 @@ export default function Navbar() {
                                   setShowSuggestions(false);
                                   router.push(
                                     `/items?search=${encodeURIComponent(
-                                      suggestion
-                                    )}`
+                                      suggestion,
+                                    )}`,
                                   );
                                 }}
                                 className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 flex items-start gap-3 text-sm"
@@ -393,20 +405,37 @@ export default function Navbar() {
                 ref={profileRef}
                 className="relative flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-gray-300"
                 onMouseEnter={() => {
-                  if (dropdownTimeoutRef.current) {
-                    clearTimeout(dropdownTimeoutRef.current);
-                    dropdownTimeoutRef.current = null;
+                  // Only use hover on non-touch devices
+                  if (!isTouchDevice) {
+                    if (dropdownTimeoutRef.current) {
+                      clearTimeout(dropdownTimeoutRef.current);
+                      dropdownTimeoutRef.current = null;
+                    }
+                    setShowProfileDropdown(true);
                   }
-                  setShowProfileDropdown(true);
                 }}
                 onMouseLeave={() => {
-                  dropdownTimeoutRef.current = setTimeout(() => {
-                    setShowProfileDropdown(false);
-                  }, 300);
+                  // Only use hover on non-touch devices
+                  if (!isTouchDevice) {
+                    dropdownTimeoutRef.current = setTimeout(() => {
+                      setShowProfileDropdown(false);
+                    }, 300);
+                  }
                 }}
               >
                 {/* Profile Button */}
-                <button className="flex items-center gap-2 hover:opacity-75 transition-opacity py-2">
+                <button
+                  className="flex items-center gap-2 hover:opacity-75 transition-opacity py-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Toggle on click for touch devices, or always allow click
+                    setShowProfileDropdown(!showProfileDropdown);
+                  }}
+                  onTouchEnd={(e) => {
+                    // Prevent ghost click on mobile
+                    e.stopPropagation();
+                  }}
+                >
                   <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center shrink-0">
                     <span className="text-white font-bold text-sm">
                       {user?.name?.charAt(0).toUpperCase()}
@@ -444,7 +473,11 @@ export default function Navbar() {
 
                 {/* Profile Dropdown Menu */}
                 {showProfileDropdown && (
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-300 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div
+                    className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-300 rounded-lg shadow-xl z-50 overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                  >
                     {/* My Profile */}
                     <Link
                       href="/profile"
@@ -479,8 +512,8 @@ export default function Navbar() {
                         sellerUsername
                           ? `/sellers/${sellerUsername}`
                           : isSeller
-                          ? "#" // Loading state - seller but username not loaded yet
-                          : "/become-a-seller"
+                            ? "#" // Loading state - seller but username not loaded yet
+                            : "/become-a-seller"
                       }
                       onClick={(e) => {
                         setShowProfileDropdown(false);
@@ -488,7 +521,7 @@ export default function Navbar() {
                         if (isSeller && !sellerUsername) {
                           e.preventDefault();
                           console.log(
-                            "🏪 Waiting for storefront username to load..."
+                            "🏪 Waiting for storefront username to load...",
                           );
                         }
                       }}
