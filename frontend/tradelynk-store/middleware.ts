@@ -143,37 +143,42 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Handle www redirect → main domain (SEO best practice)
+  // STEP 1: Handle www redirect → main domain (ONE-TIME, then stop)
   if (host === `www.${ROOT_DOMAIN}`) {
-    const newUrl = new URL(request.url);
-    newUrl.host = ROOT_DOMAIN;
-    return NextResponse.redirect(newUrl, { status: 308 });
+    const redirectUrl = url.clone();
+    redirectUrl.host = ROOT_DOMAIN;
+    return NextResponse.redirect(redirectUrl, { status: 301 });
   }
 
-  // Get subdomain if present
-  const subdomain = getSubdomain(hostname);
+  // STEP 2: If on main domain, check for legacy /sellers/ redirects, otherwise let through
+  if (host === ROOT_DOMAIN) {
+    // Handle legacy /sellers/[username] URLs - redirect to subdomain
+    if (USE_SUBDOMAINS) {
+      const sellersMatch = pathname.match(/^\/sellers\/([^\/]+)(\/.*)?$/);
 
-  // Handle legacy /sellers/[username] URLs on main domain
-  // Only redirect if USE_SUBDOMAINS is enabled and we're on main domain
-  if (USE_SUBDOMAINS && !subdomain && host === ROOT_DOMAIN) {
-    const sellersMatch = pathname.match(/^\/sellers\/([^\/]+)(\/.*)?$/);
+      if (sellersMatch) {
+        const sellerUsername = sellersMatch[1];
+        const remainingPath = sellersMatch[2] || "";
 
-    if (sellersMatch) {
-      const sellerUsername = sellersMatch[1];
-      const remainingPath = sellersMatch[2] || "";
-
-      // Skip if the username looks like a reserved word or internal route
-      if (!RESERVED_SUBDOMAINS.has(sellerUsername.toLowerCase())) {
-        // Redirect to subdomain version
-        const newUrl = `https://${sellerUsername}.${ROOT_DOMAIN}${remainingPath}${url.search}`;
-
-        // Use 308 (permanent redirect) for SEO - keeps POST as POST
-        return NextResponse.redirect(newUrl, { status: 308 });
+        // Skip if the username is reserved
+        if (!RESERVED_SUBDOMAINS.has(sellerUsername.toLowerCase())) {
+          // Redirect to subdomain version
+          const redirectUrl = url.clone();
+          redirectUrl.host = `${sellerUsername}.${ROOT_DOMAIN}`;
+          redirectUrl.pathname = remainingPath || "/";
+          return NextResponse.redirect(redirectUrl, { status: 301 });
+        }
       }
     }
+
+    // Main domain - let it through to homepage/app
+    return NextResponse.next();
   }
 
-  // Handle subdomain routing - rewrite to internal path
+  // STEP 3: Get subdomain if present
+  const subdomain = getSubdomain(hostname);
+
+  // STEP 4: Handle subdomain routing - rewrite to internal /sellers/[username] path
   if (subdomain) {
     // Rewrite to the sellers/[username] page internally
     // This keeps the subdomain URL in browser but serves the storefront page
@@ -207,7 +212,7 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // No subdomain - continue with normal routing
+  // STEP 5: No subdomain - continue with normal routing
   return NextResponse.next();
 }
 
