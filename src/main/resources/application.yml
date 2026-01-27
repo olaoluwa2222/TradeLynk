@@ -160,6 +160,7 @@ cors:
 #   allowed-origins: http://localhost:3000,http://localhost:8080
 #   allow-credentials: true
 #   max-age: 3600
+#   try to redeploy
 
 # PHASE 3: Production (Uncomment this, comment others)
 # cors:

@@ -163,6 +163,7 @@ public class SellerProfileController {
      * GET /api/sellers/{username}/storefront
      * Get seller's public storefront (by username)
      * This is the main endpoint for the public storefront page
+     * seems like this did nt deploy
      */
     @GetMapping("/{username}/storefront")
     public ResponseEntity<Map<String, Object>> getStorefrontByUsername(
