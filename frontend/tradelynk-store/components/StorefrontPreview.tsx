@@ -95,7 +95,7 @@ export default function StorefrontPreview({
               <div className="flex-1 mx-2">
                 <div className="bg-white rounded h-3 flex items-center px-2">
                   <span className="text-[6px] text-gray-400 truncate">
-                    tradelynk.com/sellers/{username || "yourstore"}
+                    {username || "yourstore"}.tradelynk.app
                   </span>
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function StorefrontPreview({
                 </div>
                 <div className="bg-gray-700 rounded-lg px-3 py-1.5 flex items-center">
                   <span className="text-xs text-gray-300">
-                    tradelynk.com/sellers/{username || "yourstore"}
+                    {username || "yourstore"}.tradelynk.app
                   </span>
                 </div>
               </div>

@@ -3,9 +3,14 @@
 
 import { useState, FormEvent, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding, UserIntent } from "@/lib/hooks/useOnboarding";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { UserIntentSelector } from "@/components/onboarding";
+
+// Registration steps
+type RegistrationStep = "form" | "intent" | "verification";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -13,11 +18,12 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>("form");
   const { register, isAuthenticated, resendVerification } = useAuth();
+  const { setUserIntent } = useOnboarding();
   const router = useRouter();
 
   const images = [
@@ -36,9 +42,15 @@ export default function RegisterPage() {
   // ✅ Check for pending verification on mount
   useEffect(() => {
     const pendingEmail = localStorage.getItem("pendingVerificationEmail");
-    if (pendingEmail && !success) {
+    const pendingIntent = localStorage.getItem("pendingIntent");
+    if (pendingEmail && currentStep === "form") {
       setEmail(pendingEmail);
-      setSuccess(true); // Show success state with resend option
+      // If they already selected intent, go to verification
+      if (pendingIntent) {
+        setCurrentStep("verification");
+      } else {
+        setCurrentStep("intent");
+      }
     }
   }, []);
 
@@ -91,13 +103,20 @@ export default function RegisterPage() {
   // ✅ Clear pending verification when navigating to login
   const handleGoToLogin = () => {
     localStorage.removeItem("pendingVerificationEmail");
+    localStorage.removeItem("pendingIntent");
     router.push("/login");
+  };
+
+  // Handle intent selection
+  const handleIntentSelect = (intent: UserIntent) => {
+    setUserIntent(intent);
+    localStorage.setItem("pendingIntent", intent || "");
+    setCurrentStep("verification");
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccess(false);
 
     // Validation
     if (!email || !name || !password || !confirmPassword) {
@@ -130,9 +149,10 @@ export default function RegisterPage() {
 
     try {
       await register(email, name, password);
-      setSuccess(true);
       // ✅ Store email in localStorage for recovery if page reloads
       localStorage.setItem("pendingVerificationEmail", email);
+      // Move to intent selection step
+      setCurrentStep("intent");
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
     } finally {
@@ -162,31 +182,64 @@ export default function RegisterPage() {
 
         {/* Form Container */}
         <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="mb-8">
-            <h2
-              className="text-4xl font-bold text-black mb-2"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 700,
-              }}
-            >
-              Create Account
-            </h2>
-            <p
-              className="text-gray-600 text-sm"
-              style={{
-                fontFamily: "Clash Display",
-                fontWeight: 400,
-              }}
-            >
-              Start buying and selling with ease
-            </p>
-          </div>
+          {/* Dynamic Header based on step */}
+          {currentStep === "form" && (
+            <div className="mb-8">
+              <h2
+                className="text-4xl font-bold text-black mb-2"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 700,
+                }}
+              >
+                Create Account
+              </h2>
+              <p
+                className="text-gray-600 text-sm"
+                style={{
+                  fontFamily: "Clash Display",
+                  fontWeight: 400,
+                }}
+              >
+                Start buying and selling with ease
+              </p>
+            </div>
+          )}
 
-          {/* Form */}
-          {success ? (
-            // Success Message
+          {currentStep === "intent" && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+                <span
+                  className="text-sm text-green-600 font-medium"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 500,
+                  }}
+                >
+                  Account created successfully!
+                </span>
+              </div>
+              <UserIntentSelector onSelect={handleIntentSelect} />
+            </div>
+          )}
+
+          {currentStep === "verification" && (
+            // Verification Message
             <div className="text-center py-8">
               <div className="mb-6 bg-green-50 rounded-lg p-6 border border-green-200">
                 <div className="mb-4">
@@ -294,7 +347,9 @@ export default function RegisterPage() {
                 </button>
               </div>
             </div>
-          ) : (
+          )}
+
+          {currentStep === "form" && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Error Message */}
               {error && (
@@ -414,7 +469,7 @@ export default function RegisterPage() {
           )}
 
           {/* Sign In Link */}
-          {!success && (
+          {currentStep === "form" && (
             <div className="mt-8 text-center">
               <p
                 className="text-sm text-gray-600"

@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { analyticsApi, ordersApi } from "@/lib/api";
+import { useOnboarding } from "@/lib/hooks/useOnboarding";
+import { analyticsApi, ordersApi, sellersApi } from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductsTable } from "@/components/product";
 import { CollectionManager } from "@/components/collections";
+import { OnboardingChecklist } from "@/components/onboarding";
 import {
   LayoutDashboard,
   Package,
@@ -92,6 +94,7 @@ const ChartSkeleton = () => (
 
 export default function SellerDashboard() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { markStorefrontCreated, markFirstProductAdded } = useOnboarding();
   const router = useRouter();
 
   const [analytics, setAnalytics] = useState<SellerAnalytics | null>(null);
@@ -100,10 +103,18 @@ export default function SellerDashboard() {
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
+  const [sellerUsername, setSellerUsername] = useState<string | null>(null);
 
   // Check if user is seller
   const isSeller =
     user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
+
+  // Mark storefront as created when user is a seller
+  useEffect(() => {
+    if (isSeller) {
+      markStorefrontCreated();
+    }
+  }, [isSeller, markStorefrontCreated]);
 
   // Redirect logic
   useEffect(() => {
@@ -127,6 +138,20 @@ export default function SellerDashboard() {
         const analyticsResponse = await analyticsApi.getSellerAnalytics();
         if (analyticsResponse.success && analyticsResponse.data) {
           setAnalytics(analyticsResponse.data);
+          // Mark first product added if they have items
+          if (analyticsResponse.data.totalItemsPosted > 0) {
+            markFirstProductAdded();
+          }
+        }
+
+        // Fetch seller profile for username
+        try {
+          const profileResponse = await sellersApi.getMySellerProfile();
+          if (profileResponse.success && profileResponse.data?.username) {
+            setSellerUsername(profileResponse.data.username);
+          }
+        } catch (err) {
+          console.error("Error fetching seller profile:", err);
         }
 
         // Fetch sales for revenue chart
@@ -507,6 +532,14 @@ export default function SellerDashboard() {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <>
+            {/* Onboarding Checklist - Show for new sellers */}
+            <div className="mb-8">
+              <OnboardingChecklist
+                variant="inline"
+                sellerUsername={sellerUsername}
+              />
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {/* Revenue Card - Black background */}

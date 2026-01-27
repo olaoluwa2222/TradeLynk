@@ -19,6 +19,22 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // Enable subdomain routing
+  async headers() {
+    return [
+      {
+        // Apply to all routes
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

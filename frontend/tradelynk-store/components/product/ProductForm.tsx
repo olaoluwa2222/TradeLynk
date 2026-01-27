@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useOnboarding } from "@/lib/hooks/useOnboarding";
 import {
   ChevronLeft,
   ChevronRight,
@@ -131,6 +132,7 @@ interface ProductFormProps {
 
 export function ProductForm({ initialData, itemId, mode }: ProductFormProps) {
   const router = useRouter();
+  const { markFirstProductAdded } = useOnboarding();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -478,6 +480,11 @@ export function ProductForm({ initialData, itemId, mode }: ProductFormProps) {
       }
 
       if (response?.success) {
+        // Mark first product added for onboarding
+        if (mode === "create") {
+          markFirstProductAdded();
+        }
+        
         toast.success(
           mode === "create"
             ? "Product created successfully!"

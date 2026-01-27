@@ -23,6 +23,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { getSellerUrl } from "@/lib/utils/sellerUrls";
 import {
   Item,
   ProductVariant,
@@ -407,7 +408,7 @@ export function ProductDetail({
                 <p className="text-xs text-gray-500">@{item.sellerUsername}</p>
               </div>
               <Link
-                href={`/sellers/${item.sellerUsername}`}
+                href={getSellerUrl(item.sellerUsername)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1"
               >
                 View Store

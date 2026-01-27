@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/lib/hooks/useOnboarding";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { sellersApi } from "@/lib/api";
@@ -13,6 +14,7 @@ import { Theme } from "@/types/seller";
 
 export default function BecomeASellerPage() {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const { markStorefrontCreated } = useOnboarding();
   const router = useRouter();
 
   // Redirect existing sellers away from this page
@@ -463,6 +465,7 @@ export default function BecomeASellerPage() {
         isAuthenticated={isAuthenticated}
         router={router}
         userName={user?.name || ""}
+        onStorefrontCreated={markStorefrontCreated}
       />
     </div>
   );
@@ -473,10 +476,12 @@ function SellerActivationForm({
   isAuthenticated,
   router,
   userName,
+  onStorefrontCreated,
 }: {
   isAuthenticated: boolean;
   router: ReturnType<typeof useRouter>;
   userName: string;
+  onStorefrontCreated: () => void;
 }) {
   const [banks, setBanks] = useState<Array<{ code: string; name: string }>>([]);
 
@@ -555,7 +560,7 @@ function SellerActivationForm({
       if (!validFormat) {
         setUsernameStatus("idle");
         setUsernameError(
-          "Only lowercase letters, numbers, and hyphens allowed"
+          "Only lowercase letters, numbers, and hyphens allowed",
         );
         return;
       }
@@ -592,7 +597,7 @@ function SellerActivationForm({
           setValidationStatus("validating");
           const data = await sellersApi.validateAccount(
             accountNumber,
-            bankCode
+            bankCode,
           );
 
           if (data.success) {
@@ -633,7 +638,7 @@ function SellerActivationForm({
   const handleThemeChange = (
     theme: Theme,
     primary: string,
-    secondary: string
+    secondary: string,
   ) => {
     setSelectedTheme(theme);
     setPrimaryColor(primary);
@@ -725,6 +730,8 @@ function SellerActivationForm({
 
       if (data.success) {
         setSuccess(true);
+        // Mark storefront as created in onboarding
+        onStorefrontCreated();
         setTimeout(() => {
           router.push("/dashboard/seller");
         }, 2000);
@@ -918,7 +925,7 @@ function SellerActivationForm({
                                   ...new Set(invalidChars),
                                 ].join(", ");
                                 setLinkValidationError(
-                                  `Invalid characters: "${uniqueInvalid}" — Only lowercase letters (a-z), numbers (0-9), and hyphens (-) are allowed in your store link.`
+                                  `Invalid characters: "${uniqueInvalid}" — Only lowercase letters (a-z), numbers (0-9), and hyphens (-) are allowed in your store link.`,
                                 );
                               } else {
                                 setLinkValidationError("");
@@ -1264,7 +1271,7 @@ function SellerActivationForm({
                         value={phoneNumber}
                         onChange={(e) =>
                           setPhoneNumber(
-                            e.target.value.replace(/\D/g, "").slice(0, 11)
+                            e.target.value.replace(/\D/g, "").slice(0, 11),
                           )
                         }
                         placeholder="08012345678"
@@ -1294,7 +1301,7 @@ function SellerActivationForm({
                         value={whatsappNumber}
                         onChange={(e) =>
                           setWhatsappNumber(
-                            e.target.value.replace(/\D/g, "").slice(0, 11)
+                            e.target.value.replace(/\D/g, "").slice(0, 11),
                           )
                         }
                         placeholder="08012345678"
@@ -1328,7 +1335,7 @@ function SellerActivationForm({
                           value={instagramHandle}
                           onChange={(e) =>
                             setInstagramHandle(
-                              e.target.value.replace(/[^a-zA-Z0-9_.]/g, "")
+                              e.target.value.replace(/[^a-zA-Z0-9_.]/g, ""),
                             )
                           }
                           placeholder="yourusername"
@@ -1361,7 +1368,7 @@ function SellerActivationForm({
                           value={twitterHandle}
                           onChange={(e) =>
                             setTwitterHandle(
-                              e.target.value.replace(/[^a-zA-Z0-9_]/g, "")
+                              e.target.value.replace(/[^a-zA-Z0-9_]/g, ""),
                             )
                           }
                           placeholder="yourusername"
@@ -1464,7 +1471,7 @@ function SellerActivationForm({
                       value={bankName}
                       onChange={(e) => {
                         const selected = banks.find(
-                          (b) => b.name === e.target.value
+                          (b) => b.name === e.target.value,
                         );
                         setBankName(e.target.value);
                         setBankCode(selected?.code || "");

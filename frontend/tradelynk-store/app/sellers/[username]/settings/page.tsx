@@ -126,7 +126,7 @@ export default function StorefrontSettingsPage() {
   const handleThemeChange = (
     theme: Theme,
     primary: string,
-    secondary: string
+    secondary: string,
   ) => {
     setSelectedTheme(theme);
     setPrimaryColor(primary);
@@ -359,11 +359,8 @@ export default function StorefrontSettingsPage() {
                       Store URL
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">
-                        tradelynk.com/sellers/
-                      </span>
                       <span className="font-medium text-gray-900">
-                        {profile?.username}
+                        {profile?.username}.tradelynk.app
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
