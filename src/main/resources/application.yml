@@ -151,7 +151,7 @@ logging:
 
 # PHASE 1: Postman Testing Only (Current Stage)
 cors:
-  allowed-origins: http://localhost:8080,http://localhost:3000,https://tradelynk-api-t598w.ondigitalocean.app,https://trade-lynk-ten.vercel.app,https://www.tradelynk.app
+  allowed-origins: http://localhost:8080,http://localhost:3000,https://tradelynk-api-t598w.ondigitalocean.app,https://trade-lynk-ten.vercel.app,https://www.tradelynk.app,https://www.tradelynk.app
   allow-credentials: true
   max-age: 3600
 

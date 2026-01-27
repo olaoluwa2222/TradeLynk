@@ -7,6 +7,7 @@ import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
 import com.codewithola.tradelynkapi.dtos.response.StorefrontResponse;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.SellerProfileService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -176,6 +177,54 @@ public class SellerProfileController {
         response.put("data", storefront);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET / (with subdomain)
+     * Handle subdomain-based storefront requests
+     * Example: qvnanniezbtq.tradelynk.app → username = qvnanniezbtq
+     */
+    @GetMapping("/")
+    public ResponseEntity<Map<String, Object>> getStorefrontBySubdomain(
+            HttpServletRequest request) {
+
+        String host = request.getHeader("Host");
+        log.info("Request host: {}", host);
+
+        // Extract subdomain
+        String subdomain = extractSubdomain(host);
+
+        if (subdomain != null && !subdomain.equals("www")) {
+            log.info("Subdomain detected: {} - Serving storefront", subdomain);
+            return getStorefrontByUsername(subdomain);
+        }
+
+        // Not a subdomain request - return error or redirect
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("message", "Invalid subdomain");
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Helper method to extract subdomain from host
+     */
+    private String extractSubdomain(String host) {
+        if (host == null) return null;
+
+        // Remove port if present
+        host = host.split(":")[0];
+
+        // Split by dots
+        String[] parts = host.split("\\.");
+
+        // tradelynk.app = 2 parts (no subdomain)
+        // qvnanniezbtq.tradelynk.app = 3 parts (subdomain = qvnanniezbtq)
+        if (parts.length >= 3) {
+            return parts[0]; // Return subdomain
+        }
+
+        return null; // No subdomain
     }
 
 }
