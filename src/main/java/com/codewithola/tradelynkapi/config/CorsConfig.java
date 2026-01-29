@@ -25,7 +25,8 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        // ✅ CHANGED: Use setAllowedOriginPatterns instead of setAllowedOrigins
+        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
 
         configuration.setAllowedMethods(Arrays.asList(
                 "GET",
@@ -46,7 +47,7 @@ public class CorsConfig {
                 "Origin",
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers",
-                "ngrok-skip-browser-warning" // ✅ For ngrok warning bypass
+                "ngrok-skip-browser-warning"
         ));
 
         configuration.setExposedHeaders(Arrays.asList(
