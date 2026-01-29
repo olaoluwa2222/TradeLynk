@@ -14,6 +14,9 @@ server:
 # Spring Configuration
 # ============================================
 spring:
+  main:
+    lazy-initialization: true
+
   application:
     name: tradeLynkApi
 
