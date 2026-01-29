@@ -57,7 +57,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
 
-                        // ✅✅✅ WEBHOOK ENDPOINTS - MUST BE BEFORE anyRequest() ✅✅✅
+                        // ✅ Webhook endpoints
                         .requestMatchers("/payments/webhook").permitAll()
                         .requestMatchers("/payments/webhook/**").permitAll()
 
@@ -66,22 +66,18 @@ public class SecurityConfig {
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
 
-                        // ✅ Item endpoints
+                        // ✅ Item endpoints (public read, auth write)
                         .requestMatchers(HttpMethod.GET, "/items/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/items/suggestions").permitAll()
 
-                        // ✅ Seller endpoints
-                        .requestMatchers(HttpMethod.GET, "/sellers/*/profile").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/sellers/*/storefront").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/sellers/*/items").permitAll()
+                        // ✅ Seller endpoints (public read ONLY)
                         .requestMatchers(HttpMethod.GET, "/sellers/banks").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/sellers/**").permitAll()  // ← SAFE: Only GET requests
 
                         // ✅ Documentation
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                         // ✅ Admin endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/health/**").hasRole("ADMIN")
 
                         // ✅ All other endpoints require authentication
                         .anyRequest().authenticated()
