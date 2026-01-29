@@ -160,10 +160,23 @@ public class SellerProfileController {
     }
 
     /**
+     * GET /api/sellers/{username}
+     * Alias for storefront endpoint (supports subdomain routing)
+     */
+    @GetMapping("/{username}")
+    public ResponseEntity<Map<String, Object>> getStorefrontAlias(
+            @PathVariable String username) {
+
+        log.info("GET /api/sellers/{} - Fetching storefront (alias)", username);
+
+        // Reuse existing storefront method
+        return getStorefrontByUsername(username);
+    }
+
+    /**
      * GET /api/sellers/{username}/storefront
      * Get seller's public storefront (by username)
      * This is the main endpoint for the public storefront page
-     * seems like this did nt deploy
      */
     @GetMapping("/{username}/storefront")
     public ResponseEntity<Map<String, Object>> getStorefrontByUsername(
@@ -227,5 +240,4 @@ public class SellerProfileController {
 
         return null; // No subdomain
     }
-
 }
