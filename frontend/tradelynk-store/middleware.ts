@@ -48,6 +48,24 @@ const EXCLUDED_PATHS = [
   "/firebase-messaging-sw.js",
 ];
 
+// App-level routes that should NOT be rewritten on subdomains
+// These routes should redirect to the main domain instead
+const APP_ROUTES = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify",
+  "/checkout",
+  "/chat",
+  "/dashboard",
+  "/create-item",
+  "/items",
+  "/orders",
+  "/payment",
+  "/become-a-seller",
+];
+
 // ---------------- Helpers ----------------
 
 function getSubdomain(hostname: string): string | null {
@@ -76,6 +94,12 @@ function getSubdomain(hostname: string): string | null {
 
 function isExcludedPath(pathname: string): boolean {
   return EXCLUDED_PATHS.some((path) => pathname.startsWith(path));
+}
+
+function isAppRoute(pathname: string): boolean {
+  return APP_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + "/"),
+  );
 }
 
 function isDevelopment(hostname: string): boolean {
@@ -134,6 +158,16 @@ export function middleware(request: NextRequest) {
   const subdomain = getSubdomain(hostname);
 
   if (subdomain) {
+    // If user is trying to access app routes (login, register, dashboard, etc.)
+    // Redirect them to the main domain to use those features
+    if (isAppRoute(pathname)) {
+      const redirectUrl = url.clone();
+      redirectUrl.host = ROOT_DOMAIN;
+      // Keep the original path (e.g., /login stays as /login)
+      return NextResponse.redirect(redirectUrl, { status: 307 });
+    }
+
+    // Rewrite storefront paths
     if (pathname === "/" || pathname === "") {
       url.pathname = `/sellers/${subdomain}`;
     } else if (!pathname.startsWith("/sellers/")) {

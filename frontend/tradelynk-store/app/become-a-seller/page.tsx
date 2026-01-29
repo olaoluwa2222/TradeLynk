@@ -732,8 +732,10 @@ function SellerActivationForm({
         setSuccess(true);
         // Mark storefront as created in onboarding
         onStorefrontCreated();
+
+        // Redirect to the seller's storefront using subdomain format
         setTimeout(() => {
-          router.push("/dashboard/seller");
+          window.location.href = `https://${username}.tradelynk.app`;
         }, 2000);
       } else {
         setError(data.message || "Failed to activate seller account");
@@ -824,7 +826,7 @@ function SellerActivationForm({
             }}
           >
             Welcome to the seller community! Your storefront is now live at{" "}
-            <span className="font-semibold">/sellers/{username}</span>
+            <span className="font-semibold">{username}.tradelynk.app</span>
           </p>
           <p
             className="text-sm text-gray-500"
@@ -833,7 +835,7 @@ function SellerActivationForm({
               fontWeight: 400,
             }}
           >
-            Redirecting to dashboard...
+            Redirecting to your storefront...
           </p>
         </div>
       </section>
@@ -904,15 +906,6 @@ function SellerActivationForm({
                     <div className="flex flex-col sm:flex-row gap-2">
                       <div className="flex-1 relative">
                         <div className="flex items-center">
-                          <span
-                            className="inline-flex items-center px-3 py-3 bg-gray-100 border border-r-0 border-gray-300 rounded-l-lg text-gray-500 text-sm"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 400,
-                            }}
-                          >
-                            tradelynk.com/sellers/
-                          </span>
                           <input
                             type="text"
                             value={username}
@@ -935,7 +928,7 @@ function SellerActivationForm({
                             }}
                             placeholder="your-store-name"
                             maxLength={50}
-                            className={`flex-1 w-full px-4 py-3 border rounded-r-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 ${
+                            className={`flex-1 w-full px-4 py-3 border border-r-0 rounded-l-lg focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 ${
                               linkValidationError
                                 ? "border-red-500 bg-red-50"
                                 : "border-gray-300"
@@ -945,6 +938,15 @@ function SellerActivationForm({
                               fontWeight: 400,
                             }}
                           />
+                          <span
+                            className="inline-flex items-center px-3 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-gray-500 text-sm"
+                            style={{
+                              fontFamily: "Clash Display",
+                              fontWeight: 400,
+                            }}
+                          >
+                            .tradelynk.app
+                          </span>
                         </div>
                         {usernameStatus === "checking" && (
                           <div className="absolute right-3 top-3">
@@ -1014,8 +1016,8 @@ function SellerActivationForm({
                           fontWeight: 400,
                         }}
                       >
-                        Your full store link: tradelynk.com/sellers/
-                        {username || "..."}
+                        Your full store link: {username || "your-store"}
+                        .tradelynk.app
                       </p>
                       {usernameError && (
                         <p className="text-xs text-red-500">{usernameError}</p>
@@ -1630,7 +1632,7 @@ function SellerActivationForm({
                         fontWeight: 400,
                       }}
                     >
-                      <p>• I understand the 10% commission on each sale</p>
+                      <p>• I understand the 3% commission on each sale</p>
                       <p>
                         • I will only sell items allowed by marketplace policies
                       </p>
@@ -1873,7 +1875,7 @@ function SellerActivationForm({
                             fontWeight: 400,
                           }}
                         >
-                          tradelynk.com/sellers/{username || "your-store"}
+                          {username || "your-store"}.tradelynk.app
                         </p>
                       </div>
                     </div>

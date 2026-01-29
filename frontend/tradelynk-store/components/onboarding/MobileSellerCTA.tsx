@@ -64,7 +64,7 @@ export default function MobileSellerCTA() {
       };
     }
     return {
-      href: "/become-a-seller",
+      href: "/become-a-seller#form",
       text: "Create Your Free Website",
       subtext: "Takes only 2 minutes to set up",
     };

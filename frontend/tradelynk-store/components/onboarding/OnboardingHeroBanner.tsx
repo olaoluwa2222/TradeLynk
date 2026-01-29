@@ -82,7 +82,7 @@ export default function OnboardingHeroBanner({
           </p>
 
           <Link
-            href="/become-a-seller"
+            href="/become-a-seller#form"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-black font-semibold rounded-lg
                      hover:bg-gray-100 active:scale-[0.98] transition-all duration-200 group"
             style={{
@@ -193,7 +193,7 @@ export default function OnboardingHeroBanner({
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/become-a-seller"
+                href="/become-a-seller#form"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black font-bold rounded-xl
                          hover:bg-gray-100 active:scale-[0.98] transition-all duration-200 group shadow-lg"
                 style={{
