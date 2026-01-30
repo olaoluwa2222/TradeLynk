@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/lib/hooks/useOnboarding";
 import SellerWelcomeWizard from "./SellerWelcomeWizard";
 import MobileSellerCTA from "./MobileSellerCTA";
+import DesktopSellerCTA from "./DesktopSellerCTA";
 
 /**
  * OnboardingManager
@@ -45,8 +46,11 @@ export default function OnboardingManager() {
         userName={user?.name}
       />
 
-      {/* Mobile Seller CTA - sticky bottom bar for non-sellers */}
+      {/* Mobile Seller CTA - sticky bottom bar for non-sellers (mobile only) */}
       <MobileSellerCTA />
+
+      {/* Desktop Seller CTA - floating card for non-sellers (desktop only) */}
+      <DesktopSellerCTA />
     </>
   );
 }

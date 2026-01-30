@@ -41,6 +41,8 @@ const EXCLUDED_PATHS = [
   "/api",
   "/_next",
   "/static",
+  "/fonts",
+  "/public",
   "/favicon.ico",
   "/robots.txt",
   "/sitemap.xml",
