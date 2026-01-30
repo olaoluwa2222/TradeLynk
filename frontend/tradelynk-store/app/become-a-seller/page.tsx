@@ -826,17 +826,34 @@ function SellerActivationForm({
             }}
           >
             Welcome to the seller community! Your storefront is now live at{" "}
-            <span className="font-semibold">{username}.tradelynk.app</span>
+            <a 
+              href={`https://${username}.tradelynk.app`}
+              className="font-semibold text-indigo-600 hover:text-indigo-800 underline"
+            >
+              {username}.tradelynk.app
+            </a>
           </p>
           <p
-            className="text-sm text-gray-500"
+            className="text-sm text-gray-500 mb-6"
             style={{
               fontFamily: "Clash Display",
               fontWeight: 400,
             }}
           >
-            Redirecting to your storefront...
+            Redirecting you to your storefront where you can start adding products...
           </p>
+          <div className="flex justify-center gap-4">
+            <a
+              href={`https://${username}.tradelynk.app`}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-900 transition-colors"
+              style={{
+                fontFamily: "Clash Display",
+                fontWeight: 600,
+              }}
+            >
+              Go to My Storefront →
+            </a>
+          </div>
         </div>
       </section>
     );

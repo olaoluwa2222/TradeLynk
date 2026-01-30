@@ -1415,7 +1415,7 @@ function ProductCard({
           {/* Price Badge */}
           <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-lg">
             <span className="font-bold text-sm" style={{ color: primaryColor }}>
-              ₦{item.price.toLocaleString()}
+              ₦{(item.price / 100).toLocaleString()}
             </span>
           </div>
 
