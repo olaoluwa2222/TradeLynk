@@ -178,3 +178,12 @@ openai:
   api-key: ${OPENAI_API_KEY}
   model: gpt-4o-mini
   timeout: 30000  # 30 seconds
+
+
+# ============================================
+# WhatsApp Configuration
+# ============================================
+whatsapp:
+  access-token: ${WHATSAPP_ACCESS_TOKEN}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
+  webhook-verify-token: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN}
