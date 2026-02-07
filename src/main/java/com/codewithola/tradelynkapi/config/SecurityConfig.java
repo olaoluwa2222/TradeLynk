@@ -60,6 +60,10 @@ public class SecurityConfig {
                         // ✅ Webhook endpoints
                         .requestMatchers("/payments/webhook").permitAll()
                         .requestMatchers("/payments/webhook/**").permitAll()
+                        .requestMatchers("/whatsapp/webhook").permitAll()      // ← ADD THIS LINE
+                        .requestMatchers("/whatsapp/webhook/**").permitAll()   // ← ADD THIS LINE
+                        .requestMatchers("/api/v1/whatsapp/webhook").permitAll()      // ← ADD THIS LINE TOO (for safety)
+                        .requestMatchers("/api/v1/whatsapp/webhook/**").permitAll()   // ← ADD THIS LINE TOO
 
                         // ✅ Public endpoints
                         .requestMatchers("/public/**").permitAll()
@@ -71,7 +75,7 @@ public class SecurityConfig {
 
                         // ✅ Seller endpoints (public read ONLY)
                         .requestMatchers(HttpMethod.GET, "/sellers/banks").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/sellers/**").permitAll()  // ← SAFE: Only GET requests
+                        .requestMatchers(HttpMethod.GET, "/sellers/**").permitAll()
 
                         // ✅ Documentation
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
