@@ -1,15 +1,19 @@
 package com.codewithola.tradelynkapi.controller;
 
 import com.codewithola.tradelynkapi.config.WhatsAppConfig;
+import com.codewithola.tradelynkapi.entity.Item;
+import com.codewithola.tradelynkapi.repositories.ItemRepository;
 import com.codewithola.tradelynkapi.services.OpenAIService;
 import com.codewithola.tradelynkapi.services.WhatsAppService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -20,6 +24,7 @@ public class WhatsAppController {
     private final WhatsAppService whatsAppService;
     private final OpenAIService openAIService;
     private final WhatsAppConfig whatsAppConfig;
+    private final ItemRepository itemRepository;  // ✅ ADD THIS
 
     /**
      * GET /api/v1/whatsapp/webhook - For Meta verification
@@ -71,10 +76,8 @@ public class WhatsAppController {
 
             log.info("💬 From {}: {}", from, userMessage);
 
-            // Simple system prompt for now
-            String systemPrompt = "You are a helpful sales assistant for TradeBlynk, " +
-                    "an online marketplace in Nigeria. Be friendly, professional, and " +
-                    "keep responses short (2-3 sentences). Use Nigerian English style.";
+            // ✅ NEW: Build system prompt with real products
+            String systemPrompt = buildSystemPromptWithProducts();
 
             String aiResponse = openAIService.chat(userMessage, systemPrompt);
             whatsAppService.sendMessage(from, aiResponse);
@@ -84,6 +87,57 @@ public class WhatsAppController {
         } catch (Exception e) {
             log.error("❌ Error processing webhook", e);
             return ResponseEntity.ok("Error");
+        }
+    }
+
+    /**
+     * ✅ NEW METHOD: Build system prompt with actual products from database
+     */
+    private String buildSystemPromptWithProducts() {
+        try {
+            // Get top 20 active items
+            List<Item> items = itemRepository.findByStatus(
+                            Item.Status.ACTIVE,
+                            PageRequest.of(0, 20)  // Get first 20 items
+                    )
+                    .getContent()  // Convert Page to List
+                    .stream()
+                    .filter(item -> item.getQuantity() > 0)  // Only in-stock
+                    .collect(Collectors.toList());
+
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("You are a helpful sales assistant for Tradelynk, Nigeria's online marketplace.\n\n");
+
+            if (!items.isEmpty()) {
+                prompt.append("AVAILABLE PRODUCTS:\n");
+                for (Item item : items) {
+                    prompt.append(String.format(
+                            "- %s | ₦%,d | %s | Category: %s\n",
+                            item.getTitle(),
+                            item.getPrice(),
+                            item.getCondition(),
+                            item.getCategory()
+                    ));
+                }
+                prompt.append("\n");
+            }
+
+            prompt.append("YOUR ROLE:\n");
+            prompt.append("1. Help customers find products from the list above\n");
+            prompt.append("2. Answer questions about prices, condition, and availability\n");
+            prompt.append("3. When they want to buy, tell them to visit: https://tradelynk.app\n");
+            prompt.append("4. Be friendly, use Nigerian English style\n");
+            prompt.append("5. Keep responses SHORT (2-3 sentences max)\n");
+            prompt.append("6. Only mention products from the list above\n");
+
+            return prompt.toString();
+
+        } catch (Exception e) {
+            log.error("Error building prompt with products", e);
+            // Fallback to simple prompt
+            return "You are a helpful sales assistant for Tradelynk, " +
+                    "an online marketplace in Nigeria. Be friendly, professional, and " +
+                    "keep responses short (2-3 sentences). Use Nigerian English style.";
         }
     }
 }
