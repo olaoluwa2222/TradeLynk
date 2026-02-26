@@ -86,10 +86,7 @@ public class SecurityConfig {
                         // ✅ All other endpoints require authentication
                         .anyRequest().authenticated()
 
-                        .requestMatchers("/whatsapp/webhook").permitAll()
-                        .requestMatchers("/whatsapp/webhook/**").permitAll()
-                        .requestMatchers("/api/v1/whatsapp/webhook").permitAll()
-                        .requestMatchers("/api/v1/whatsapp/webhook/**").permitAll()
+
                 )
                 .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
