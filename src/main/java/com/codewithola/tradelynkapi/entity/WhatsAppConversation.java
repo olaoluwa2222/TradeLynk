@@ -34,9 +34,6 @@ public class WhatsAppConversation {
     @Builder.Default
     private Integer messageCount = 0;
 
-    @Column(name = "context", columnDefinition = "JSONB")
-    private String context; // Store as JSON string
-
     @CreationTimestamp
     @Column(name = "started_at", nullable = false, updatable = false)
     private LocalDateTime startedAt;
