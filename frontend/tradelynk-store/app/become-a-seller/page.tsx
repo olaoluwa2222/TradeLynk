@@ -826,7 +826,7 @@ function SellerActivationForm({
             }}
           >
             Welcome to the seller community! Your storefront is now live at{" "}
-            <a 
+            <a
               href={`https://${username}.tradelynk.app`}
               className="font-semibold text-indigo-600 hover:text-indigo-800 underline"
             >
@@ -840,7 +840,8 @@ function SellerActivationForm({
               fontWeight: 400,
             }}
           >
-            Redirecting you to your storefront where you can start adding products...
+            Redirecting you to your storefront where you can start adding
+            products...
           </p>
           <div className="flex justify-center gap-4">
             <a
