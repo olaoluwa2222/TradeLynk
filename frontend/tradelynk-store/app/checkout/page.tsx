@@ -199,6 +199,36 @@ function CheckoutContent() {
       console.log("Payment response:", response);
 
       if (response.success && response.data.paymentUrl) {
+        // Save pending payment reference in localStorage as a safety net
+        // This lets us recover the payment if the redirect back from Paystack fails
+        try {
+          const pendingPayments = JSON.parse(
+            localStorage.getItem("pendingPayments") || "[]",
+          );
+          const pendingEntry = {
+            reference:
+              response.data.reference || response.data.paymentReference,
+            itemId: item.id,
+            itemTitle: item.title,
+            amount: amountInNaira,
+            createdAt: new Date().toISOString(),
+            paymentUrl: response.data.paymentUrl,
+          };
+          pendingPayments.push(pendingEntry);
+          // Keep only recent pending payments (last 10)
+          const recentPending = pendingPayments.slice(-10);
+          localStorage.setItem(
+            "pendingPayments",
+            JSON.stringify(recentPending),
+          );
+          console.log(
+            "Saved pending payment reference:",
+            pendingEntry.reference,
+          );
+        } catch (e) {
+          console.warn("Could not save pending payment to localStorage:", e);
+        }
+
         // Redirect to Paystack payment page
         window.location.href = response.data.paymentUrl;
       } else {

@@ -21,13 +21,16 @@ function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const reference = searchParams.get("reference");
+  // Paystack sends both ?reference=xxx and ?trxref=xxx — use either as fallback
+  const reference = searchParams.get("reference") || searchParams.get("trxref");
 
   const [verifying, setVerifying] = useState(true);
   const [verification, setVerification] = useState<PaymentVerification | null>(
-    null
+    null,
   );
   const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -36,17 +39,20 @@ function PaymentSuccessContent() {
     }
   }, [isAuthenticated, authLoading, router]);
 
-  // Verify payment on mount
+  // Verify payment on mount with retry logic
   useEffect(() => {
-    const verifyPayment = async () => {
+    const verifyPayment = async (attempt: number = 0) => {
       if (!reference) {
-        setError("No payment reference provided");
+        setError(
+          "No payment reference provided. If you completed a payment, go to your orders page — we'll try to recover it automatically.",
+        );
         setVerifying(false);
         return;
       }
 
       try {
         setVerifying(true);
+        setRetryCount(attempt);
         const response = await paymentsApi.verifyPayment(reference);
 
         if (response.success) {
@@ -58,14 +64,46 @@ function PaymentSuccessContent() {
             amount: response.data?.amount,
             sellerName: response.data?.sellerName,
           });
+
+          // Clear this reference from pending payments in localStorage
+          try {
+            const pendingPayments = JSON.parse(
+              localStorage.getItem("pendingPayments") || "[]",
+            );
+            const updated = pendingPayments.filter(
+              (p: any) => p.reference !== reference,
+            );
+            localStorage.setItem("pendingPayments", JSON.stringify(updated));
+          } catch (e) {
+            // Ignore localStorage errors
+          }
         } else {
           throw new Error(response.message || "Payment verification failed");
         }
       } catch (err: any) {
-        console.error("Payment verification error:", err);
-        setError(err.message || "Failed to verify payment");
+        console.error(
+          `Payment verification error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`,
+          err,
+        );
+
+        // Retry with exponential backoff
+        if (attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 1500; // 1.5s, 3s, 6s
+          console.log(`Retrying payment verification in ${delay}ms...`);
+          setTimeout(() => verifyPayment(attempt + 1), delay);
+          return;
+        }
+
+        // All retries exhausted
+        setError(
+          `Payment verification failed after ${MAX_RETRIES + 1} attempts. ` +
+            `Your payment reference is: ${reference}. ` +
+            `Don't worry — your payment is safe. Please visit the Payment Recovery page or contact support.`,
+        );
       } finally {
-        setVerifying(false);
+        if (retryCount >= MAX_RETRIES || verification?.success) {
+          setVerifying(false);
+        }
       }
     };
 
@@ -96,12 +134,53 @@ function PaymentSuccessContent() {
               fontWeight: 400,
             }}
           >
-            Please wait while we confirm your transaction
+            {retryCount > 0
+              ? `Retry attempt ${retryCount} of ${MAX_RETRIES}... Please wait.`
+              : "Please wait while we confirm your transaction"}
           </p>
         </div>
       </div>
     );
   }
+
+  // Manual retry handler
+  const handleManualRetry = async () => {
+    if (!reference) return;
+    setError("");
+    setVerifying(true);
+    try {
+      const response = await paymentsApi.verifyPayment(reference);
+      if (response.success) {
+        setVerification({
+          success: true,
+          message: response.message || "Payment successful",
+          orderId: response.data?.orderId,
+          itemTitle: response.data?.itemTitle,
+          amount: response.data?.amount,
+          sellerName: response.data?.sellerName,
+        });
+        // Clear from pending payments
+        try {
+          const pendingPayments = JSON.parse(
+            localStorage.getItem("pendingPayments") || "[]",
+          );
+          const updated = pendingPayments.filter(
+            (p: any) => p.reference !== reference,
+          );
+          localStorage.setItem("pendingPayments", JSON.stringify(updated));
+        } catch (e) {}
+      } else {
+        throw new Error(response.message || "Verification failed");
+      }
+    } catch (err: any) {
+      setError(
+        err.message ||
+          "Verification failed. Please try again or contact support.",
+      );
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   // Error state
   if (error || !verification?.success) {
@@ -109,7 +188,7 @@ function PaymentSuccessContent() {
       <div className="min-h-screen bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <div className="text-8xl mb-6">❌</div>
+            <div className="text-8xl mb-6">⚠️</div>
             <h1
               className="text-4xl font-bold text-black mb-4"
               style={{
@@ -117,38 +196,57 @@ function PaymentSuccessContent() {
                 fontWeight: 700,
               }}
             >
-              Payment Verification Failed
+              Payment Verification Issue
             </h1>
             <p
-              className="text-lg text-gray-600 mb-8"
+              className="text-lg text-gray-600 mb-4"
               style={{
                 fontFamily: "Clash Display",
                 fontWeight: 400,
               }}
             >
               {error ||
-                "We couldn't verify your payment. Please contact support."}
+                "We couldn't verify your payment right now. Don't worry — your money is safe."}
             </p>
-            <div className="flex gap-4 justify-center">
+
+            {/* Show reference prominently */}
+            {reference && (
+              <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 mb-6 inline-block">
+                <p className="text-sm text-yellow-800 font-medium mb-1">
+                  Your Payment Reference:
+                </p>
+                <p className="font-mono text-lg font-bold text-yellow-900 select-all">
+                  {reference}
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Save this reference — you'll need it for recovery
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+              {reference && (
+                <button
+                  onClick={handleManualRetry}
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                  style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                >
+                  🔄 Retry Verification
+                </button>
+              )}
               <Link
-                href="/items"
+                href="/payment/recover"
                 className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                Browse Items
+                🔍 Payment Recovery
               </Link>
               <Link
                 href="/orders/purchases"
                 className="px-8 py-3 border-2 border-black text-black rounded-lg hover:bg-gray-50 transition-colors"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                My Orders
+                📦 My Orders
               </Link>
             </div>
           </div>

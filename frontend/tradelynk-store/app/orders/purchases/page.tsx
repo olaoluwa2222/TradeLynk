@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ordersApi } from "@/lib/api";
+import { ordersApi, paymentsApi } from "@/lib/api";
 import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import DisputeModal from "@/components/DisputeModal";
@@ -64,13 +64,134 @@ export default function MyOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [chatLoading, setChatLoading] = useState<number | null>(null);
   const [confirmingDelivery, setConfirmingDelivery] = useState<number | null>(
-    null
+    null,
   );
   const [disputeModalOrder, setDisputeModalOrder] = useState<Order | null>(
-    null
+    null,
   );
   const [actionError, setActionError] = useState<string>("");
   const [actionSuccess, setActionSuccess] = useState<string>("");
+  const [pendingPayments, setPendingPayments] = useState<
+    Array<{
+      reference: string;
+      itemTitle: string;
+      amount: number;
+      createdAt: string;
+    }>
+  >([]);
+  const [verifyingRef, setVerifyingRef] = useState<string | null>(null);
+
+  // Check for pending unverified payments in localStorage
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("pendingPayments") || "[]",
+      );
+      const recent = stored.filter((p: any) => {
+        const createdAt = new Date(p.createdAt).getTime();
+        return Date.now() - createdAt < 24 * 60 * 60 * 1000;
+      });
+      if (recent.length > 0) {
+        setPendingPayments(recent);
+      }
+    } catch (e) {}
+  }, []);
+
+  // Auto-verify pending payments when the page loads
+  useEffect(() => {
+    if (!isAuthenticated || pendingPayments.length === 0) return;
+
+    const autoVerify = async () => {
+      for (const payment of pendingPayments) {
+        try {
+          const response = await paymentsApi.verifyPayment(payment.reference);
+          if (response.success) {
+            // Payment was verified — remove from pending and refresh orders
+            const stored = JSON.parse(
+              localStorage.getItem("pendingPayments") || "[]",
+            );
+            const updated = stored.filter(
+              (p: any) => p.reference !== payment.reference,
+            );
+            localStorage.setItem("pendingPayments", JSON.stringify(updated));
+            setPendingPayments((prev) =>
+              prev.filter((p) => p.reference !== payment.reference),
+            );
+            setActionSuccess(
+              `Payment for "${payment.itemTitle}" was recovered and your order has been created!`,
+            );
+            // Refresh orders list
+            try {
+              const ordersResponse = await ordersApi.getMyPurchases(
+                currentPage,
+                10,
+              );
+              if (ordersResponse.success) {
+                const ordersData = Array.isArray(ordersResponse.data)
+                  ? ordersResponse.data
+                  : ordersResponse.data.data || [];
+                const filteredOrders =
+                  filterStatus === "ALL"
+                    ? ordersData
+                    : ordersData.filter(
+                        (order: Order) => order.status === filterStatus,
+                      );
+                setOrders(filteredOrders);
+              }
+            } catch (e) {}
+          }
+        } catch (e) {
+          // Verification failed — payment might not have been completed, leave it in pending
+        }
+      }
+    };
+
+    autoVerify();
+  }, [isAuthenticated, pendingPayments.length]);
+
+  // Manual verify handler for pending payment banner
+  const handleVerifyPending = async (reference: string) => {
+    setVerifyingRef(reference);
+    try {
+      const response = await paymentsApi.verifyPayment(reference);
+      if (response.success) {
+        const stored = JSON.parse(
+          localStorage.getItem("pendingPayments") || "[]",
+        );
+        const updated = stored.filter((p: any) => p.reference !== reference);
+        localStorage.setItem("pendingPayments", JSON.stringify(updated));
+        setPendingPayments((prev) =>
+          prev.filter((p) => p.reference !== reference),
+        );
+        setActionSuccess("Payment verified! Your order has been created.");
+        // Refresh orders
+        const ordersResponse = await ordersApi.getMyPurchases(currentPage, 10);
+        if (ordersResponse.success) {
+          const ordersData = Array.isArray(ordersResponse.data)
+            ? ordersResponse.data
+            : ordersResponse.data.data || [];
+          const filteredOrders =
+            filterStatus === "ALL"
+              ? ordersData
+              : ordersData.filter(
+                  (order: Order) => order.status === filterStatus,
+                );
+          setOrders(filteredOrders);
+        }
+      } else {
+        setActionError(
+          "Could not verify this payment. It may not have been completed, or try again in a few minutes.",
+        );
+      }
+    } catch (err: any) {
+      setActionError(
+        err.response?.data?.message ||
+          "Verification failed. Try again or visit Payment Recovery page.",
+      );
+    } finally {
+      setVerifyingRef(null);
+    }
+  };
 
   // Clear messages after 5 seconds
   useEffect(() => {
@@ -110,7 +231,7 @@ export default function MyOrdersPage() {
             filterStatus === "ALL"
               ? ordersData
               : ordersData.filter(
-                  (order: Order) => order.status === filterStatus
+                  (order: Order) => order.status === filterStatus,
                 );
 
           setOrders(filteredOrders);
@@ -221,15 +342,15 @@ export default function MyOrdersPage() {
       const response = await ordersApi.confirmDelivery(orderId);
       if (response.success) {
         setActionSuccess(
-          "Delivery confirmed! Payment has been released to the seller."
+          "Delivery confirmed! Payment has been released to the seller.",
         );
         // Update order status locally
         setOrders((prev) =>
           prev.map((order) =>
             order.id === orderId
               ? { ...order, status: "DELIVERED" as OrderStatus }
-              : order
-          )
+              : order,
+          ),
         );
         // Refresh orders after a short delay
         setTimeout(() => {
@@ -241,7 +362,7 @@ export default function MyOrdersPage() {
     } catch (err: any) {
       console.error("Error confirming delivery:", err);
       setActionError(
-        err.message || "Failed to confirm delivery. Please try again."
+        err.message || "Failed to confirm delivery. Please try again.",
       );
     } finally {
       setConfirmingDelivery(null);
@@ -252,7 +373,7 @@ export default function MyOrdersPage() {
   const handleDisputeSuccess = () => {
     setDisputeModalOrder(null);
     setActionSuccess(
-      "Your dispute has been submitted. We'll review it within 24-48 hours."
+      "Your dispute has been submitted. We'll review it within 24-48 hours.",
     );
     // Refresh orders
     setTimeout(() => {
@@ -330,6 +451,59 @@ export default function MyOrdersPage() {
           </div>
         )}
 
+        {/* Pending Payments Banner */}
+        {pendingPayments.length > 0 && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-300 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3
+                className="font-bold text-yellow-900 flex items-center gap-2"
+                style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+              >
+                ⚠️ Unverified Payments Detected
+              </h3>
+              <Link
+                href="/payment/recover"
+                className="text-sm text-yellow-800 underline hover:text-yellow-900 font-semibold"
+              >
+                Payment Recovery →
+              </Link>
+            </div>
+            <p className="text-yellow-800 text-sm mb-3">
+              We found payments that weren&apos;t confirmed yet. If you
+              completed these payments, click &quot;Verify&quot; to create your
+              order.
+            </p>
+            <div className="space-y-2">
+              {pendingPayments.map((p) => (
+                <div
+                  key={p.reference}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white rounded-lg p-3 border border-yellow-200 gap-2"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {p.itemTitle}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ₦{p.amount?.toLocaleString()} • Ref:{" "}
+                      <span className="font-mono">{p.reference}</span> •{" "}
+                      {new Date(p.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleVerifyPending(p.reference)}
+                    disabled={!!verifyingRef}
+                    className="px-4 py-1.5 bg-yellow-600 text-white text-sm rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 font-semibold whitespace-nowrap"
+                  >
+                    {verifyingRef === p.reference
+                      ? "Verifying..."
+                      : "Verify Payment"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="mb-8 flex flex-wrap gap-3">
           {[
@@ -357,16 +531,16 @@ export default function MyOrdersPage() {
               {status === "ALL"
                 ? "All Orders"
                 : status === "PAYMENT_HELD"
-                ? "Payment Held"
-                : status === "SHIPPED"
-                ? "Shipped"
-                : status === "DELIVERED"
-                ? "Delivered"
-                : status === "COMPLETED"
-                ? "Completed"
-                : status === "DISPUTED"
-                ? "Disputed"
-                : "Cancelled"}
+                  ? "Payment Held"
+                  : status === "SHIPPED"
+                    ? "Shipped"
+                    : status === "DELIVERED"
+                      ? "Delivered"
+                      : status === "COMPLETED"
+                        ? "Completed"
+                        : status === "DISPUTED"
+                          ? "Disputed"
+                          : "Cancelled"}
             </button>
           ))}
         </div>
@@ -518,8 +692,8 @@ export default function MyOrdersPage() {
                                         isCompleted
                                           ? "bg-green-500 text-white"
                                           : isCurrent
-                                          ? "bg-black text-white"
-                                          : "bg-gray-200 text-gray-500"
+                                            ? "bg-black text-white"
+                                            : "bg-gray-200 text-gray-500"
                                       }`}
                                     >
                                       {isCompleted ? "✓" : stepNumber}
@@ -701,13 +875,13 @@ export default function MyOrdersPage() {
                               await startChatWithSeller(
                                 order.item.id,
                                 order.seller.id,
-                                router
+                                router,
                               );
                             } catch (err: any) {
                               console.error("Error starting chat:", err);
                               setActionError(
                                 err.message ||
-                                  "Failed to start chat. Please try again."
+                                  "Failed to start chat. Please try again.",
                               );
                             } finally {
                               setChatLoading(null);

@@ -29,6 +29,17 @@ export default function Navbar() {
 
   // Hide navbar on storefront pages (they have their own navigation)
   const isStorefrontPage = pathname?.startsWith("/sellers/");
+  // Hide navbar on homepage (it has its own landing nav)
+  const isHomePage = pathname === "/";
+  // Hide navbar on dashboard pages (they have their own sidebar navigation)
+  const isDashboardPage = pathname?.startsWith("/dashboard/");
+  // Hide navbar on auth pages (they have their own layout)
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname?.startsWith("/forgot-password") ||
+    pathname?.startsWith("/reset-password") ||
+    pathname?.startsWith("/verify");
 
   // Notification counts
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -188,8 +199,8 @@ export default function Navbar() {
     };
   }, []);
 
-  // Don't render navbar on storefront pages - they have their own navigation
-  if (isStorefrontPage) {
+  // Don't render navbar on storefront pages, homepage, or dashboard - they have their own navigation
+  if (isStorefrontPage || isHomePage || isDashboardPage || isAuthPage) {
     return null;
   }
 

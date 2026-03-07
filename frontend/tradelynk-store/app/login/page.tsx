@@ -16,7 +16,12 @@ export default function LoginPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const { login, isAuthenticated, resendVerification } = useAuth();
+  const {
+    login,
+    isAuthenticated,
+    isLoading: authLoading,
+    resendVerification,
+  } = useAuth();
   const router = useRouter();
 
   const images = [
@@ -27,10 +32,10 @@ export default function LoginPage() {
 
   // Redirect if already authenticated - moved inside useEffect
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/");
+    if (!authLoading && isAuthenticated) {
+      router.push("/dashboard/seller");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, authLoading, router]);
 
   // Image carousel effect
   useEffect(() => {
@@ -100,7 +105,7 @@ export default function LoginPage() {
         errorMessage.toLowerCase().includes("verify your email")
       ) {
         setError(
-          "⚠️ Your email is not verified. Please check your inbox or click below to resend the verification email."
+          "⚠️ Your email is not verified. Please check your inbox or click below to resend the verification email.",
         );
         setShowResendVerification(true);
       } else {
@@ -113,9 +118,13 @@ export default function LoginPage() {
     }
   };
 
-  // If authenticated, don't render the form (optional)
+  // If still checking auth, show nothing to avoid flash
+  if (authLoading) {
+    return null;
+  }
+  // If authenticated, don't render the form
   if (isAuthenticated) {
-    return null; // Or a loading indicator
+    return null;
   }
 
   return (

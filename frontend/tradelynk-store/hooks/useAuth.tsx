@@ -93,19 +93,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           showNotificationToast(
             payload.title,
             payload.body,
-            payload.data?.chatId
+            payload.data?.chatId,
           );
         });
       } catch (notifError) {
         console.warn(
           "⚠️ Push notification setup failed (non-critical):",
-          notifError
+          notifError,
         );
         // Don't block login if notifications fail
       }
 
-      // Navigate to home
-      router.push("/");
+      // Navigate to role-based dashboard
+      const role = normalizedUser.role;
+      if (role === "SELLER" || role === "BOTH" || role === "ADMIN") {
+        router.push("/dashboard/seller");
+      } else {
+        router.push("/items");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
 

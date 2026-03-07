@@ -9,13 +9,35 @@ import { OnboardingManager } from "@/components/onboarding";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "TradeLynk - Online Marketplace",
+  title: "Tradelynk — Automate Instagram & WhatsApp Sales | AI Sales Assistant",
   description:
-    "Buy and sell items online with TradeLynk - Nigeria's trusted marketplace",
+    "Stop losing sales to slow replies. Tradelynk gives Instagram sellers a storefront and WhatsApp AI Sales Assistant that works 24/7.",
+  keywords: [
+    "instagram selling",
+    "whatsapp sales automation",
+    "AI sales assistant",
+    "online storefront",
+    "instagram seller tools",
+    "ecommerce Nigeria",
+  ],
   icons: {
     icon: "/Logo Icon.png",
     shortcut: "/Logo Icon.png",
     apple: "/Logo Icon.png",
+  },
+  openGraph: {
+    title: "Tradelynk — Automate Instagram & WhatsApp Sales",
+    description:
+      "Your AI Sales Assistant works 24/7 on WhatsApp — answering customers, sending product details, and closing sales while you sleep.",
+    url: "https://tradelynk.app",
+    siteName: "Tradelynk",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tradelynk — Automate Instagram & WhatsApp Sales",
+    description:
+      "Stop losing sales to slow replies. AI-powered WhatsApp assistant + storefront for Instagram sellers.",
   },
 };
 

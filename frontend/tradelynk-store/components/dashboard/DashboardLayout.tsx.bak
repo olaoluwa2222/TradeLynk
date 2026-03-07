@@ -1,0 +1,350 @@
+// components/dashboard/DashboardLayout.tsx
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  badge?: number;
+}
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  sellerUsername?: string | null;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+}
+
+export default function DashboardLayout({
+  children,
+  sellerUsername,
+  activeTab,
+  onTabChange,
+}: DashboardLayoutProps) {
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  const isSeller =
+    user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
+
+  // Close sidebar on outside click (mobile)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (
+        sidebarRef.current &&
+        !sidebarRef.current.contains(e.target as Node)
+      ) {
+        setSidebarOpen(false);
+      }
+    };
+    if (sidebarOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchend", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchend", handleClickOutside);
+    };
+  }, [sidebarOpen]);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Dashboard nav tabs (internal)
+  const dashboardTabs = [
+    { id: "overview", label: "Overview", icon: "&#128200;" },
+    { id: "products", label: "Products", icon: "&#128230;" },
+    { id: "collections", label: "Collections", icon: "&#127991;" },
+  ];
+
+  // Sidebar navigation items
+  const mainNav: NavItem[] = [
+    { label: "Dashboard", href: "/dashboard/seller", icon: "&#128202;" },
+    { label: "Orders", href: "/orders/sales", icon: "&#128230;" },
+    { label: "My Purchases", href: "/orders/purchases", icon: "&#128717;" },
+    { label: "Chat", href: "/chat", icon: "&#128172;" },
+  ];
+
+  const storeNav: NavItem[] = [
+    ...(sellerUsername
+      ? [
+          {
+            label: "View Store",
+            href: `/sellers/${sellerUsername}`,
+            icon: "&#127760;",
+          },
+        ]
+      : []),
+    { label: "Create Item", href: "/create-item", icon: "&#10133;" },
+  ];
+
+  const accountNav: NavItem[] = [
+    ...(sellerUsername
+      ? [
+          {
+            label: "Store Settings",
+            href: `/sellers/${sellerUsername}/settings`,
+            icon: "&#9881;",
+          },
+        ]
+      : []),
+  ];
+
+  const isActive = (href: string) => pathname === href;
+
+  const NavLink = ({ item }: { item: NavItem }) => (
+    <Link
+      href={item.href}
+      onClick={() => setSidebarOpen(false)}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group ${
+        isActive(item.href)
+          ? "bg-black text-white shadow-sm"
+          : "text-gray-700 hover:bg-gray-100"
+      }`}
+      style={{ fontFamily: "Clash Display", fontWeight: isActive(item.href) ? 600 : 400 }}
+    >
+      <span
+        className={`text-lg shrink-0 transition-transform duration-200 group-hover:scale-110 ${collapsed ? "mx-auto" : ""}`}
+        dangerouslySetInnerHTML={{ __html: item.icon }}
+      />
+      {!collapsed && (
+        <span className="truncate">{item.label}</span>
+      )}
+      {!collapsed && item.badge && item.badge > 0 && (
+        <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+          {item.badge}
+        </span>
+      )}
+    </Link>
+  );
+
+  const SectionLabel = ({ label }: { label: string }) =>
+    collapsed ? (
+      <div className="h-px bg-gray-200 my-3 mx-3" />
+    ) : (
+      <p
+        className="px-3 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400"
+        style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+      >
+        {label}
+      </p>
+    );
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        ref={sidebarRef}
+        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0 lg:static lg:z-auto
+          ${collapsed ? "w-[72px]" : "w-64"}
+        `}
+      >
+        {/* Logo / Brand */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 shrink-0">
+          {!collapsed && (
+            <Link
+              href="/dashboard/seller"
+              className="flex items-center gap-2"
+              style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+            >
+              <span className="text-lg font-bold text-black">Tradelynk</span>
+            </Link>
+          )}
+          {/* Collapse toggle - desktop only */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg
+              className={`w-4 h-4 transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+          {/* Close button - mobile only */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+          <SectionLabel label="Main" />
+          {mainNav.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
+
+          <SectionLabel label="Store" />
+          {storeNav.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
+
+          {accountNav.length > 0 && (
+            <>
+              <SectionLabel label="Settings" />
+              {accountNav.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+            </>
+          )}
+        </nav>
+
+        {/* User section at bottom */}
+        <div className="border-t border-gray-200 p-3 shrink-0">
+          {collapsed ? (
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center p-2.5 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              title="Logout"
+            >
+              <span className="text-lg">&#128682;</span>
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 px-2 py-1.5">
+                <div className="w-9 h-9 rounded-full bg-black flex items-center justify-center shrink-0">
+                  <span
+                    className="text-white font-bold text-sm"
+                    style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                  >
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-sm font-semibold text-black truncate"
+                    style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                  >
+                    {user?.name?.split(" ")[0]}
+                  </p>
+                  <p
+                    className="text-xs text-gray-500 truncate"
+                    style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                  >
+                    {user?.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
+                style={{ fontFamily: "Clash Display", fontWeight: 500 }}
+              >
+                <span className="text-lg">&#128682;</span>
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top header bar */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-30 shrink-0">
+          {/* Mobile: hamburger + logo */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1
+              className="text-lg font-bold text-black"
+              style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+            >
+              {activeTab === "overview" && "Dashboard"}
+              {activeTab === "products" && "Products"}
+              {activeTab === "collections" && "Collections"}
+              {!activeTab && "Dashboard"}
+            </h1>
+          </div>
+
+          {/* Right side: Quick actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/create-item"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-gray-900 transition-colors"
+              style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="hidden sm:inline">Add Product</span>
+            </Link>
+            {sellerUsername && (
+              <Link
+                href={`/sellers/${sellerUsername}`}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ fontFamily: "Clash Display", fontWeight: 500 }}
+              >
+                <span className="text-base">&#128065;</span>
+                <span className="hidden sm:inline">View Store</span>
+              </Link>
+            )}
+          </div>
+        </header>
+
+        {/* Dashboard internal tabs */}
+        {onTabChange && (
+          <div className="bg-white border-b border-gray-200 px-4 sm:px-6">
+            <div className="flex gap-1 -mb-px overflow-x-auto scrollbar-hide">
+              {dashboardTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  className={`flex items-center gap-2 px-4 sm:px-5 py-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  style={{ fontFamily: "Clash Display", fontWeight: activeTab === tab.id ? 600 : 400 }}
+                >
+                  <span dangerouslySetInnerHTML={{ __html: tab.icon }} />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
