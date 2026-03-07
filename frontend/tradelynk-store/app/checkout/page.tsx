@@ -182,10 +182,14 @@ function CheckoutContent() {
         ? Math.floor(selectedVariant.price / 100)
         : Math.floor(item.price / 100);
 
+      // Build the callback URL so Paystack redirects back to our success page
+      const callbackUrl = `${window.location.origin}/payment/success`;
+
       const paymentData: any = {
         itemId: item.id,
         amount: amountInNaira, // ✅ NOW in naira (e.g., 1500000 instead of 150000000)
         deliveryAddress: deliveryAddress.trim(),
+        callbackUrl, // Tell backend where Paystack should redirect after payment
       };
 
       // Add variantId if item has variants

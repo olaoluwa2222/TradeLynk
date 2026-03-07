@@ -935,6 +935,7 @@ export const paymentsApi = {
     amount: number;
     deliveryAddress: string;
     variantId?: number;
+    callbackUrl?: string;
   }) => {
     const response = await api.post("/payments/initialize", data);
     return response.data;
