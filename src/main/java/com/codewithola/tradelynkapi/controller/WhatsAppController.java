@@ -1,18 +1,24 @@
 package com.codewithola.tradelynkapi.controller;
 
+import com.codewithola.tradelynkapi.dtos.response.WhatsAppCallbackResponse;
+import com.codewithola.tradelynkapi.dtos.response.WhatsAppSignupResponse;
 import com.codewithola.tradelynkapi.entity.Item;
 import com.codewithola.tradelynkapi.entity.SellerWhatsAppConfig;
 import com.codewithola.tradelynkapi.entity.WhatsAppConversation;
 import com.codewithola.tradelynkapi.repositories.ItemRepository;
 import com.codewithola.tradelynkapi.repositories.SellerWhatsAppConfigRepository;
 import com.codewithola.tradelynkapi.repositories.WhatsAppConversationRepository;
+import com.codewithola.tradelynkapi.security.UserPrincipal;
 import com.codewithola.tradelynkapi.services.OpenAIService;
+import com.codewithola.tradelynkapi.services.WhatsAppEmbeddedSignupService;
 import com.codewithola.tradelynkapi.services.WhatsAppService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,6 +34,7 @@ public class WhatsAppController {
     private final ItemRepository itemRepository;
     private final SellerWhatsAppConfigRepository sellerWhatsAppConfigRepository;
     private final WhatsAppConversationRepository conversationRepository;
+    private final WhatsAppEmbeddedSignupService embeddedSignupService;
 
     /**
      * GET /api/v1/whatsapp/webhook/{phoneNumberId} - Verification per store
@@ -194,6 +201,137 @@ public class WhatsAppController {
         } catch (Exception e) {
             log.error("Error building prompt for seller {}", sellerId, e);
             return "You are a helpful sales assistant. Be friendly and professional.";
+        }
+    }
+
+    /**
+     * GET /api/v1/whatsapp/embedded-signup
+     * Generate signup URL for seller to connect their WhatsApp
+     */
+    @GetMapping("/embedded-signup")
+    public ResponseEntity<Map<String, Object>> getEmbeddedSignupUrl(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        log.info("🔗 Generating embedded signup URL for seller: {}", userPrincipal.getId());
+
+        try {
+            WhatsAppSignupResponse response = embeddedSignupService.generateSignupUrl(userPrincipal.getId());
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("signupUrl", response.getSignupUrl());
+            result.put("state", response.getState());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error generating signup URL", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to generate signup URL: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    /**
+     * GET /api/v1/whatsapp/callback
+     * Handle OAuth callback from Meta after seller completes signup
+     */
+    @GetMapping("/callback")
+    public ResponseEntity<Map<String, Object>> handleOAuthCallback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state) {
+
+        log.info("📞 Received OAuth callback. State: {}", state);
+
+        try {
+            WhatsAppCallbackResponse response = embeddedSignupService.handleCallback(code, state);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", response.isSuccess());
+            result.put("message", response.getMessage());
+            result.put("phoneNumber", response.getPhoneNumber());
+            result.put("phoneNumberId", response.getPhoneNumberId());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error handling callback", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to process callback: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    /**
+     * GET /api/v1/whatsapp/status
+     * Get seller's WhatsApp bot status
+     */
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getWhatsAppStatus(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        try {
+            SellerWhatsAppConfig config = sellerWhatsAppConfigRepository
+                    .findBySellerId(userPrincipal.getId())
+                    .orElse(null);
+
+            Map<String, Object> result = new HashMap<>();
+
+            if (config == null) {
+                result.put("connected", false);
+                result.put("message", "WhatsApp not connected");
+            } else {
+                result.put("connected", true);
+                result.put("phoneNumber", config.getPhoneNumber());
+                result.put("phoneNumberId", config.getPhoneNumberId());
+                result.put("status", config.getStatus());
+                result.put("isEnabled", config.getIsEnabled());
+                result.put("totalConversations", config.getTotalConversations());
+                result.put("totalMessagesSent", config.getTotalMessagesSent());
+                result.put("totalMessagesReceived", config.getTotalMessagesReceived());
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting status", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to get status: " + e.getMessage());
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    /**
+     * POST /api/v1/whatsapp/toggle
+     * Enable/disable WhatsApp bot
+     */
+    @PostMapping("/toggle")
+    public ResponseEntity<Map<String, Object>> toggleWhatsAppBot(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestBody Map<String, Boolean> request) {
+
+        try {
+            Boolean enabled = request.get("enabled");
+
+            SellerWhatsAppConfig config = sellerWhatsAppConfigRepository
+                    .findBySellerId(userPrincipal.getId())
+                    .orElseThrow(() -> new RuntimeException("WhatsApp not connected"));
+
+            config.setIsEnabled(enabled);
+            sellerWhatsAppConfigRepository.save(config);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", enabled ? "Bot enabled" : "Bot disabled");
+            result.put("isEnabled", enabled);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error toggling bot", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(500).body(error);
         }
     }
 }

@@ -60,10 +60,14 @@ public class SecurityConfig {
                         // ✅ Webhook endpoints
                         .requestMatchers("/payments/webhook").permitAll()
                         .requestMatchers("/payments/webhook/**").permitAll()
-                        .requestMatchers("/whatsapp/webhook").permitAll()      // ← ADD THIS LINE
-                        .requestMatchers("/whatsapp/webhook/**").permitAll()   // ← ADD THIS LINE
-                        .requestMatchers("/api/v1/whatsapp/webhook").permitAll()      // ← ADD THIS LINE TOO (for safety)
-                        .requestMatchers("/api/v1/whatsapp/webhook/**").permitAll()   // ← ADD THIS LINE TOO
+                        .requestMatchers("/api/v1/payments/webhook").permitAll()
+                        .requestMatchers("/api/v1/payments/webhook/**").permitAll()
+                        .requestMatchers("/whatsapp/webhook").permitAll()
+                        .requestMatchers("/whatsapp/webhook/**").permitAll()
+                        .requestMatchers("/whatsapp/callback").permitAll()
+                        .requestMatchers("/api/v1/whatsapp/webhook").permitAll()
+                        .requestMatchers("/api/v1/whatsapp/webhook/**").permitAll()
+                        .requestMatchers("/api/v1/whatsapp/callback").permitAll()
 
                         // ✅ Public endpoints
                         .requestMatchers("/public/**").permitAll()
@@ -83,10 +87,8 @@ public class SecurityConfig {
                         // ✅ Admin endpoints
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
-                        // ✅ All other endpoints require authentication
+                        // ✅ All other endpoints require authentication (MUST BE LAST!)
                         .anyRequest().authenticated()
-
-
                 )
                 .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

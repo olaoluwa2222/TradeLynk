@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * UPDATED PaystackService with Variant Support + Escrow
@@ -102,13 +103,14 @@ public class PaystackService {
     }
 
     /**
-     * ✅ UPDATED: Initialize payment with VARIANT SUPPORT
+     * ✅ UPDATED: Initialize payment with VARIANT SUPPORT + CALLBACK URL
      *
      * @param itemId Item ID
      * @param variantId Variant ID (null for simple products)
      * @param buyerId Buyer user ID
      * @param amount Payment amount in Naira
      * @param deliveryAddress Delivery address
+     * @param callbackUrl Where Paystack redirects after payment (null defaults to tradelynk.app)
      * @return Payment initialization response
      */
     @Transactional
@@ -117,7 +119,8 @@ public class PaystackService {
             Long variantId,
             Long buyerId,
             Long amount,
-            String deliveryAddress) {
+            String deliveryAddress,
+            String callbackUrl) {
 
         log.info("🔒 Initializing ESCROW payment - Item: {}, Variant: {}, Buyer: {}, Amount: ₦{}",
                 itemId, variantId, buyerId, amount);
@@ -180,9 +183,19 @@ public class PaystackService {
             Long amountInKobo = amount * 100;
             log.info("Converting amount: ₦{} → {} kobo", amount, amountInKobo);
 
+            // Generate unique reference
+            String generatedReference = "tl_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+
+            // Determine callback URL (default to tradelynk.app)
+            String effectiveCallbackUrl = (callbackUrl != null && !callbackUrl.isBlank())
+                    ? callbackUrl
+                    : "https://tradelynk.app/payment/success";
+
             PaystackInitializeRequest request = PaystackInitializeRequest.builder()
                     .amount(String.valueOf(amountInKobo))
                     .email(buyer.getEmail())
+                    .reference(generatedReference)
+                    .callbackUrl(effectiveCallbackUrl)
                     .metadata(metadata)
                     .build();
 
@@ -204,13 +217,14 @@ public class PaystackService {
                 // 8. Save payment record with PENDING status
                 Payment payment = Payment.builder()
                         .itemId(itemId)
-                        .variantId(variantId) // ✅ NEW: Store variant ID
+                        .variantId(variantId)
                         .sellerId(item.getSeller().getId())
                         .buyerId(buyerId)
                         .amount(amount)  // Store in Naira
                         .paystackReference(data.getReference())
                         .paystackAccessCode(data.getAccessCode())
                         .authorizationUrl(data.getAuthorizationUrl())
+                        .deliveryAddress(deliveryAddress) // ✅ Store for webhook order creation
                         .status(Payment.PaymentStatus.PENDING)
                         .build();
 
@@ -222,6 +236,7 @@ public class PaystackService {
                 return InitializePaymentResponse.builder()
                         .paymentUrl(data.getAuthorizationUrl())
                         .reference(data.getReference())
+                        .paymentReference(data.getReference()) // ✅ Same as reference for frontend
                         .amount(amount)
                         .message("Payment initialized successfully (escrow mode)")
                         .build();

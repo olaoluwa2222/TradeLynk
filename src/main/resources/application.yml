@@ -187,3 +187,12 @@ whatsapp:
   access-token: ${WHATSAPP_ACCESS_TOKEN}
   phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
   webhook-verify-token: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN}
+
+  meta:
+    app:
+      id: ${META_APP_ID}
+      secret: ${META_APP_SECRET}
+    config:
+      id: ${META_CONFIG_ID}
+    redirect:
+      uri: ${META_REDIRECT_URI}

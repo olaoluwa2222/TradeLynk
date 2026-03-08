@@ -31,4 +31,10 @@ public class InitializePaymentRequest {
 
     @NotBlank(message = "Delivery address is required")
     private String deliveryAddress;
+
+    /**
+     * ✅ NEW: Callback URL where Paystack redirects after payment
+     * If null/empty, defaults to "https://tradelynk.app/payment/success"
+     */
+    private String callbackUrl;
 }

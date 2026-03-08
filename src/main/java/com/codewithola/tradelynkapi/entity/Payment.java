@@ -58,6 +58,9 @@ public class Payment {
     @Column(length = 500)
     private String authorizationUrl;
 
+    @Column(length = 500)
+    private String deliveryAddress; // Store delivery address for webhook order creation
+
     @Column(columnDefinition = "TEXT")
     private String metadata; // Store additional payment data as JSON
 

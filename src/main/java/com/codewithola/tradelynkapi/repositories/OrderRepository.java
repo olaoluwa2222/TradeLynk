@@ -76,6 +76,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByPaymentId(Long paymentId);
 
     /**
+     * Find order by Paystack payment reference
+     * Used by verify endpoint and webhook for idempotent order creation
+     */
+    @Query("SELECT o FROM Order o " +
+            "JOIN FETCH o.item i " +
+            "JOIN FETCH o.buyer b " +
+            "JOIN FETCH o.seller s " +
+            "JOIN FETCH o.payment p " +
+            "WHERE o.payment.paystackReference = :reference")
+    Optional<Order> findByPaymentPaystackReference(@Param("reference") String reference);
+
+    /**
      * Count orders by buyer
      */
     long countByBuyerId(Long buyerId);

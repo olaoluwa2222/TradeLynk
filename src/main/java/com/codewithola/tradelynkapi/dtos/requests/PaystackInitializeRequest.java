@@ -18,6 +18,12 @@ public class PaystackInitializeRequest {
     @JsonProperty("email")
     private String email; // Buyer's email
 
+    @JsonProperty("reference")
+    private String reference; // Unique payment reference
+
+    @JsonProperty("callback_url")
+    private String callbackUrl; // Where Paystack redirects after payment
+
     @JsonProperty("subaccount")
     private String subaccount; // Seller's subaccount code
 

@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class InitializePaymentResponse {
     private String paymentUrl;
     private String reference;
+    private String paymentReference; // same as reference, for frontend compatibility
     private Long amount;
     private String message;
 }
