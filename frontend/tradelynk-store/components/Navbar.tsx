@@ -503,6 +503,20 @@ export default function Navbar() {
                       👤 My Profile
                     </Link>
 
+                    {/* Dashboard - role aware */}
+                    <Link
+                      href={isSeller ? "/dashboard/seller" : "/dashboard/buyer"}
+                      onClick={() => setShowProfileDropdown(false)}
+                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
+                      style={{
+                        color: "#0C0A09",
+                        fontFamily: "Clash Display",
+                        fontWeight: 400,
+                      }}
+                    >
+                      📊 Dashboard
+                    </Link>
+
                     {/* My Orders */}
                     <Link
                       href="/orders/purchases"
@@ -517,35 +531,28 @@ export default function Navbar() {
                       📦 My Orders
                     </Link>
 
-                    {/* My Website - Link to storefront or become-a-seller */}
-                    <Link
-                      href={
-                        sellerUsername
-                          ? `/sellers/${sellerUsername}`
-                          : isSeller
-                            ? "#" // Loading state - seller but username not loaded yet
-                            : "/become-a-seller"
-                      }
-                      onClick={(e) => {
-                        setShowProfileDropdown(false);
-                        // If seller but username not loaded yet, prevent navigation
-                        if (isSeller && !sellerUsername) {
-                          e.preventDefault();
-                          console.log(
-                            "🏪 Waiting for storefront username to load...",
-                          );
+                    {/* My Website - Link to storefront (sellers only) */}
+                    {isSeller && (
+                      <Link
+                        href={
+                          sellerUsername ? `/sellers/${sellerUsername}` : "#"
                         }
-                      }}
-                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
-                      style={{
-                        color: "#0C0A09",
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      🌐 My Website{" "}
-                      {isSeller && !sellerUsername && "(Loading...)"}
-                    </Link>
+                        onClick={(e) => {
+                          setShowProfileDropdown(false);
+                          if (!sellerUsername) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
+                        style={{
+                          color: "#0C0A09",
+                          fontFamily: "Clash Display",
+                          fontWeight: 400,
+                        }}
+                      >
+                        🌐 My Storefront {!sellerUsername && "(Loading...)"}
+                      </Link>
+                    )}
 
                     {/* My Sales - Only for sellers */}
                     {isSeller && (
@@ -563,10 +570,10 @@ export default function Navbar() {
                       </Link>
                     )}
 
-                    {/* Seller Dashboard - Only for sellers */}
-                    {isSeller && (
+                    {/* Become a Seller - Only for non-sellers */}
+                    {!isSeller && (
                       <Link
-                        href="/dashboard/seller"
+                        href="/become-a-seller"
                         onClick={() => setShowProfileDropdown(false)}
                         className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
                         style={{
@@ -575,23 +582,9 @@ export default function Navbar() {
                           fontWeight: 400,
                         }}
                       >
-                        📊 Dashboard
+                        ⚡ Become a Seller
                       </Link>
                     )}
-
-                    {/* Settings */}
-                    <Link
-                      href="/settings"
-                      onClick={() => setShowProfileDropdown(false)}
-                      className="block w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors border-b border-gray-100"
-                      style={{
-                        color: "#0C0A09",
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      ⚙️ Settings
-                    </Link>
 
                     {/* Logout */}
                     <button

@@ -61,6 +61,7 @@ export interface ApiError {
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isSeller: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, name: string, password: string) => Promise<string>;

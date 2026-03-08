@@ -255,22 +255,14 @@ export default function DashboardLayout({
   /* ── NAV SECTIONS ── */
   const navSections: NavSection[] = [
     {
-      items: [{ label: "Home", href: "/dashboard/seller", icon: Icons.home }],
-    },
-    {
-      label: "Sales channels",
       items: [
-        { label: "Orders", href: "/orders/sales", icon: Icons.orders },
-        {
-          label: "My Purchases",
-          href: "/orders/purchases",
-          icon: Icons.purchases,
-        },
+        { label: "Dashboard", href: "/dashboard/seller", icon: Icons.home },
       ],
     },
     {
-      label: "Catalog",
+      label: "Manage",
       items: [
+        { label: "Orders", href: "/orders/sales", icon: Icons.orders },
         {
           label: "Products",
           href: "/dashboard/seller?tab=products",
@@ -291,7 +283,7 @@ export default function DashboardLayout({
           href: "/dashboard/seller?tab=analytics",
           icon: Icons.analytics,
         },
-        { label: "Chat", href: "/chat", icon: Icons.chat },
+        { label: "Messages", href: "/chat", icon: Icons.chat },
       ],
     },
     {
@@ -300,7 +292,7 @@ export default function DashboardLayout({
         ...(sellerUsername
           ? [
               {
-                label: "Online Store",
+                label: "View Storefront",
                 href: `/sellers/${sellerUsername}`,
                 icon: Icons.eye,
                 external: true,
@@ -308,7 +300,7 @@ export default function DashboardLayout({
             ]
           : []),
         {
-          label: "Store Settings",
+          label: "Settings",
           href: sellerUsername ? `/sellers/${sellerUsername}/settings` : "#",
           icon: Icons.settings,
         },
@@ -316,8 +308,23 @@ export default function DashboardLayout({
           label: "WhatsApp AI",
           href: "#",
           icon: Icons.whatsapp,
-          badge: "Soon",
+          badge: "Pro",
           badgeColor: "bg-purple-100 text-purple-700",
+        },
+      ],
+    },
+    {
+      label: "Shopping",
+      items: [
+        {
+          label: "My Purchases",
+          href: "/orders/purchases",
+          icon: Icons.purchases,
+        },
+        {
+          label: "Buyer Dashboard",
+          href: "/dashboard/buyer",
+          icon: Icons.home,
         },
       ],
     },

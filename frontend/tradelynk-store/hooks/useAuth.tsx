@@ -25,6 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const isAuthenticated = !!user;
+  const isSeller =
+    user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN";
 
   // Check if user is authenticated on mount
   const checkAuth = useCallback(async () => {
@@ -109,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (role === "SELLER" || role === "BOTH" || role === "ADMIN") {
         router.push("/dashboard/seller");
       } else {
-        router.push("/items");
+        router.push("/dashboard/buyer");
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -188,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isAuthenticated,
+        isSeller,
         isLoading,
         login,
         register,
