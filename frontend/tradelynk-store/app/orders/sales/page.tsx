@@ -218,9 +218,9 @@ export default function MySalesPage() {
     switch (status) {
       case "PAYMENT_HELD":
       case "SHIPPED":
-        return { label: "💰 In Escrow", color: "text-amber-600" };
+        return { label: "� Payment Received", color: "text-amber-600" };
       case "DELIVERED":
-        return { label: "⏳ Pending Release", color: "text-blue-600" };
+        return { label: "⏳ Awaiting Completion", color: "text-blue-600" };
       case "COMPLETED":
         return { label: "✅ Paid Out", color: "text-green-600" };
       case "DISPUTED":
@@ -390,7 +390,7 @@ export default function MySalesPage() {
               </div>
             </div>
 
-            {/* Held in Escrow Card */}
+            {/* Pending Orders Card */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm hover:bg-white/10 transition-all">
               <div className="flex items-center justify-between">
                 <div>
@@ -401,7 +401,7 @@ export default function MySalesPage() {
                       fontWeight: 500,
                     }}
                   >
-                    In Escrow
+                    Pending
                   </p>
                   <p
                     className="text-4xl font-bold text-amber-400"

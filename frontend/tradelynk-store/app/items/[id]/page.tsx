@@ -152,14 +152,8 @@ export default function ItemDetailPage() {
     }
   };
 
-  // Handle buy
+  // Handle buy — no login required, guest checkout is supported
   const handleBuy = () => {
-    if (!isAuthenticated) {
-      toast.error("Please login to purchase products");
-      router.push(`/login?redirect=/items/${itemId}`);
-      return;
-    }
-
     router.push(`/checkout?itemId=${itemId}`);
   };
 

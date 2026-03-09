@@ -60,14 +60,12 @@ function CheckoutContent() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [validationError, setValidationError] = useState("");
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push(`/login?redirect=/checkout?itemId=${itemId}`);
-    }
-  }, [isAuthenticated, authLoading, router, itemId]);
+  // Guest fields (used when not logged in)
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
 
-  // Fetch item details
+  // Fetch item details (no auth required — guest checkout supported)
   useEffect(() => {
     const fetchItem = async () => {
       if (!itemId) {
@@ -135,10 +133,10 @@ function CheckoutContent() {
       }
     };
 
-    if (itemId && !authLoading && isAuthenticated) {
+    if (itemId && !authLoading) {
       fetchItem();
     }
-  }, [itemId, user, authLoading, isAuthenticated]);
+  }, [itemId, user, authLoading]);
 
   // Handle purchase
   const handleCompletePurchase = async () => {
@@ -151,6 +149,25 @@ function CheckoutContent() {
     if (deliveryAddress.trim().length < 10) {
       setValidationError("Delivery address must be at least 10 characters");
       return;
+    }
+
+    // Guest validation
+    if (!isAuthenticated) {
+      if (!guestName.trim()) {
+        setValidationError("Please enter your full name");
+        return;
+      }
+      if (
+        !guestEmail.trim() ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)
+      ) {
+        setValidationError("Please enter a valid email address");
+        return;
+      }
+      if (!guestPhone.trim() || guestPhone.replace(/\D/g, "").length < 7) {
+        setValidationError("Please enter a valid phone number");
+        return;
+      }
     }
 
     if (!item) {
@@ -195,6 +212,13 @@ function CheckoutContent() {
       // Add variantId if item has variants
       if (item.hasVariants && selectedVariant) {
         paymentData.variantId = selectedVariant.id;
+      }
+
+      // Add guest info when buyer is not logged in
+      if (!isAuthenticated) {
+        paymentData.buyerName = guestName.trim();
+        paymentData.buyerEmail = guestEmail.trim();
+        paymentData.buyerPhone = guestPhone.trim();
       }
 
       // Initialize payment
@@ -573,7 +597,7 @@ function CheckoutContent() {
                       fontWeight: 600,
                     }}
                   >
-                    Safe Transaction
+                    Secure Payment
                   </p>
                   <p
                     className="text-xs text-blue-800"
@@ -582,9 +606,8 @@ function CheckoutContent() {
                       fontWeight: 400,
                     }}
                   >
-                    Your payment is held securely in escrow until you confirm
-                    delivery. You have 5 days after shipment to report any
-                    issues.
+                    Your payment is processed securely via Paystack. Payment
+                    goes directly to the seller upon completion.
                   </p>
                 </div>
               </div>
@@ -603,6 +626,88 @@ function CheckoutContent() {
               >
                 Delivery Details
               </h2>
+
+              {/* Guest info — shown only when not logged in */}
+              {!isAuthenticated && !authLoading && (
+                <div className="mb-6 space-y-4">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p
+                      className="text-xs text-amber-800"
+                      style={{ fontFamily: "Clash Display", fontWeight: 500 }}
+                    >
+                      Checking out as guest.{" "}
+                      <a
+                        href={`/login?redirect=/checkout?itemId=${itemId}`}
+                        className="underline font-semibold"
+                      >
+                        Sign in
+                      </a>{" "}
+                      to track your orders.
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-semibold text-gray-700 mb-2"
+                      style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                    >
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={guestName}
+                      onChange={(e) => {
+                        setGuestName(e.target.value);
+                        setValidationError("");
+                      }}
+                      placeholder="Your full name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all text-gray-700"
+                      style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-semibold text-gray-700 mb-2"
+                      style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                    >
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      value={guestEmail}
+                      onChange={(e) => {
+                        setGuestEmail(e.target.value);
+                        setValidationError("");
+                      }}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all text-gray-700"
+                      style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-semibold text-gray-700 mb-2"
+                      style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                    >
+                      Phone Number *
+                    </label>
+                    <input
+                      type="tel"
+                      value={guestPhone}
+                      onChange={(e) => {
+                        setGuestPhone(e.target.value);
+                        setValidationError("");
+                      }}
+                      placeholder="e.g. 08012345678"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent transition-all text-gray-700"
+                      style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                      disabled={paymentLoading}
+                    />
+                  </div>
+                  <hr className="border-gray-200" />
+                </div>
+              )}
 
               {/* Delivery Address Input */}
               <div className="mb-6">

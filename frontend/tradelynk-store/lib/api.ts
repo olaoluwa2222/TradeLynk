@@ -91,6 +91,8 @@ const isPublicEndpoint = (url: string | undefined): boolean => {
     /\/items$/, // Items list
     /\/auth\//, // Auth endpoints
     /\/categories/, // Categories
+    /\/payments\/initialize/, // Guest checkout — no auth required
+    /\/payments\/verify/, // Payment verification
   ];
   return publicPatterns.some((pattern) => pattern.test(url));
 };

@@ -228,9 +228,8 @@ export default function DisputeModal({
                 fontWeight: 400,
               }}
             >
-              ℹ️ Your payment is held in escrow until this issue is resolved.
-              Our team will review your dispute and contact both parties within
-              24-48 hours.
+              ℹ️ Our team will review your dispute and contact both parties
+              within 24-48 hours.
             </p>
           </div>
 

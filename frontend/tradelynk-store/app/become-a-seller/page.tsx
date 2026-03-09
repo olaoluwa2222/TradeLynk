@@ -1650,7 +1650,6 @@ function SellerActivationForm({
                         fontWeight: 400,
                       }}
                     >
-                      <p>• I understand the 3% commission on each sale</p>
                       <p>
                         • I will only sell items allowed by marketplace policies
                       </p>
