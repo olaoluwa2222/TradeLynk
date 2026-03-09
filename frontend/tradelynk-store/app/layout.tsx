@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { OnboardingProvider } from "@/lib/hooks/useOnboarding";
+import { CartProvider } from "@/lib/hooks/useCart";
 import Navbar from "@/components/Navbar";
+import CartDrawer from "@/components/CartDrawer";
 import UnverifiedBanner from "@/components/UnverifiedBanner";
 import InAppNotifications from "@/components/InAppNotifications";
 import { OnboardingManager } from "@/components/onboarding";
@@ -50,14 +52,17 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         <AuthProvider>
-          <OnboardingProvider>
-            <Navbar />
-            <UnverifiedBanner /> {/* ✅ Show banner if user is unverified */}
-            <InAppNotifications />
-            <OnboardingManager /> {/* ✅ Global onboarding components */}
-            <Toaster position="top-center" />
-            <main>{children}</main>
-          </OnboardingProvider>
+          <CartProvider>
+            <OnboardingProvider>
+              <Navbar />
+              <CartDrawer />
+              <UnverifiedBanner /> {/* ✅ Show banner if user is unverified */}
+              <InAppNotifications />
+              <OnboardingManager /> {/* ✅ Global onboarding components */}
+              <Toaster position="top-center" />
+              <main>{children}</main>
+            </OnboardingProvider>
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

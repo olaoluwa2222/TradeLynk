@@ -7,9 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState, useRef, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { itemsApi, ordersApi, chatsApi, sellersApi } from "@/lib/api";
+import { useCart } from "@/lib/hooks/useCart";
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { count: cartCount, openCart } = useCart();
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
@@ -385,6 +387,32 @@ export default function Navbar() {
                 )}
               </Link>
             )}
+
+            {/* Cart Icon — visible to all users */}
+            <button
+              onClick={openCart}
+              className="relative p-2 hover:bg-gray-100 rounded-lg transition-all group"
+              title="Cart"
+            >
+              <svg
+                className="w-6 h-6 text-gray-700 group-hover:text-black transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 7h13M10 20a1 1 0 100-2 1 1 0 000 2zm7.5 0a1 1 0 100-2 1 1 0 000 2z"
+                />
+              </svg>
+              {cartCount > 0 && (
+                <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 bg-purple-600 text-white text-xs font-bold rounded-full shadow-sm">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+            </button>
 
             {/* Create Item Button */}
             {isAuthenticated && isSeller && (

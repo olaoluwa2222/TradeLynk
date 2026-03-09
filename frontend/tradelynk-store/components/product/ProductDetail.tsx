@@ -38,6 +38,7 @@ interface ProductDetailProps {
   onLike?: () => void;
   onChat?: () => void;
   onBuy?: () => void;
+  onAddToCart?: (variant?: ProductVariant | null) => void;
   isLiking?: boolean;
   isChatting?: boolean;
 }
@@ -47,6 +48,7 @@ export function ProductDetail({
   onLike,
   onChat,
   onBuy,
+  onAddToCart,
   isLiking = false,
   isChatting = false,
 }: ProductDetailProps) {
@@ -297,6 +299,18 @@ export function ProductDetail({
               <ShoppingCart size={20} />
               {canBuy ? "Buy Now" : "Out of Stock"}
             </button>
+
+            {onAddToCart && (
+              <button
+                onClick={() => onAddToCart(selectedVariant)}
+                disabled={!canBuy}
+                className="w-full py-4 border-2 border-purple-600 text-purple-600 font-bold rounded-xl hover:bg-purple-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ fontFamily: "Clash Display" }}
+              >
+                <ShoppingCart size={20} />
+                Add to Cart
+              </button>
+            )}
 
             <div className="grid grid-cols-3 gap-3">
               <button

@@ -9,6 +9,7 @@ import { ArrowLeft, Store, Sparkles, TrendingUp } from "lucide-react";
 import { itemsApi } from "@/lib/api";
 import { startChatWithSeller } from "@/lib/utils/chatHelpers";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/lib/hooks/useCart";
 import { Item } from "@/types/items";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { ProductGrid } from "@/components/product/ProductGrid";
@@ -152,9 +153,28 @@ export default function ItemDetailPage() {
     }
   };
 
+  const { addItem } = useCart();
+
   // Handle buy — no login required, guest checkout is supported
   const handleBuy = () => {
     router.push(`/checkout?itemId=${itemId}`);
+  };
+
+  // Handle add to cart
+  const handleAddToCart = (variant?: any) => {
+    if (!item) return;
+    addItem({
+      itemId: item.id,
+      title: item.title,
+      imageUrl:
+        item.primaryImage?.imageUrl || item.images?.[0]?.imageUrl || null,
+      sellerName: item.sellerName || "",
+      price: item.price,
+      effectivePrice: variant?.effectivePrice ?? variant?.price ?? item.price,
+      variantId: variant?.id,
+      variantName: variant?.variantName,
+    });
+    toast.success("Added to cart!");
   };
 
   // Handle like for related items (both seller items and similar products)
@@ -271,6 +291,7 @@ export default function ItemDetailPage() {
         onLike={handleLike}
         onChat={handleChat}
         onBuy={handleBuy}
+        onAddToCart={handleAddToCart}
         isLiking={likeLoading}
         isChatting={chatLoading}
       />
