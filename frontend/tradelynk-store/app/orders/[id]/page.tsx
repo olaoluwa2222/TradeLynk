@@ -227,7 +227,8 @@ export default function OrderDetailPage() {
   }
 
   const statusBadge = getStatusBadge(order.status);
-  const sellerRevenue = isSeller ? order.amount * 0.9 : null;
+  // order.amount is NAIRA; no commission — seller receives full amount
+  const sellerRevenue = isSeller ? order.amount : null;
 
   return (
     <div className="min-h-screen bg-white">
@@ -315,7 +316,7 @@ export default function OrderDetailPage() {
                     className="text-2xl font-bold text-black"
                     style={{ fontFamily: "Clash Display", fontWeight: 700 }}
                   >
-                    ₦{(order.item.price || 0).toLocaleString()}
+                    ₦{((order.item.price || 0) / 100).toLocaleString()}
                   </p>
                   <Link
                     href={`/items/${order.item.id}`}
@@ -408,12 +409,12 @@ export default function OrderDetailPage() {
                     await startChatWithSeller(
                       order.item.id,
                       isBuyer ? order.seller.id : order.buyer.id,
-                      router
+                      router,
                     );
                   } catch (err: any) {
                     console.error("Error starting chat:", err);
                     alert(
-                      err.message || "Failed to start chat. Please try again."
+                      err.message || "Failed to start chat. Please try again.",
                     );
                   } finally {
                     setChatLoading(false);
@@ -460,37 +461,21 @@ export default function OrderDetailPage() {
                     ₦{order.amount.toLocaleString()}
                   </p>
                 </div>
-                {isSeller && sellerRevenue && (
-                  <>
-                    <div className="flex justify-between text-sm">
-                      <p
-                        className="text-gray-500"
-                        style={{ fontFamily: "Clash Display", fontWeight: 400 }}
-                      >
-                        Platform Fee (10%)
-                      </p>
-                      <p
-                        className="text-gray-500"
-                        style={{ fontFamily: "Clash Display", fontWeight: 500 }}
-                      >
-                        -₦{(order.amount * 0.1).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="pt-3 border-t border-gray-200 flex justify-between">
-                      <p
-                        className="font-bold text-black"
-                        style={{ fontFamily: "Clash Display", fontWeight: 700 }}
-                      >
-                        Your Revenue
-                      </p>
-                      <p
-                        className="font-bold text-green-600 text-xl"
-                        style={{ fontFamily: "Clash Display", fontWeight: 700 }}
-                      >
-                        ₦{sellerRevenue.toLocaleString()}
-                      </p>
-                    </div>
-                  </>
+                {isSeller && (
+                  <div className="pt-3 border-t border-gray-200 flex justify-between">
+                    <p
+                      className="font-bold text-black"
+                      style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                    >
+                      Your Revenue
+                    </p>
+                    <p
+                      className="font-bold text-green-600 text-xl"
+                      style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                    >
+                      ₦{order.amount.toLocaleString()}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

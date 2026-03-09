@@ -66,8 +66,7 @@ export default function MySalesPage() {
   const [actionError, setActionError] = useState<string>("");
   const [actionSuccess, setActionSuccess] = useState<string>("");
 
-  // Platform fee is 3%
-  const PLATFORM_FEE_PERCENT = 0.03;
+  // No platform fee — sellers receive 100% of the sale amount
 
   // Check if user is seller
   const isSeller =
@@ -124,20 +123,20 @@ export default function MySalesPage() {
             .filter((sale: Sale) => sale.status === "COMPLETED")
             .reduce((sum: number, sale: Sale) => sum + sale.amount, 0);
 
-          // Seller gets 97% (after 3% platform fee)
-          setTotalRevenue(completedRevenue * (1 - PLATFORM_FEE_PERCENT));
+          // order.amount is NAIRA — no commission deduction
+          setTotalRevenue(completedRevenue);
 
-          // Calculate pending revenue (PAYMENT_HELD, SHIPPED, DELIVERED - money in escrow)
-          const pendingEscrow = salesData
+          // Calculate pending revenue (SHIPPED, DELIVERED — awaiting completion)
+          const pendingAmount = salesData
             .filter(
               (sale: Sale) =>
                 sale.status === "PAYMENT_HELD" ||
                 sale.status === "SHIPPED" ||
-                sale.status === "DELIVERED"
+                sale.status === "DELIVERED",
             )
             .reduce((sum: number, sale: Sale) => sum + sale.amount, 0);
 
-          setPendingRevenue(pendingEscrow * (1 - PLATFORM_FEE_PERCENT));
+          setPendingRevenue(pendingAmount);
         } else {
           throw new Error(response.message || "Failed to load sales");
         }
@@ -240,11 +239,11 @@ export default function MySalesPage() {
     if (!shippedAt) return null;
     const shippedDate = new Date(shippedAt);
     const autoCompleteDate = new Date(
-      shippedDate.getTime() + 5 * 24 * 60 * 60 * 1000
+      shippedDate.getTime() + 5 * 24 * 60 * 60 * 1000,
     );
     const now = new Date();
     const daysRemaining = Math.ceil(
-      (autoCompleteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      (autoCompleteDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
     );
     return daysRemaining > 0 ? daysRemaining : 0;
   };
@@ -259,7 +258,7 @@ export default function MySalesPage() {
       const response = await ordersApi.markAsShipped(orderId);
       if (response.success) {
         setActionSuccess(
-          "Order marked as shipped! The buyer has been notified."
+          "Order marked as shipped! The buyer has been notified.",
         );
         // Update order status locally
         setSales((prev) =>
@@ -270,8 +269,8 @@ export default function MySalesPage() {
                   status: "SHIPPED" as OrderStatus,
                   shippedAt: new Date().toISOString(),
                 }
-              : sale
-          )
+              : sale,
+          ),
         );
         // Refresh after a short delay
         setTimeout(() => {
@@ -283,7 +282,7 @@ export default function MySalesPage() {
     } catch (err: any) {
       console.error("Error marking as shipped:", err);
       setActionError(
-        err.message || "Failed to mark as shipped. Please try again."
+        err.message || "Failed to mark as shipped. Please try again.",
       );
     } finally {
       setMarkingShipped(null);
@@ -365,7 +364,7 @@ export default function MySalesPage() {
                       fontWeight: 500,
                     }}
                   >
-                    Paid Out (97%)
+                    Revenue Earned
                   </p>
                   <p
                     className="text-4xl font-bold text-green-400"
@@ -423,8 +422,8 @@ export default function MySalesPage() {
                     {
                       sales.filter((s) =>
                         ["PAYMENT_HELD", "SHIPPED", "DELIVERED"].includes(
-                          s.status
-                        )
+                          s.status,
+                        ),
                       ).length
                     }{" "}
                     pending orders
@@ -493,14 +492,14 @@ export default function MySalesPage() {
               {status === "ALL"
                 ? "All Sales"
                 : status === "PAYMENT_HELD"
-                ? "💰 Payment Held"
-                : status === "SHIPPED"
-                ? "🚚 Shipped"
-                : status === "DELIVERED"
-                ? "✅ Delivered"
-                : status === "COMPLETED"
-                ? "💸 Completed"
-                : "⚠️ Disputed"}
+                  ? "💰 Payment Held"
+                  : status === "SHIPPED"
+                    ? "🚚 Shipped"
+                    : status === "DELIVERED"
+                      ? "✅ Delivered"
+                      : status === "COMPLETED"
+                        ? "💸 Completed"
+                        : "⚠️ Disputed"}
             </button>
           ))}
         </div>
@@ -550,7 +549,7 @@ export default function MySalesPage() {
             {sales.map((sale) => {
               const statusBadge = getStatusBadge(sale.status);
               const paymentStatus = getPaymentStatus(sale.status);
-              const sellerRevenue = sale.amount * (1 - PLATFORM_FEE_PERCENT); // 97% after 3% fee
+              const sellerRevenue = sale.amount; // sale.amount is NAIRA, no commission
               const daysRemaining = getDaysUntilAutoComplete(sale.shippedAt);
 
               // Parse imageUrls if it's a string
@@ -655,7 +654,7 @@ export default function MySalesPage() {
                               fontWeight: 400,
                             }}
                           >
-                            You&apos;ll Get (97%)
+                            You&apos;ll Get
                           </p>
                           <p
                             className="text-lg font-bold text-green-600"

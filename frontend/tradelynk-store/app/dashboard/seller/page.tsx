@@ -190,7 +190,7 @@ export default function SellerDashboard() {
         day: "numeric",
       });
       if (!revenueByDate[date]) revenueByDate[date] = 0;
-      revenueByDate[date] += order.amount * 0.9;
+      revenueByDate[date] += order.amount; // order.amount is NAIRA
     });
     return Object.entries(revenueByDate)
       .map(([date, revenue]) => ({ date, revenue: Math.round(revenue) }))
@@ -432,8 +432,7 @@ export default function SellerDashboard() {
   const revenueData = processRevenueData();
   const engagementData = getEngagementData();
   const statusData = getStatusData();
-  const netRevenue = analytics.totalRevenue * 0.9;
-  const commission = analytics.totalRevenue * 0.1;
+  const netRevenue = analytics.totalRevenue; // totalRevenue is already in NAIRA, no commission
 
   /* ========================
      MAIN DASHBOARD
@@ -965,7 +964,7 @@ export default function SellerDashboard() {
                 {
                   label: "Revenue",
                   value: formatCurrency(netRevenue),
-                  sub: "After 10% commission",
+                  sub: "Total revenue earned",
                   iconBg: "bg-purple-100",
                   icon: (
                     <svg
@@ -1226,7 +1225,7 @@ export default function SellerDashboard() {
                     icon: "👁️",
                     items: analytics.topViewedItems,
                     metric: (item: TopItem) =>
-                      `${item.viewCount || 0} views · ${formatCurrency(item.price)}`,
+                      `${item.viewCount || 0} views · ${formatCurrency(item.price / 100)}`, // item.price is KOBO
                     empty: "No views yet",
                   },
                   {
@@ -1234,7 +1233,7 @@ export default function SellerDashboard() {
                     icon: "💰",
                     items: analytics.topRevenueItems,
                     metric: (item: TopItem) =>
-                      formatCurrency((item.revenue || 0) * 0.9),
+                      formatCurrency(item.revenue || 0), // item.revenue is NAIRA
                     empty: "No sales yet",
                     metricColor: "text-green-600 font-semibold",
                   },
