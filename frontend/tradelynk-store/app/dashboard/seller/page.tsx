@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/lib/hooks/useOnboarding";
 import { analyticsApi, ordersApi, sellersApi } from "@/lib/api";
+import { getSellerFullUrl, getDisplayUrl } from "@/lib/utils/sellerUrls";
 import Link from "next/link";
 import Image from "next/image";
 import { ProductsTable } from "@/components/product";
@@ -236,7 +237,7 @@ export default function SellerDashboard() {
 
   const handleCopyLink = async () => {
     if (!sellerUsername) return;
-    const link = `${window.location.origin}/sellers/${sellerUsername}`;
+    const link = getSellerFullUrl(sellerUsername);
     try {
       await navigator.clipboard.writeText(link);
       setCopiedLink(true);
@@ -867,9 +868,7 @@ export default function SellerDashboard() {
                       className="text-sm font-bold text-black truncate"
                       style={{ fontFamily: "Clash Display", fontWeight: 700 }}
                     >
-                      {typeof window !== "undefined"
-                        ? `${window.location.origin}/sellers/${sellerUsername}`
-                        : `/sellers/${sellerUsername}`}
+                      {getDisplayUrl(sellerUsername)}
                     </p>
                   </div>
                 </div>
@@ -920,7 +919,7 @@ export default function SellerDashboard() {
                     )}
                   </button>
                   <a
-                    href={`https://wa.me/?text=Shop%20my%20store%20on%20Tradelynk%3A%20${encodeURIComponent(typeof window !== "undefined" ? `${window.location.origin}/sellers/${sellerUsername}` : `/sellers/${sellerUsername}`)}`}
+                    href={`https://wa.me/?text=Shop%20my%20store%20on%20Tradelynk%3A%20${encodeURIComponent(getSellerFullUrl(sellerUsername))}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-green-500 hover:bg-green-600 text-white transition-colors"
@@ -935,9 +934,10 @@ export default function SellerDashboard() {
                     </svg>
                     Share
                   </a>
-                  <Link
-                    href={`/sellers/${sellerUsername}`}
+                  <a
+                    href={getSellerFullUrl(sellerUsername)}
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-gray-200 text-gray-600 hover:border-purple-600 hover:text-purple-600 transition-colors"
                     style={{ fontFamily: "Clash Display", fontWeight: 600 }}
                   >
@@ -955,7 +955,7 @@ export default function SellerDashboard() {
                       />
                     </svg>
                     Open
-                  </Link>
+                  </a>
                 </div>
               </div>
             )}
