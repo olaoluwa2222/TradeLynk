@@ -21,7 +21,7 @@ import java.util.Map;
 
 /**
  * TransferService handles seller payouts via Paystack Transfer API
- * This service releases escrow funds to sellers after delivery confirmation
+ * This service handles manual seller payouts via Paystack Transfer API.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,8 +39,8 @@ public class TransferService {
     private static final Double PLATFORM_FEE_PERCENTAGE = 3.0; // 3% platform fee
 
     /**
-     * Initiate transfer to seller after delivery confirmation
-     * This releases money from escrow to seller's bank account
+     * Initiate transfer to seller.
+     * Seller receives 100% of the order amount — no commission deducted.
      */
     @Transactional
     public TransferDTO initiateTransfer(Long orderId) {
@@ -70,13 +70,13 @@ public class TransferService {
             throw new BadRequestException("Seller bank details not configured");
         }
 
-        // 6. Calculate amounts (convert from Naira to kobo for Paystack)
-        Long orderAmountInKobo = order.getAmount() * 100; // Convert Naira to kobo
-        Long platformFeeInKobo = Transfer.calculatePlatformFee(orderAmountInKobo);
-        Long sellerPayoutInKobo = orderAmountInKobo - platformFeeInKobo;
+        // 6. Seller receives 100% — convert Naira to kobo for Paystack
+        Long orderAmountInKobo = order.getAmount() * 100;
+        Long platformFeeInKobo = 0L; // No platform commission
+        Long sellerPayoutInKobo = orderAmountInKobo;
 
-        log.info("Transfer calculation - Order: ₦{} ({} kobo), Fee: {} kobo, Payout: {} kobo",
-                order.getAmount(), orderAmountInKobo, platformFeeInKobo, sellerPayoutInKobo);
+        log.info("Transfer: Order ₦{} ({} kobo) → Seller payout: {} kobo (100%, no commission)",
+                order.getAmount(), orderAmountInKobo, sellerPayoutInKobo);
 
         // 7. Create transfer record (PENDING status)
         Transfer transfer = Transfer.builder()
@@ -110,7 +110,7 @@ public class TransferService {
 
             log.info("✅ Transfer successful! Code: {}, Amount: {} kobo", transferCode, sellerPayoutInKobo);
 
-            // 11. Notify seller about payout
+            // 11. Notify seller about payout (100% of order amount)
             notificationService.sendPayoutNotification(
                     seller.getId(),
                     order.getAmount(),

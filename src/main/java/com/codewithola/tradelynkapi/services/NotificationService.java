@@ -371,7 +371,7 @@ public class NotificationService {
                     View your sales: %s/dashboard/sales
                     
                     Thank you for using TradeLynk!
-                    
+
                     Best regards,
                     The TradeLynk Team
                     """,
@@ -513,7 +513,7 @@ public class NotificationService {
                     📦 Item: %s
                     ✅ Status: Delivered (Auto-completed after 48 hours)
                     
-                    This order was automatically completed as we didn't receive a delivery confirmation within 48 hours. 
+                    This order was automatically completed as we didn't receive a delivery confirmation within 48 hours.
                     If there are any issues with this order, please contact our support team immediately.
                     
                     View your orders: %s/dashboard/purchases
@@ -563,7 +563,7 @@ public class NotificationService {
                     
                     📦 Item: %s
                     ✅ Status: Completed (Auto-completed after 48 hours)
-                    
+
                     Your payment will be processed according to our settlement schedule.
                     
                     View your sales: %s/dashboard/sales
@@ -584,79 +584,7 @@ public class NotificationService {
     }
 
     /**
-     * ✅ NEW: Send notification that payment is held in escrow
-     */
-    public void sendPaymentHeldNotification(Long sellerId, Long amount, String itemTitle) {
-        log.info("Sending payment held notification to seller: {}", sellerId);
-
-        try {
-            User seller = userRepository.findById(sellerId)
-                    .orElseThrow(() -> new NotFoundException("Seller not found"));
-
-            // 1. Send push notifications
-            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
-            String amountFormatted = String.format("₦%,d", amount);
-
-            for (DeviceToken token : tokens) {
-                try {
-                    Message message = Message.builder()
-                            .setToken(token.getDeviceToken())
-                            .setNotification(Notification.builder()
-                                    .setTitle("💰 Payment Received (In Escrow)")
-                                    .setBody(itemTitle + " - " + amountFormatted + " held until delivery")
-                                    .build())
-                            .putData("type", "payment_held")
-                            .putData("amount", String.valueOf(amount))
-                            .putData("itemTitle", itemTitle)
-                            .build();
-
-                    firebaseMessaging.send(message);
-                    token.setLastUsedAt(LocalDateTime.now());
-                    deviceTokenRepository.save(token);
-
-                } catch (FirebaseMessagingException e) {
-                    handleFirebaseError(token, e);
-                }
-            }
-
-            // 2. Send email notification
-            String subject = "Payment Received (Escrow) - " + itemTitle;
-            String body = String.format("""
-                Hello %s,
-                
-                Great news! A buyer has paid for your item.
-                
-                📦 Item: %s
-                💰 Amount: ₦%,d (held in escrow)
-                
-                The payment is currently held in escrow for security. You'll receive the funds once the buyer confirms delivery.
-                
-                Next steps:
-                1. Arrange delivery with the buyer
-                2. Mark the order as "Shipped" when you deliver
-                3. Funds will be released after buyer confirms delivery (or after 5 days automatically)
-                
-                View order details: %s/dashboard/sales
-                
-                Best regards,
-                The TradeLynk Team
-                """,
-                    seller.getFullName(),
-                    itemTitle,
-                    amount,
-                    frontendUrl
-            );
-
-            emailService.sendEmail(seller.getEmail(), subject, body);
-            log.info("✅ Payment held email sent to seller: {}", seller.getEmail());
-
-        } catch (Exception e) {
-            log.error("❌ Failed to send payment held notification", e);
-        }
-    }
-
-    /**
-     * ✅ NEW: Send notification when seller marks order as shipped
+     * Send notification when seller marks order as shipped
      */
     public void sendShippedNotification(Long buyerId, String itemTitle, String deliveryAddress) {
         log.info("Sending shipped notification to buyer: {}", buyerId);
@@ -701,9 +629,9 @@ public class NotificationService {
                 
                 The seller has marked your order as shipped. You should receive it soon.
                 
-                Important: Once you receive the item, please confirm delivery in your dashboard. 
+                Important: Once you receive the item, please confirm delivery in your dashboard.
                 This will release the payment to the seller.
-                
+
                 If you don't receive the item or there's any issue, you can report a problem within 5 days.
                 
                 Track your order: %s/dashboard/purchases

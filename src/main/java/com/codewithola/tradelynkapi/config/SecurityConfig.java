@@ -62,6 +62,10 @@ public class SecurityConfig {
                         .requestMatchers("/payments/webhook/**").permitAll()
                         .requestMatchers("/api/v1/payments/webhook").permitAll()
                         .requestMatchers("/api/v1/payments/webhook/**").permitAll()
+
+                        // ✅ Guest payment endpoint (no auth required — WhatsApp bot)
+                        .requestMatchers(HttpMethod.POST, "/payments/guest/initialize").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/guest/initialize").permitAll()
                         .requestMatchers("/whatsapp/webhook").permitAll()
                         .requestMatchers("/whatsapp/webhook/**").permitAll()
                         .requestMatchers("/whatsapp/callback").permitAll()

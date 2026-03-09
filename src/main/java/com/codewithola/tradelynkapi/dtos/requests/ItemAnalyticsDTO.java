@@ -32,7 +32,7 @@ public class ItemAnalyticsDTO {
 
     // Sales Metrics
     private Boolean isSold;
-    private Long soldPrice; // In kobo
+    private Long soldPrice; // In Naira (from Payment.amount)
     private LocalDateTime soldAt;
 
     // Timeline

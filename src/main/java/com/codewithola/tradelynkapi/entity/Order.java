@@ -10,8 +10,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * UPDATED Order entity with escrow payment flow
- * Now tracks payment hold, shipping, disputes, and completion states
+ * Order entity — direct payment flow.
+ * Payment goes directly to seller; no escrow/hold period.
  */
 @Entity
 @Table(name = "orders", indexes = {
@@ -58,7 +58,7 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private OrderStatus status = OrderStatus.PAYMENT_HELD;
+    private OrderStatus status = OrderStatus.PAID;
 
     @Column(length = 1000)
     private String cancellationReason;
@@ -86,29 +86,29 @@ public class Order {
     @Column(name = "refunded_at")
     private LocalDateTime refundedAt; // When refund was issued
 
-    // ✅ UPDATED Enum for Order Status (Escrow Flow)
+    // Order Status — Direct Payment Flow (no escrow)
     public enum OrderStatus {
-        PAYMENT_HELD,       // Payment successful, money in escrow
-        SHIPPED,            // Seller marked as shipped
-        DELIVERED,          // Buyer confirmed delivery
-        COMPLETED,          // Seller paid out
-        DISPUTED,           // Buyer raised a dispute
-        REFUNDED,           // Money refunded to buyer
-        CANCELLED           // Order cancelled
+        PAID,           // Payment successful, seller receives funds directly
+        SHIPPED,        // Seller marked as shipped
+        DELIVERED,      // Buyer confirmed delivery
+        COMPLETED,      // Order fully completed
+        DISPUTED,       // Buyer raised a dispute
+        REFUNDED,       // Money refunded to buyer
+        CANCELLED       // Order cancelled
     }
 
-    // ✅ State transition methods
+    // State transition methods
     public void markAsShipped() {
-        if (this.status != OrderStatus.PAYMENT_HELD) {
-            throw new IllegalStateException("Can only mark PAYMENT_HELD orders as shipped");
+        if (this.status != OrderStatus.PAID) {
+            throw new IllegalStateException("Can only mark PAID orders as shipped");
         }
         this.status = OrderStatus.SHIPPED;
         this.shippedAt = LocalDateTime.now();
     }
 
     public void markAsDelivered() {
-        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAYMENT_HELD) {
-            throw new IllegalStateException("Can only mark SHIPPED orders as delivered");
+        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
+            throw new IllegalStateException("Can only mark SHIPPED or PAID orders as delivered");
         }
         this.status = OrderStatus.DELIVERED;
         this.deliveredAt = LocalDateTime.now();
@@ -123,8 +123,8 @@ public class Order {
     }
 
     public void markAsDisputed() {
-        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAYMENT_HELD) {
-            throw new IllegalStateException("Can only dispute PAYMENT_HELD or SHIPPED orders");
+        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
+            throw new IllegalStateException("Can only dispute PAID or SHIPPED orders");
         }
         this.status = OrderStatus.DISPUTED;
         this.disputedAt = LocalDateTime.now();
@@ -144,84 +144,29 @@ public class Order {
     }
 
     public void autoComplete() {
-        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAYMENT_HELD) {
-            throw new IllegalStateException("Can only auto-complete SHIPPED or PAYMENT_HELD orders");
+        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
+            throw new IllegalStateException("Can only auto-complete SHIPPED or PAID orders");
         }
         this.status = OrderStatus.DELIVERED;
         this.autoCompletedAt = LocalDateTime.now();
         this.deliveredAt = LocalDateTime.now();
     }
 
-    // ✅ State check methods
-    public boolean isPaymentHeld() {
-        return this.status == OrderStatus.PAYMENT_HELD;
-    }
+    // State check methods
+    public boolean isPaid() { return this.status == OrderStatus.PAID; }
+    public boolean isShipped() { return this.status == OrderStatus.SHIPPED; }
+    public boolean isDelivered() { return this.status == OrderStatus.DELIVERED; }
+    public boolean isCompleted() { return this.status == OrderStatus.COMPLETED; }
+    public boolean isDisputed() { return this.status == OrderStatus.DISPUTED; }
+    public boolean isRefunded() { return this.status == OrderStatus.REFUNDED; }
+    public boolean isCancelled() { return this.status == OrderStatus.CANCELLED; }
 
-    public boolean isShipped() {
-        return this.status == OrderStatus.SHIPPED;
-    }
-
-    public boolean isDelivered() {
-        return this.status == OrderStatus.DELIVERED;
-    }
-
-    public boolean isCompleted() {
-        return this.status == OrderStatus.COMPLETED;
-    }
-
-    public boolean isDisputed() {
-        return this.status == OrderStatus.DISPUTED;
-    }
-
-    public boolean isRefunded() {
-        return this.status == OrderStatus.REFUNDED;
-    }
-
-    public boolean isCancelled() {
-        return this.status == OrderStatus.CANCELLED;
-    }
-
-    // ✅ Permission checks
-    public boolean canBeShipped() {
-        return this.status == OrderStatus.PAYMENT_HELD;
-    }
-
-    public boolean canBeMarkedAsDelivered() {
-        return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAYMENT_HELD;
-    }
-
-    public boolean canBeDisputed() {
-        return this.status == OrderStatus.PAYMENT_HELD ||
-                this.status == OrderStatus.SHIPPED;
-    }
-
-    public boolean canBeCancelled() {
-        return this.status == OrderStatus.PAYMENT_HELD ||
-                this.status == OrderStatus.SHIPPED;
-    }
-
-    public boolean canBeCompleted() {
-        return this.status == OrderStatus.DELIVERED;
-    }
-
-    public boolean canBeRefunded() {
-        return this.status == OrderStatus.DISPUTED ||
-                this.status == OrderStatus.PAYMENT_HELD ||
-                this.status == OrderStatus.SHIPPED;
-    }
-
-    // ✅ Check if order is in final state (no further actions possible)
-    public boolean isFinalState() {
-        return this.status == OrderStatus.COMPLETED ||
-                this.status == OrderStatus.REFUNDED ||
-                this.status == OrderStatus.CANCELLED;
-    }
-
-    // ✅ Check if money should still be in escrow
-    public boolean isMoneyInEscrow() {
-        return this.status == OrderStatus.PAYMENT_HELD ||
-                this.status == OrderStatus.SHIPPED ||
-                this.status == OrderStatus.DELIVERED ||
-                this.status == OrderStatus.DISPUTED;
-    }
+    // Permission checks
+    public boolean canBeShipped() { return this.status == OrderStatus.PAID; }
+    public boolean canBeMarkedAsDelivered() { return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAID; }
+    public boolean canBeDisputed() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
+    public boolean canBeCancelled() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
+    public boolean canBeCompleted() { return this.status == OrderStatus.DELIVERED; }
+    public boolean canBeRefunded() { return this.status == OrderStatus.DISPUTED || this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
+    public boolean isFinalState() { return this.status == OrderStatus.COMPLETED || this.status == OrderStatus.REFUNDED || this.status == OrderStatus.CANCELLED; }
 }

@@ -137,7 +137,7 @@ public class OrderController {
 
     /**
      * PUT /api/orders/{id}/confirm-delivery
-     * Buyer confirms delivery (releases escrow to seller)
+     * Buyer confirms delivery of the item.
      */
     @PutMapping("/{id}/confirm-delivery")
     public ResponseEntity<Map<String, Object>> confirmDelivery(
@@ -150,7 +150,7 @@ public class OrderController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Delivery confirmed. Payment will be released to seller.");
+        response.put("message", "Delivery confirmed successfully.");
         response.put("data", order);
 
         return ResponseEntity.ok(response);

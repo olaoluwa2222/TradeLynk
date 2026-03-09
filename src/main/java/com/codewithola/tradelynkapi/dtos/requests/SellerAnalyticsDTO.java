@@ -30,8 +30,8 @@ public class SellerAnalyticsDTO {
 
     // Sales Metrics
     private Integer totalSales;
-    private Long totalRevenue; // In kobo
-    private Double averageItemPrice; // In kobo
+    private Long totalRevenue; // In Naira (summed from Payment.amount values)
+    private Double averageItemPrice; // In kobo (averaged from Item.price values)
     private Double conversionRate; // Percentage of views that led to sales
 
     // Recent Activity

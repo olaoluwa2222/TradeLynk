@@ -6,6 +6,7 @@ import com.codewithola.tradelynkapi.dtos.requests.PaymentMetadata;
 import com.codewithola.tradelynkapi.dtos.requests.PaystackInitializeRequest;
 import com.codewithola.tradelynkapi.dtos.requests.PaystackSubaccountRequest;
 import com.codewithola.tradelynkapi.dtos.response.*;
+import com.codewithola.tradelynkapi.entity.GuestPayment;
 import com.codewithola.tradelynkapi.entity.Item;
 import com.codewithola.tradelynkapi.entity.Payment;
 import com.codewithola.tradelynkapi.entity.ProductVariant;
@@ -13,6 +14,7 @@ import com.codewithola.tradelynkapi.entity.SellerProfile;
 import com.codewithola.tradelynkapi.entity.User;
 import com.codewithola.tradelynkapi.exception.BadRequestException;
 import com.codewithola.tradelynkapi.exception.NotFoundException;
+import com.codewithola.tradelynkapi.repositories.GuestPaymentRepository;
 import com.codewithola.tradelynkapi.repositories.ItemRepository;
 import com.codewithola.tradelynkapi.repositories.PaymentRepository;
 import com.codewithola.tradelynkapi.repositories.ProductVariantRepository;
@@ -35,11 +37,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * UPDATED PaystackService with Variant Support + Escrow
- * KEY CHANGES:
- * 1. Added variantId parameter to initializePayment
- * 2. Stock check now handles both simple products and variants
- * 3. Payments store variantId for tracking
+ * PaystackService — handles payment initialization (authenticated + guest), verification,
+ * webhook signature validation, subaccount creation, and bank account validation.
  */
 @Service
 @RequiredArgsConstructor
@@ -49,13 +48,13 @@ public class PaystackService {
     private final PaystackConfig paystackConfig;
     private final RestTemplate restTemplate;
     private final PaymentRepository paymentRepository;
+    private final GuestPaymentRepository guestPaymentRepository;
     private final ItemRepository itemRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
     private final SellerProfileRepository sellerProfileRepository;
     private final NotificationService notificationService;
 
-    private static final Double PLATFORM_FEE_PERCENTAGE = 3.0; // 3% platform fee
 
     /**
      * Create a Paystack subaccount for a seller
@@ -103,7 +102,7 @@ public class PaystackService {
     }
 
     /**
-     * ✅ UPDATED: Initialize payment with VARIANT SUPPORT + CALLBACK URL
+     * Initialize an authenticated payment (buyer must have a TradeLynk account).
      *
      * @param itemId Item ID
      * @param variantId Variant ID (null for simple products)
@@ -122,7 +121,7 @@ public class PaystackService {
             String deliveryAddress,
             String callbackUrl) {
 
-        log.info("🔒 Initializing ESCROW payment - Item: {}, Variant: {}, Buyer: {}, Amount: ₦{}",
+        log.info("Initializing payment — Item: {}, Variant: {}, Buyer: {}, Amount: ₦{}",
                 itemId, variantId, buyerId, amount);
 
         // 1. Fetch and validate item
@@ -230,7 +229,7 @@ public class PaystackService {
 
                 paymentRepository.save(payment);
 
-                log.info("✅ ESCROW payment initialized. Reference: {}, Variant: {}",
+                log.info("✅ Payment initialized. Reference: {}, Variant: {}",
                         data.getReference(), variantId);
 
                 return InitializePaymentResponse.builder()
@@ -238,7 +237,7 @@ public class PaystackService {
                         .reference(data.getReference())
                         .paymentReference(data.getReference()) // ✅ Same as reference for frontend
                         .amount(amount)
-                        .message("Payment initialized successfully (escrow mode)")
+                        .message("Payment initialized successfully")
                         .build();
 
             } else {
@@ -251,6 +250,139 @@ public class PaystackService {
             throw new RuntimeException("Failed to initialize payment: " + e.getMessage());
         } catch (Exception e) {
             log.error("Error initializing payment", e);
+            throw new RuntimeException("Failed to initialize payment: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Initialize a guest payment — no TradeLynk account required.
+     * Used by the WhatsApp bot and direct payment links.
+     *
+     * @param itemId          Item being purchased
+     * @param variantId       Variant (null for simple products)
+     * @param buyerName       Guest's full name
+     * @param buyerEmail      Guest's email (used for Paystack)
+     * @param buyerPhone      Guest's phone number (optional, for WhatsApp follow-up)
+     * @param amount          Amount in Naira
+     * @param deliveryAddress Delivery address
+     * @param callbackUrl     Where Paystack redirects after payment (null = default)
+     * @return Payment URL, reference, amount
+     */
+    @Transactional
+    public InitializePaymentResponse initializeGuestPayment(
+            Long itemId,
+            Long variantId,
+            String buyerName,
+            String buyerEmail,
+            String buyerPhone,
+            Long amount,
+            String deliveryAddress,
+            String callbackUrl) {
+
+        log.info("🛒 Guest payment init — Item: {}, Variant: {}, Guest: {} <{}>",
+                itemId, variantId, buyerName, buyerEmail);
+
+        // 1. Fetch and validate item
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Item not found"));
+
+        if (item.getStatus() != Item.Status.ACTIVE) {
+            throw new BadRequestException("Item is not available for purchase");
+        }
+
+        // 2. Stock check
+        ProductVariant selectedVariant = null;
+        if (variantId != null) {
+            selectedVariant = productVariantRepository.findById(variantId)
+                    .orElseThrow(() -> new NotFoundException("Product variant not found"));
+            if (!selectedVariant.getItem().getId().equals(itemId)) {
+                throw new BadRequestException("Variant does not belong to this item");
+            }
+            if (!selectedVariant.isInStock()) {
+                throw new BadRequestException("Selected variant is out of stock");
+            }
+        } else {
+            if (item.getQuantity() < 1) {
+                throw new BadRequestException("Item is out of stock");
+            }
+        }
+
+        try {
+            // 3. Build metadata
+            PaymentMetadata metadata = PaymentMetadata.builder()
+                    .itemId(itemId)
+                    .variantId(variantId)
+                    .sellerId(item.getSeller().getId())
+                    .buyerId(null)              // no registered buyer
+                    .itemTitle(item.getTitle())
+                    .variantName(selectedVariant != null ? selectedVariant.getVariantName() : null)
+                    .deliveryAddress(deliveryAddress)
+                    .build();
+
+            Long amountInKobo = amount * 100;
+            String reference = "tlg_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            String effectiveCallbackUrl = (callbackUrl != null && !callbackUrl.isBlank())
+                    ? callbackUrl
+                    : "https://tradelynk.app/payment/success";
+
+            PaystackInitializeRequest request = PaystackInitializeRequest.builder()
+                    .amount(String.valueOf(amountInKobo))
+                    .email(buyerEmail)
+                    .reference(reference)
+                    .callbackUrl(effectiveCallbackUrl)
+                    .metadata(metadata)
+                    .build();
+
+            // 4. Call Paystack
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", paystackConfig.getAuthorizationHeader());
+            HttpEntity<PaystackInitializeRequest> entity = new HttpEntity<>(request, headers);
+
+            String url = paystackConfig.getBaseUrl() + "/transaction/initialize";
+            ResponseEntity<PaystackInitializeResponse> response =
+                    restTemplate.postForEntity(url, entity, PaystackInitializeResponse.class);
+
+            if (response.getBody() != null && response.getBody().getStatus()) {
+                PaystackInitializeResponse.InitializeData data = response.getBody().getData();
+
+                // 5. Persist guest payment record
+                GuestPayment guestPayment = GuestPayment.builder()
+                        .itemId(itemId)
+                        .variantId(variantId)
+                        .sellerId(item.getSeller().getId())
+                        .buyerName(buyerName)
+                        .buyerEmail(buyerEmail)
+                        .buyerPhone(buyerPhone)
+                        .amount(amount)
+                        .paystackReference(data.getReference())
+                        .authorizationUrl(data.getAuthorizationUrl())
+                        .deliveryAddress(deliveryAddress)
+                        .status(GuestPayment.GuestPaymentStatus.PENDING)
+                        .build();
+
+                guestPaymentRepository.save(guestPayment);
+
+                log.info("✅ Guest payment initialized. Ref: {}", data.getReference());
+
+                return InitializePaymentResponse.builder()
+                        .paymentUrl(data.getAuthorizationUrl())
+                        .reference(data.getReference())
+                        .paymentReference(data.getReference())
+                        .amount(amount)
+                        .message("Payment link created successfully")
+                        .build();
+
+            } else {
+                throw new RuntimeException("Failed to initialize guest payment: " +
+                        (response.getBody() != null ? response.getBody().getMessage() : "Unknown error"));
+            }
+
+        } catch (HttpClientErrorException e) {
+            log.error("Paystack API error (guest): {}", e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Failed to initialize payment: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Error initializing guest payment", e);
             throw new RuntimeException("Failed to initialize payment: " + e.getMessage());
         }
     }
@@ -278,29 +410,49 @@ public class PaystackService {
                 PaystackVerifyResponse verifyResponse = response.getBody();
                 String status = verifyResponse.getData().getStatus();
 
-                // 3. Update payment record in database
-                Payment payment = paymentRepository.findByPaystackReference(reference)
-                        .orElseThrow(() -> new NotFoundException("Payment record not found"));
+                // 3. Determine whether this is a guest payment or an authenticated payment
+                boolean isGuest = reference.startsWith("tlg_");
 
-                if ("success".equalsIgnoreCase(status)) {
-                    payment.markAsSuccess();
+                if (isGuest) {
+                    // ── Guest payment path ─────────────────────────────────────────
+                    GuestPayment guestPayment = guestPaymentRepository.findByPaystackReference(reference)
+                            .orElseThrow(() -> new NotFoundException("Guest payment record not found"));
 
-                    // Notify seller about payment (money in escrow)
-                    Item item = itemRepository.findById(payment.getItemId())
-                            .orElseThrow(() -> new NotFoundException("Item not found"));
-
-                    notificationService.sendPaymentHeldNotification(
-                            payment.getSellerId(),
-                            payment.getAmount(),
-                            item.getTitle()
-                    );
+                    if ("success".equalsIgnoreCase(status)) {
+                        guestPayment.markAsSuccess();
+                        Item item = itemRepository.findById(guestPayment.getItemId())
+                                .orElseThrow(() -> new NotFoundException("Item not found"));
+                        notificationService.sendPaymentReceivedNotification(
+                                guestPayment.getSellerId(),
+                                guestPayment.getAmount(),
+                                item.getTitle()
+                        );
+                    } else {
+                        guestPayment.markAsFailed();
+                    }
+                    guestPaymentRepository.save(guestPayment);
+                    log.info("Guest payment verification completed. Status: {}", status);
 
                 } else {
-                    payment.markAsFailed();
-                }
+                    // ── Authenticated payment path ─────────────────────────────────
+                    Payment payment = paymentRepository.findByPaystackReference(reference)
+                            .orElseThrow(() -> new NotFoundException("Payment record not found"));
 
-                paymentRepository.save(payment);
-                log.info("Payment verification completed. Status: {}", status);
+                    if ("success".equalsIgnoreCase(status)) {
+                        payment.markAsSuccess();
+                        Item item = itemRepository.findById(payment.getItemId())
+                                .orElseThrow(() -> new NotFoundException("Item not found"));
+                        notificationService.sendPaymentReceivedNotification(
+                                payment.getSellerId(),
+                                payment.getAmount(),
+                                item.getTitle()
+                        );
+                    } else {
+                        payment.markAsFailed();
+                    }
+                    paymentRepository.save(payment);
+                    log.info("Payment verification completed. Status: {}", status);
+                }
 
                 return verifyResponse;
 

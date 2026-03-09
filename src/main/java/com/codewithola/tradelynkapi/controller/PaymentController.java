@@ -81,6 +81,60 @@ public class PaymentController {
     }
 
     // =====================================================================
+    // 1b. GUEST INITIALIZE — no authentication required
+    // =====================================================================
+
+    /**
+     * POST /api/v1/payments/guest/initialize
+     * Create a Paystack payment link for a guest buyer (no TradeLynk account needed).
+     * Used by the WhatsApp bot to send payment links to non-registered users.
+     *
+     * Request body:
+     * {
+     *   "itemId": 123,
+     *   "amount": 1000,            // Naira
+     *   "deliveryAddress": "...",
+     *   "buyerName": "John Doe",
+     *   "buyerEmail": "john@example.com",
+     *   "buyerPhone": "+2348012345678",  // optional
+     *   "variantId": 5,                  // optional
+     *   "callbackUrl": "https://..."     // optional
+     * }
+     *
+     * Returns the same shape as /initialize:
+     * { "success": true, "data": { "paymentUrl", "reference", "paymentReference" } }
+     */
+    @PostMapping("/guest/initialize")
+    public ResponseEntity<Map<String, Object>> guestInitializePayment(
+            @Valid @RequestBody GuestInitializePaymentRequest request) {
+
+        log.info("POST /payments/guest/initialize — Item: {}, Guest: {} <{}>",
+                request.getItemId(), request.getBuyerName(), request.getBuyerEmail());
+
+        InitializePaymentResponse response = paystackService.initializeGuestPayment(
+                request.getItemId(),
+                request.getVariantId(),
+                request.getBuyerName(),
+                request.getBuyerEmail(),
+                request.getBuyerPhone(),
+                request.getAmount(),
+                request.getDeliveryAddress(),
+                request.getCallbackUrl()
+        );
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", response.getMessage());
+        result.put("data", Map.of(
+                "paymentUrl", response.getPaymentUrl(),
+                "reference", response.getReference(),
+                "paymentReference", response.getReference()
+        ));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
+    // =====================================================================
     // 2. WEBHOOK — SAFETY NET (most important fix)
     // =====================================================================
 
@@ -228,16 +282,17 @@ public class PaymentController {
     /**
      * Verify payment with Paystack, mark as SUCCESS, create order if it doesn't exist.
      * This is the single source of truth for order creation after payment.
+     * Guest references (tlg_ prefix) are verified but do NOT create an Order entity.
      *
      * @param reference   Paystack payment reference
      * @param webhookData Optional webhook JSON data (for metadata extraction fallback)
-     * @return OrderDTO if order was created or already exists, null if payment not successful
+     * @return OrderDTO if order was created or already exists, null if payment not successful or guest
      */
     private OrderDTO processSuccessfulPayment(String reference, JsonNode webhookData) {
         log.info("Processing payment for reference: {}", reference);
 
         try {
-            // 1. Verify with Paystack API (this also marks payment as SUCCESS in DB)
+            // 1. Verify with Paystack API
             PaystackVerifyResponse verifyResponse = paystackService.verifyPayment(reference);
 
             if (!verifyResponse.getData().getStatus().equalsIgnoreCase("success")) {
@@ -246,21 +301,32 @@ public class PaymentController {
             }
             log.info("✔ Paystack confirmed SUCCESS for reference: {}", reference);
 
-            // 2. Fetch payment from DB (already marked as SUCCESS by verifyPayment)
+            // 2. Guest payments (tlg_ prefix) — no Order row; GuestPayment record already updated by verifyPayment
+            if (reference.startsWith("tlg_")) {
+                GuestPayment guestPayment = guestPaymentRepository.findByPaystackReference(reference).orElse(null);
+                if (guestPayment != null) {
+                    guestPayment.markOrderCreated();
+                    guestPaymentRepository.save(guestPayment);
+                }
+                log.info("✔ Guest payment verified. No Order entity created for guest reference: {}", reference);
+                return null; // caller handles guest response separately
+            }
+
+            // 3. Authenticated payment — fetch Payment record
             Payment payment = paymentRepository.findByPaystackReference(reference).orElse(null);
             if (payment == null) {
                 log.error("❌ Payment not found in DB for reference: {}", reference);
                 return null;
             }
 
-            // 3. IDEMPOTENT CHECK: does order already exist?
+            // 4. IDEMPOTENT CHECK: does order already exist?
             Optional<Order> existingOrder = orderRepository.findByPaymentId(payment.getId());
             if (existingOrder.isPresent()) {
                 log.info("⚠ Order already exists for payment {}. Order ID: {}", payment.getId(), existingOrder.get().getId());
                 return OrderDTO.fromEntity(existingOrder.get());
             }
 
-            // 4. Resolve delivery address: DB → Paystack verify metadata → webhook metadata → fallback
+            // 5. Resolve delivery address: DB → Paystack verify metadata → webhook metadata → fallback
             String deliveryAddress = payment.getDeliveryAddress();
             if (deliveryAddress == null || deliveryAddress.isBlank()) {
                 deliveryAddress = extractDeliveryAddressFromVerifyResponse(verifyResponse);
@@ -274,7 +340,7 @@ public class PaymentController {
 
             log.info("Delivery address: {}", deliveryAddress);
 
-            // 5. CREATE THE ORDER
+            // 6. CREATE THE ORDER
             OrderDTO order = orderService.createOrder(
                     payment.getItemId(),
                     payment.getBuyerId(),
