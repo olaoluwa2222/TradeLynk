@@ -388,85 +388,37 @@ public class PaystackService {
     }
 
     /**
-     * Verify a payment transaction
+     * Call Paystack's verify API and return the raw response.
+     * This method ONLY talks to Paystack — it does NOT touch the database.
+     * All DB updates (payment status, order creation) are handled by the caller.
      */
-    @Transactional
     public PaystackVerifyResponse verifyPayment(String reference) {
-        log.info("Verifying payment with reference: {}", reference);
+        log.info("Calling Paystack verify API for reference: {}", reference);
 
         try {
-            // 1. Set headers
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
-
             HttpEntity<?> entity = new HttpEntity<>(headers);
 
-            // 2. Call Paystack API
             String url = paystackConfig.getBaseUrl() + "/transaction/verify/" + reference;
             ResponseEntity<PaystackVerifyResponse> response = restTemplate.exchange(
                     url, HttpMethod.GET, entity, PaystackVerifyResponse.class);
 
             if (response.getBody() != null && response.getBody().getStatus()) {
-                PaystackVerifyResponse verifyResponse = response.getBody();
-                String status = verifyResponse.getData().getStatus();
-
-                // 3. Determine whether this is a guest payment or an authenticated payment
-                boolean isGuest = reference.startsWith("tlg_");
-
-                if (isGuest) {
-                    // ── Guest payment path ─────────────────────────────────────────
-                    GuestPayment guestPayment = guestPaymentRepository.findByPaystackReference(reference)
-                            .orElseThrow(() -> new NotFoundException("Guest payment record not found"));
-
-                    if ("success".equalsIgnoreCase(status)) {
-                        guestPayment.markAsSuccess();
-                        Item item = itemRepository.findById(guestPayment.getItemId())
-                                .orElseThrow(() -> new NotFoundException("Item not found"));
-                        notificationService.sendPaymentReceivedNotification(
-                                guestPayment.getSellerId(),
-                                guestPayment.getAmount(),
-                                item.getTitle()
-                        );
-                    } else {
-                        guestPayment.markAsFailed();
-                    }
-                    guestPaymentRepository.save(guestPayment);
-                    log.info("Guest payment verification completed. Status: {}", status);
-
-                } else {
-                    // ── Authenticated payment path ─────────────────────────────────
-                    Payment payment = paymentRepository.findByPaystackReference(reference)
-                            .orElseThrow(() -> new NotFoundException("Payment record not found"));
-
-                    if ("success".equalsIgnoreCase(status)) {
-                        payment.markAsSuccess();
-                        Item item = itemRepository.findById(payment.getItemId())
-                                .orElseThrow(() -> new NotFoundException("Item not found"));
-                        notificationService.sendPaymentReceivedNotification(
-                                payment.getSellerId(),
-                                payment.getAmount(),
-                                item.getTitle()
-                        );
-                    } else {
-                        payment.markAsFailed();
-                    }
-                    paymentRepository.save(payment);
-                    log.info("Payment verification completed. Status: {}", status);
-                }
-
-                return verifyResponse;
-
+                log.info("Paystack verify API responded — payment status: {}",
+                        response.getBody().getData().getStatus());
+                return response.getBody();
             } else {
-                throw new RuntimeException("Failed to verify payment: " +
-                        (response.getBody() != null ? response.getBody().getMessage() : "Unknown error"));
+                String msg = response.getBody() != null ? response.getBody().getMessage() : "Unknown error";
+                throw new RuntimeException("Paystack verify returned failure: " + msg);
             }
 
         } catch (HttpClientErrorException e) {
-            log.error("Paystack API error: {}", e.getResponseBodyAsString(), e);
-            throw new RuntimeException("Failed to verify payment: " + e.getMessage());
+            log.error("Paystack API HTTP error for ref {}: {}", reference, e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Paystack verify HTTP error: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Error verifying payment", e);
-            throw new RuntimeException("Failed to verify payment: " + e.getMessage());
+            log.error("Paystack verify API call failed for ref {}", reference, e);
+            throw new RuntimeException("Paystack verify failed: " + e.getMessage());
         }
     }
 
