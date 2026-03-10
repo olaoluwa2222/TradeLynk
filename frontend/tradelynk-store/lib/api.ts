@@ -1019,7 +1019,7 @@ export const ordersApi = {
     return response.data;
   },
 
-  // ===== NEW ESCROW SYSTEM ENDPOINTS =====
+  // ===== ORDER MANAGEMENT =====
 
   // Mark order as shipped (seller only)
   markAsShipped: async (orderId: number) => {
@@ -1027,7 +1027,7 @@ export const ordersApi = {
     return response.data;
   },
 
-  // Confirm delivery (buyer only) - releases escrow payment to seller
+  // DEPRECATED — confirm-delivery no longer used (no escrow)
   confirmDelivery: async (orderId: number) => {
     const response = await api.put(`/orders/${orderId}/confirm-delivery`);
     return response.data;

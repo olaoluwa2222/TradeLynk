@@ -63,9 +63,6 @@ export default function MyOrdersPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [chatLoading, setChatLoading] = useState<number | null>(null);
-  const [confirmingDelivery, setConfirmingDelivery] = useState<number | null>(
-    null,
-  );
   const [disputeModalOrder, setDisputeModalOrder] = useState<Order | null>(
     null,
   );
@@ -256,52 +253,42 @@ export default function MyOrdersPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAYMENT_HELD":
-        return {
-          bg: "bg-amber-100",
-          text: "text-amber-800",
-          label: "💰 Payment Held",
-        };
-      case "SHIPPED":
+      case "PROCESSING":
         return {
           bg: "bg-blue-100",
           text: "text-blue-800",
-          label: "🚚 Shipped",
+          label: "📦 Processing",
+        };
+      case "SHIPPED":
+        return {
+          bg: "bg-purple-100",
+          text: "text-purple-800",
+          label: "🚚 On the way",
         };
       case "DELIVERED":
-        return {
-          bg: "bg-emerald-100",
-          text: "text-emerald-800",
-          label: "✅ Delivered",
-        };
       case "COMPLETED":
         return {
           bg: "bg-green-100",
           text: "text-green-800",
-          label: "💸 Completed",
+          label: "✅ Delivered",
         };
       case "DISPUTED":
         return {
           bg: "bg-red-100",
           text: "text-red-800",
-          label: "⚠️ Disputed",
+          label: "⚠️ Issue Raised",
         };
       case "REFUNDED":
         return {
           bg: "bg-gray-100",
           text: "text-gray-800",
-          label: "💵 Refunded",
+          label: "↩️ Refunded",
         };
       case "CANCELLED":
         return {
           bg: "bg-red-100",
           text: "text-red-800",
           label: "❌ Cancelled",
-        };
-      case "PENDING_DELIVERY":
-        return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-800",
-          label: "⏳ Pending Delivery",
         };
       default:
         return {
@@ -312,60 +299,23 @@ export default function MyOrdersPage() {
     }
   };
 
-  // Get progress step for order timeline
+  // Get progress step for order timeline (3-step: Ordered → Shipped → Delivered)
   const getProgressStep = (status: string): number => {
     switch (status) {
       case "PAYMENT_HELD":
+      case "PROCESSING":
         return 1;
       case "SHIPPED":
         return 2;
       case "DELIVERED":
-        return 3;
       case "COMPLETED":
-        return 4;
+        return 3;
       case "DISPUTED":
       case "REFUNDED":
       case "CANCELLED":
-        return -1; // Special case
+        return -1;
       default:
         return 0;
-    }
-  };
-
-  // Handle confirm delivery
-  const handleConfirmDelivery = async (orderId: number) => {
-    setConfirmingDelivery(orderId);
-    setActionError("");
-    setActionSuccess("");
-
-    try {
-      const response = await ordersApi.confirmDelivery(orderId);
-      if (response.success) {
-        setActionSuccess(
-          "Delivery confirmed! Payment has been released to the seller.",
-        );
-        // Update order status locally
-        setOrders((prev) =>
-          prev.map((order) =>
-            order.id === orderId
-              ? { ...order, status: "DELIVERED" as OrderStatus }
-              : order,
-          ),
-        );
-        // Refresh orders after a short delay
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        throw new Error(response.message || "Failed to confirm delivery");
-      }
-    } catch (err: any) {
-      console.error("Error confirming delivery:", err);
-      setActionError(
-        err.message || "Failed to confirm delivery. Please try again.",
-      );
-    } finally {
-      setConfirmingDelivery(null);
     }
   };
 
@@ -507,19 +457,17 @@ export default function MyOrdersPage() {
         {/* Filters */}
         <div className="mb-8 flex flex-wrap gap-3">
           {[
-            "ALL",
-            "PAYMENT_HELD",
-            "SHIPPED",
-            "DELIVERED",
-            "COMPLETED",
-            "DISPUTED",
-            "CANCELLED",
-          ].map((status) => (
+            { key: "ALL", label: "All Orders" },
+            { key: "PROCESSING", label: "Processing" },
+            { key: "SHIPPED", label: "On the Way" },
+            { key: "COMPLETED", label: "Delivered" },
+            { key: "CANCELLED", label: "Cancelled" },
+          ].map(({ key, label }) => (
             <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
+              key={key}
+              onClick={() => setFilterStatus(key)}
               className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                filterStatus === status
+                filterStatus === key
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
@@ -528,19 +476,7 @@ export default function MyOrdersPage() {
                 fontWeight: 600,
               }}
             >
-              {status === "ALL"
-                ? "All Orders"
-                : status === "PAYMENT_HELD"
-                  ? "Payment Held"
-                  : status === "SHIPPED"
-                    ? "Shipped"
-                    : status === "DELIVERED"
-                      ? "Delivered"
-                      : status === "COMPLETED"
-                        ? "Completed"
-                        : status === "DISPUTED"
-                          ? "Disputed"
-                          : "Cancelled"}
+              {label}
             </button>
           ))}
         </div>
@@ -728,30 +664,21 @@ export default function MyOrdersPage() {
                         </div>
                       )}
 
-                      {/* Dispute/Refund notice */}
-                      {(order.status === "DISPUTED" ||
+                      {/* Cancellation / Refund notice */}
+                      {(order.status === "CANCELLED" ||
                         order.status === "REFUNDED") && (
-                        <div
-                          className={`mb-4 p-3 rounded-lg ${
-                            order.status === "DISPUTED"
-                              ? "bg-red-50 border border-red-200"
-                              : "bg-gray-50 border border-gray-200"
-                          }`}
-                        >
+                        <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
                           <p
-                            className={`text-sm ${
-                              order.status === "DISPUTED"
-                                ? "text-red-700"
-                                : "text-gray-700"
-                            }`}
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 500,
-                            }}
+                            className="text-sm text-gray-700"
+                            style={{ fontFamily: "Clash Display", fontWeight: 500 }}
                           >
-                            {order.status === "DISPUTED"
-                              ? "⚠️ You've raised a dispute for this order. We're reviewing it and will get back to you soon."
-                              : "💵 This order has been refunded to your original payment method."}
+                            {order.status === "REFUNDED"
+                              ? "↩️ A refund has been processed for this order."
+                              : `❌ This order was cancelled.${
+                                  order.cancellationReason
+                                    ? " Reason: " + order.cancellationReason
+                                    : ""
+                                }`}
                           </p>
                         </div>
                       )}
@@ -821,42 +748,6 @@ export default function MyOrdersPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-3">
-                        {/* Confirm Delivery Button - only for SHIPPED orders */}
-                        {order.status === "SHIPPED" && (
-                          <button
-                            onClick={() => handleConfirmDelivery(order.id)}
-                            disabled={confirmingDelivery === order.id}
-                            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {confirmingDelivery === order.id ? (
-                              <>
-                                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></div>
-                                Confirming...
-                              </>
-                            ) : (
-                              <>✅ Confirm Delivery</>
-                            )}
-                          </button>
-                        )}
-
-                        {/* Report Issue Button - for PAYMENT_HELD or SHIPPED orders */}
-                        {(order.status === "PAYMENT_HELD" ||
-                          order.status === "SHIPPED") && (
-                          <button
-                            onClick={() => setDisputeModalOrder(order)}
-                            className="px-6 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition-colors text-sm font-semibold"
-                            style={{
-                              fontFamily: "Clash Display",
-                              fontWeight: 600,
-                            }}
-                          >
-                            ⚠️ Report Issue
-                          </button>
-                        )}
 
                         <Link
                           href={`/orders/${order.id}`}

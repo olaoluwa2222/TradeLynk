@@ -126,13 +126,13 @@ export default function MySalesPage() {
           // order.amount is NAIRA — no commission deduction
           setTotalRevenue(completedRevenue);
 
-          // Calculate pending revenue (SHIPPED, DELIVERED — awaiting completion)
+          // Calculate pending revenue (SHIPPED orders — in transit)
           const pendingAmount = salesData
             .filter(
               (sale: Sale) =>
                 sale.status === "PAYMENT_HELD" ||
-                sale.status === "SHIPPED" ||
-                sale.status === "DELIVERED",
+                sale.status === "PROCESSING" ||
+                sale.status === "SHIPPED",
             )
             .reduce((sum: number, sale: Sale) => sum + sale.amount, 0);
 
@@ -157,52 +157,42 @@ export default function MySalesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PAYMENT_HELD":
-        return {
-          bg: "bg-amber-100",
-          text: "text-amber-800",
-          label: "💰 Payment Held",
-        };
-      case "SHIPPED":
+      case "PROCESSING":
         return {
           bg: "bg-blue-100",
           text: "text-blue-800",
+          label: "📦 New Order",
+        };
+      case "SHIPPED":
+        return {
+          bg: "bg-purple-100",
+          text: "text-purple-800",
           label: "🚚 Shipped",
         };
       case "DELIVERED":
-        return {
-          bg: "bg-emerald-100",
-          text: "text-emerald-800",
-          label: "✅ Delivered",
-        };
       case "COMPLETED":
         return {
           bg: "bg-green-100",
           text: "text-green-800",
-          label: "💸 Completed",
+          label: "✅ Delivered",
         };
       case "DISPUTED":
         return {
           bg: "bg-red-100",
           text: "text-red-800",
-          label: "⚠️ Disputed",
+          label: "⚠️ Issue Raised",
         };
       case "REFUNDED":
         return {
           bg: "bg-gray-100",
           text: "text-gray-800",
-          label: "💵 Refunded",
+          label: "↩️ Refunded",
         };
       case "CANCELLED":
         return {
           bg: "bg-red-100",
           text: "text-red-800",
           label: "❌ Cancelled",
-        };
-      case "PENDING_DELIVERY":
-        return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-800",
-          label: "⏳ Pending Delivery",
         };
       default:
         return {
@@ -217,16 +207,16 @@ export default function MySalesPage() {
   const getPaymentStatus = (status: string) => {
     switch (status) {
       case "PAYMENT_HELD":
+      case "PROCESSING":
       case "SHIPPED":
-        return { label: "� Payment Received", color: "text-amber-600" };
+        return { label: "💳 Payment Received", color: "text-blue-600" };
       case "DELIVERED":
-        return { label: "⏳ Awaiting Completion", color: "text-blue-600" };
       case "COMPLETED":
         return { label: "✅ Paid Out", color: "text-green-600" };
       case "DISPUTED":
-        return { label: "⚠️ On Hold", color: "text-red-600" };
+        return { label: "⚠️ Under Review", color: "text-red-600" };
       case "REFUNDED":
-        return { label: "💸 Refunded", color: "text-gray-600" };
+        return { label: "↩️ Refunded", color: "text-gray-600" };
       case "CANCELLED":
         return { label: "❌ Cancelled", color: "text-gray-600" };
       default:
@@ -421,7 +411,7 @@ export default function MySalesPage() {
                   >
                     {
                       sales.filter((s) =>
-                        ["PAYMENT_HELD", "SHIPPED", "DELIVERED"].includes(
+                        ["PAYMENT_HELD", "PROCESSING", "SHIPPED"].includes(
                           s.status,
                         ),
                       ).length
@@ -469,18 +459,17 @@ export default function MySalesPage() {
         {/* Filters */}
         <div className="mb-8 flex flex-wrap gap-3">
           {[
-            "ALL",
-            "PAYMENT_HELD",
-            "SHIPPED",
-            "DELIVERED",
-            "COMPLETED",
-            "DISPUTED",
-          ].map((status) => (
+            { key: "ALL", label: "All Sales" },
+            { key: "PAYMENT_HELD", label: "📦 New Orders" },
+            { key: "SHIPPED", label: "🚚 Shipped" },
+            { key: "COMPLETED", label: "✅ Delivered" },
+            { key: "CANCELLED", label: "❌ Cancelled" },
+          ].map(({ key, label }) => (
             <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
+              key={key}
+              onClick={() => setFilterStatus(key)}
               className={`px-6 py-2 rounded-full font-semibold transition-all ${
-                filterStatus === status
+                filterStatus === key
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
@@ -489,17 +478,7 @@ export default function MySalesPage() {
                 fontWeight: 600,
               }}
             >
-              {status === "ALL"
-                ? "All Sales"
-                : status === "PAYMENT_HELD"
-                  ? "💰 Payment Held"
-                  : status === "SHIPPED"
-                    ? "🚚 Shipped"
-                    : status === "DELIVERED"
-                      ? "✅ Delivered"
-                      : status === "COMPLETED"
-                        ? "💸 Completed"
-                        : "⚠️ Disputed"}
+              {label}
             </button>
           ))}
         </div>
@@ -736,8 +715,8 @@ export default function MySalesPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap gap-3">
-                        {/* Mark as Shipped button for PAYMENT_HELD orders */}
-                        {sale.status === "PAYMENT_HELD" && (
+                        {/* Mark as Shipped button for PAYMENT_HELD or PROCESSING orders */}
+                        {(sale.status === "PAYMENT_HELD" || sale.status === "PROCESSING") && (
                           <button
                             onClick={() => handleMarkAsShipped(sale.id)}
                             disabled={markingShipped === sale.id}

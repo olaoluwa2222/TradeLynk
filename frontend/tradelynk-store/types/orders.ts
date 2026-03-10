@@ -14,14 +14,15 @@ export interface PaymentInitializeResponse {
   };
 }
 
-// Order status types for the escrow payment system
+// Order status types — simple direct payment flow (no escrow)
 export type OrderStatus =
-  | "PAYMENT_HELD" // Buyer paid, money held in escrow
-  | "SHIPPED" // Seller marked as shipped
-  | "DELIVERED" // Buyer confirmed delivery
-  | "COMPLETED" // Money released to seller
-  | "DISPUTED" // Buyer raised a dispute
-  | "REFUNDED" // Dispute resolved with refund
+  | "PAYMENT_HELD" // Legacy — treated same as PROCESSING
+  | "PROCESSING" // Order placed, payment received
+  | "SHIPPED" // Seller marked as shipped / in transit
+  | "DELIVERED" // Delivered (auto or admin)
+  | "COMPLETED" // Order complete, seller paid
+  | "DISPUTED" // Issue raised
+  | "REFUNDED" // Refund processed
   | "CANCELLED"; // Order cancelled
 
 export interface Order {
