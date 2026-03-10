@@ -59,11 +59,17 @@ export default function BecomeASellerPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="w-full bg-linear-to-br from-black via-gray-900 to-black text-white py-20 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-[#0F0F0F] text-white py-20 pb-28 px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
             <div className="space-y-8">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 bg-purple-600/20 border border-purple-500/30 text-purple-300 text-sm font-semibold px-4 py-2 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+                Free storefront · No credit card needed
+              </div>
+
               {/* Main Headline */}
               <div>
                 <h1
@@ -73,7 +79,8 @@ export default function BecomeASellerPage() {
                     fontWeight: 700,
                   }}
                 >
-                  💰 Start Selling & Earn Money Online
+                  Stop Sending Photos.<br />
+                  <span className="text-purple-400">Get a Real Store.</span> 🏪
                 </h1>
               </div>
 
@@ -86,102 +93,56 @@ export default function BecomeASellerPage() {
                     fontWeight: 400,
                   }}
                 >
-                  Turn your unused items into cash. Join 50+ sellers making
-                  ₦50,000+ per month on TradeLynk Marketplace.
+                  Your own professional mini website at{" "}
+                  <span className="text-purple-400 font-semibold">yourname.tradelynk.app</span>.
+                  Share one link, let customers browse everything you sell, and receive orders directly — no more DM chaos.
                 </p>
               </div>
 
-              {/* CTA Button */}
-              <div>
+              {/* What you get — quick hits */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center">
+                  <p className="text-2xl mb-1">🌐</p>
+                  <p className="text-white font-semibold text-sm">Your own link</p>
+                  <p className="text-gray-400 text-xs">yourname.tradelynk.app</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center">
+                  <p className="text-2xl mb-1">🛍️</p>
+                  <p className="text-white font-semibold text-sm">Product catalogue</p>
+                  <p className="text-gray-400 text-xs">Unlimited listings</p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center">
+                  <p className="text-2xl mb-1">💸</p>
+                  <p className="text-white font-semibold text-sm">Direct payments</p>
+                  <p className="text-gray-400 text-xs">To your bank · 24h</p>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-4">
                 <a
-                  href="#form"
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg group"
+                  href="#storefront-feature"
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all duration-300 shadow-lg hover:shadow-purple-900/50 text-lg group"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 700,
                   }}
                 >
-                  <span>Start Selling Now</span>
-                  <span className="group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>
+                  <span>See How It Works</span>
+                  <span className="group-hover:translate-y-1 transition-transform">↓</span>
+                </a>
+                <a
+                  href="#form"
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 border-2 border-white/20 text-white font-bold rounded-xl hover:border-purple-400 hover:text-purple-300 transition-all duration-300 text-lg"
+                  style={{
+                    fontFamily: "Clash Display",
+                    fontWeight: 700,
+                  }}
+                >
+                  Skip to Setup →
                 </a>
               </div>
 
-              {/* Benefits List */}
-              <div className="space-y-4 pt-4">
-                <div className="flex items-start gap-4">
-                  <div className="text-2xl mt-1">✅</div>
-                  <div>
-                    <p
-                      className="text-lg font-semibold text-white"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 600,
-                      }}
-                    >
-                      No listing fees
-                    </p>
-                    <p
-                      className="text-gray-400 text-sm"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      List as many items as you want for free
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="text-2xl mt-1">✅</div>
-                  <div>
-                    <p
-                      className="text-lg font-semibold text-white"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Fast payments
-                    </p>
-                    <p
-                      className="text-gray-400 text-sm"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      Get paid within 24 hours of confirming a sale
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="text-2xl mt-1">✅</div>
-                  <div>
-                    <p
-                      className="text-lg font-semibold text-white"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Easy setup
-                    </p>
-                    <p
-                      className="text-gray-400 text-sm"
-                      style={{
-                        fontFamily: "Clash Display",
-                        fontWeight: 400,
-                      }}
-                    >
-                      Create your profile in less than 5 minutes
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Right Side - Stats Card */}
@@ -273,26 +234,49 @@ export default function BecomeASellerPage() {
                 </div>
               </div>
 
-              {/* Secondary CTA */}
-              <div className="bg-white rounded-2xl p-6 text-center">
-                <p
-                  className="text-black text-sm mb-4"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 500,
-                  }}
-                >
-                  Ready to start earning?
+              {/* Storefront URL Preview */}
+              <div className="bg-white rounded-2xl p-6">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-3">
+                  Your storefront will look like this:
                 </p>
+                {/* Browser bar mockup */}
+                <div className="bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-200 border-b border-gray-300">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-gray-600 font-medium text-center border border-gray-300">
+                      yourname.tradelynk.app
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-16 bg-linear-to-r from-purple-500 to-purple-700 rounded-lg flex items-center px-4 gap-3">
+                      <div className="w-10 h-10 bg-white/30 rounded-full"></div>
+                      <div>
+                        <div className="h-3 w-24 bg-white/80 rounded mb-1"></div>
+                        <div className="h-2 w-16 bg-white/50 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="aspect-square bg-gray-200 rounded-lg"></div>
+                      <div className="aspect-square bg-gray-200 rounded-lg"></div>
+                      <div className="aspect-square bg-gray-200 rounded-lg"></div>
+                    </div>
+                    <div className="h-2 w-3/4 bg-gray-200 rounded"></div>
+                    <div className="h-2 w-1/2 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
                 <a
                   href="#form"
-                  className="inline-block w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-900 transition-colors"
+                  className="inline-block w-full py-3 mt-4 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition-colors text-center"
                   style={{
                     fontFamily: "Clash Display",
                     fontWeight: 700,
                   }}
                 >
-                  Become a Seller
+                  Claim Your Store →
                 </a>
               </div>
             </div>
@@ -300,11 +284,248 @@ export default function BecomeASellerPage() {
         </div>
       </section>
 
+      {/* ── BEFORE vs AFTER ─────────────────────── */}
+      <section className="w-full bg-[#0F0F0F] py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-purple-400 font-semibold text-sm tracking-widest uppercase mb-4">
+            THE DIFFERENCE
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 leading-tight" style={{ fontFamily: "Clash Display", fontWeight: 700 }}>
+            Instagram DMs vs. your TradeLynk storefront
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
+            {/* Before */}
+            <div className="bg-red-950/40 border border-red-800/40 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="text-2xl">😵</span>
+                <p className="text-red-300 font-bold text-lg">Before TradeLynk</p>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  "Sending the same photos to every customer over and over",
+                  "\"How much?\" \"Available?\" — same questions, all day",
+                  "No way for customers to browse what you sell",
+                  "Payment via manual bank transfer with no record",
+                  "Lose sales when you're offline or asleep",
+                  "Customers can't find you easily — no single link to share",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3 text-red-200 text-sm">
+                    <span className="text-red-500 mt-0.5 shrink-0">✗</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* After */}
+            <div className="bg-green-950/40 border border-green-700/40 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <span className="text-2xl">🚀</span>
+                <p className="text-green-300 font-bold text-lg">With TradeLynk</p>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  "All your products live on your own site — customers browse themselves",
+                  "Share ONE link: yourname.tradelynk.app — works everywhere",
+                  "Customers order directly with full product details + photos",
+                  "Payments tracked and paid to your bank within 24 hours",
+                  "Your store works 24/7 — even while you sleep",
+                  "Professional, branded presence that builds trust instantly",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3 text-green-200 text-sm">
+                    <span className="text-green-400 mt-0.5 shrink-0">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <a
+            href="#storefront-feature"
+            className="inline-flex items-center gap-2 mt-10 text-purple-400 font-semibold hover:text-purple-300 transition-colors"
+          >
+            See what your storefront looks like ↓
+          </a>
+        </div>
+      </section>
+
+      {/* ── STOREFRONT FEATURE SHOWCASE ─────────────────────── */}
+      <section id="storefront-feature" className="w-full bg-white py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Label */}
+          <p className="text-purple-600 font-semibold text-sm tracking-widest uppercase mb-3 text-center">
+            YOUR OWN MINI WEBSITE
+          </p>
+          <h2
+            className="text-4xl md:text-5xl font-bold text-black mb-4 text-center leading-tight"
+            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+          >
+            Not just a listing. A full storefront.
+          </h2>
+          <p className="text-gray-500 text-lg text-center mb-16 max-w-2xl mx-auto leading-relaxed">
+            When you become a seller on TradeLynk, you get your own professional
+            mini website — not just a profile. Share one link everywhere and let
+            customers browse, order, and pay directly.
+          </p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Feature highlights */}
+            <div className="space-y-8">
+              {/* Feature 1 */}
+              <div className="flex items-start gap-5">
+                <div className="shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl">
+                  🌐
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                    Your own unique link
+                  </h3>
+                  <p className="text-gray-500 leading-relaxed">
+                    Get <span className="font-semibold text-purple-600">yourname.tradelynk.app</span> — a real web address you can
+                    drop in your Instagram bio, WhatsApp status, or anywhere online.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="flex items-start gap-5">
+                <div className="shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl">
+                  🛍️
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                    Product catalogue — not just photos
+                  </h3>
+                  <p className="text-gray-500 leading-relaxed">
+                    List unlimited products with prices, descriptions, and photos. Organize
+                    them into collections. Customers can browse everything in one place.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="flex items-start gap-5">
+                <div className="shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl">
+                  🎨
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                    Pick your look & theme
+                  </h3>
+                  <p className="text-gray-500 leading-relaxed">
+                    Choose from multiple storefront themes and brand colours to match your
+                    business personality — no design skills needed.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="flex items-start gap-5">
+                <div className="shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl">
+                  📦
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                    Orders come straight to you
+                  </h3>
+                  <p className="text-gray-500 leading-relaxed">
+                    Customers order directly on your storefront. You get notified instantly
+                    and receive payment to your bank — no middleman.
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href="#form"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all duration-200 shadow-lg hover:shadow-purple-200 text-lg group mt-2"
+                style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+              >
+                <span>Set Up My Storefront</span>
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </a>
+            </div>
+
+            {/* Right: Storefront URL Bar + Card mockup */}
+            <div className="relative">
+              {/* Decorative glow */}
+              <div className="absolute -inset-4 bg-purple-100 rounded-3xl blur-2xl opacity-40 pointer-events-none"></div>
+
+              <div className="relative bg-white border border-gray-200 rounded-3xl shadow-2xl overflow-hidden">
+                {/* Browser chrome */}
+                <div className="bg-gray-100 px-4 py-3 flex items-center gap-3 border-b border-gray-200">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                  </div>
+                  <div className="flex-1 bg-white rounded-md px-4 py-1.5 text-sm text-gray-500 font-medium border border-gray-300 flex items-center gap-2">
+                    <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span className="text-purple-600 font-semibold">adaeze</span>.tradelynk.app
+                  </div>
+                </div>
+
+                {/* Storefront content mockup */}
+                <div className="bg-gray-50">
+                  {/* Store banner */}
+                  <div className="h-28 bg-linear-to-r from-purple-600 to-purple-800 relative flex items-end px-6 pb-4">
+                    <div className="absolute bottom-0 translate-y-1/2 left-6 w-16 h-16 bg-white rounded-full border-4 border-white shadow-md flex items-center justify-center text-2xl">
+                      👗
+                    </div>
+                  </div>
+                  <div className="pt-12 px-6 pb-4">
+                    <h4 className="text-lg font-bold text-gray-900">Adaeze Couture</h4>
+                    <p className="text-gray-500 text-sm mb-1">adaeze.tradelynk.app</p>
+                    <p className="text-gray-600 text-sm">Nigerian fashion for the modern woman 🇳🇬</p>
+                    <div className="flex gap-2 mt-3">
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">✓ Verified Seller</span>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">⚡ Ships in 24h</span>
+                    </div>
+                  </div>
+
+                  {/* Product grid */}
+                  <div className="px-6 pb-6">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Products</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { bg: "bg-orange-200", emoji: "👗", price: "₦8,500" },
+                        { bg: "bg-pink-200", emoji: "👜", price: "₦12,000" },
+                        { bg: "bg-blue-200", emoji: "👠", price: "₦6,200" },
+                      ].map((item, i) => (
+                        <div key={i} className="rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-white">
+                          <div className={`${item.bg} aspect-square flex items-center justify-center text-3xl`}>
+                            {item.emoji}
+                          </div>
+                          <div className="p-2">
+                            <div className="h-1.5 bg-gray-200 rounded w-3/4 mb-1.5"></div>
+                            <p className="text-xs font-bold text-gray-800">{item.price}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating badge */}
+              <div className="absolute -bottom-4 -right-4 bg-purple-600 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg">
+                Free to set up ✨
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How Selling Works Section */}
-      <section className="w-full bg-white py-20 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gray-50 py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Section Title */}
           <div className="text-center mb-16">
+            <p className="text-purple-600 font-semibold text-sm tracking-widest uppercase mb-3">
+              HOW IT WORKS
+            </p>
             <h2
               className="text-4xl md:text-5xl font-bold text-black mb-3"
               style={{
@@ -312,151 +533,119 @@ export default function BecomeASellerPage() {
                 fontWeight: 700,
               }}
             >
-              How Selling Works - It's Easy!
+              Up and running in 3 simple steps
             </h2>
-            <div className="h-1 w-20 bg-black mx-auto"></div>
+            <div className="h-1 w-20 bg-purple-600 mx-auto rounded-full"></div>
           </div>
 
           {/* Steps Container */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            {/* Step 1: Sign Up */}
+            {/* Step 1: Create Storefront */}
             <div className="flex flex-col items-center text-center group">
-              <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
-                <span
-                  className="text-5xl"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  📋
-                </span>
+              <div className="w-24 h-24 rounded-full bg-purple-600 flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
+                <span className="text-5xl">🏪</span>
               </div>
 
-              <h3
-                className="text-2xl font-bold text-black mb-4"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
+              <h3 className="text-2xl font-bold text-black mb-4" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
                 Step 1
               </h3>
 
-              <h4
-                className="text-xl font-semibold text-black mb-3"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Sign Up
+              <h4 className="text-xl font-semibold text-black mb-3" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+                Create Your Storefront
               </h4>
 
-              <p
-                className="text-gray-600 text-sm leading-relaxed"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 400,
-                }}
-              >
-                Add your bank details and complete your seller profile in less
-                than 5 minutes.
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Sign up, choose your store name, and get your personal link at{" "}
+                <span className="text-purple-600 font-semibold">yourname.tradelynk.app</span> — in under 5 minutes.
               </p>
             </div>
 
-            {/* Step 2: List Item */}
+            {/* Step 2: Add Products */}
             <div className="flex flex-col items-center text-center group">
-              <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
-                <span
-                  className="text-5xl"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  📸
-                </span>
+              <div className="w-24 h-24 rounded-full bg-purple-600 flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
+                <span className="text-5xl">📸</span>
               </div>
 
-              <h3
-                className="text-2xl font-bold text-black mb-4"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
+              <h3 className="text-2xl font-bold text-black mb-4" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
                 Step 2
               </h3>
 
-              <h4
-                className="text-xl font-semibold text-black mb-3"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                List Item
+              <h4 className="text-xl font-semibold text-black mb-3" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+                Add Your Products
               </h4>
 
-              <p
-                className="text-gray-600 text-sm leading-relaxed"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 400,
-                }}
-              >
-                Upload photos, add details, set your price, and list your items
-                instantly.
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Upload photos, set prices, write descriptions, and organise into collections.
+                Your storefront is instantly updated — no tech skills needed.
               </p>
             </div>
 
-            {/* Step 3: Get Paid */}
+            {/* Step 3: Share & Get Paid */}
             <div className="flex flex-col items-center text-center group">
-              <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
-                <span
-                  className="text-5xl"
-                  style={{
-                    fontFamily: "Clash Display",
-                    fontWeight: 700,
-                  }}
-                >
-                  💰
-                </span>
+              <div className="w-24 h-24 rounded-full bg-purple-600 flex items-center justify-center mb-6 shadow-lg transform group-hover:scale-110 transition-transform duration-300 relative z-10">
+                <span className="text-5xl">💰</span>
               </div>
 
-              <h3
-                className="text-2xl font-bold text-black mb-4"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
+              <h3 className="text-2xl font-bold text-black mb-4" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
                 Step 3
               </h3>
 
-              <h4
-                className="text-xl font-semibold text-black mb-3"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 600,
-                }}
-              >
-                Get Paid
+              <h4 className="text-xl font-semibold text-black mb-3" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+                Share Your Link & Get Paid
               </h4>
 
-              <p
-                className="text-gray-600 text-sm leading-relaxed"
-                style={{
-                  fontFamily: "Clash Display",
-                  fontWeight: 400,
-                }}
-              >
-                Receive payment directly to your bank account within 24-48 hours
-                after each sale.
+              <p className="text-gray-600 text-sm leading-relaxed">
+                Drop your storefront link in your Instagram bio or WhatsApp status. Customers
+                order directly and you get paid to your bank within 24–48 hours.
               </p>
             </div>
           </div>
+
+          {/* CTA below steps */}
+          <div className="text-center mt-14">
+            <a
+              href="#form"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all duration-200 shadow-lg hover:shadow-purple-200 text-lg group"
+              style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+            >
+              <span>Start Building My Store</span>
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </a>
+            <p className="text-gray-400 text-sm mt-3">Free to start · No credit card needed</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── BRIDGE — "You're 5 mins away" ─────────────────────── */}
+      <section className="w-full bg-purple-600 py-14 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-purple-200 font-semibold text-sm tracking-widest uppercase mb-3">
+            READY?
+          </p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight" style={{ fontFamily: "Clash Display", fontWeight: 700 }}>
+            You're 5 minutes away from your own store.
+          </h2>
+          <p className="text-purple-100 text-lg mb-8 leading-relaxed">
+            Fill in the form below to claim your storefront link, customise your look,
+            and go live. It's completely free — no credit card, no tech skills needed.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white/80 text-sm font-medium">
+            <span>✓ Free forever</span>
+            <span className="hidden sm:block">·</span>
+            <span>✓ Your own subdomain</span>
+            <span className="hidden sm:block">·</span>
+            <span>✓ Unlimited products</span>
+            <span className="hidden sm:block">·</span>
+            <span>✓ Direct bank payments</span>
+          </div>
+          <a
+            href="#form"
+            className="inline-flex items-center gap-3 mt-8 px-8 py-4 bg-white text-purple-600 font-bold rounded-xl hover:bg-purple-50 transition-all duration-200 shadow-lg text-lg group"
+            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+          >
+            <span>Set Up My Store Now</span>
+            <span className="group-hover:translate-y-1 transition-transform">↓</span>
+          </a>
         </div>
       </section>
 
@@ -865,6 +1054,9 @@ function SellerActivationForm({
       <div className="max-w-7xl mx-auto">
         {/* Section Title */}
         <div className="text-center mb-12">
+          <p className="text-purple-600 font-semibold text-sm tracking-widest uppercase mb-3">
+            STEP 1 OF 1 — FREE TO JOIN
+          </p>
           <h2
             className="text-4xl font-bold text-black mb-3"
             style={{
@@ -872,16 +1064,18 @@ function SellerActivationForm({
               fontWeight: 700,
             }}
           >
-            Complete Your Seller Profile
+            🏪 Build Your Store — It Takes 5 Minutes
           </h2>
           <p
-            className="text-gray-600"
+            className="text-gray-500 max-w-xl mx-auto"
             style={{
               fontFamily: "Clash Display",
               fontWeight: 400,
             }}
           >
-            Set up your seller account and storefront
+            Fill in your details below to claim your storefront at{" "}
+            <span className="text-purple-600 font-semibold">yourname.tradelynk.app</span>.
+            Customers will be able to browse your products and order directly.
           </p>
         </div>
 
@@ -1108,9 +1302,9 @@ function SellerActivationForm({
 
                   {/* Banner Image - Required */}
                   <div className="mb-8">
-                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
+                    <div className="bg-linear-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-100">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
                           <span className="text-xl">🖼️</span>
                         </div>
                         <div>
@@ -1155,7 +1349,7 @@ function SellerActivationForm({
                     {/* Store Logo - Optional */}
                     <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
                           <span className="text-base">🏪</span>
                         </div>
                         <div>
@@ -1188,9 +1382,9 @@ function SellerActivationForm({
                     </div>
 
                     {/* Instagram Profile - Optional for verification */}
-                    <div className="bg-gradient-to-br from-pink-50 to-orange-50 rounded-xl p-5 border border-pink-100">
+                    <div className="bg-linear-to-br from-pink-50 to-orange-50 rounded-xl p-5 border border-pink-100">
                       <div className="flex items-start gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
                           <svg
                             className="w-4 h-4 text-white"
                             fill="currentColor"
