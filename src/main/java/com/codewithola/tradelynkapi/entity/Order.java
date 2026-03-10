@@ -100,22 +100,24 @@ public class Order {
     // State transition methods
     public void markAsShipped() {
         if (this.status != OrderStatus.PAID) {
-            throw new IllegalStateException("Can only mark PAID orders as shipped");
+            throw new IllegalStateException("Can only mark PAID orders as shipped. Current status: " + this.status);
         }
         this.status = OrderStatus.SHIPPED;
         this.shippedAt = LocalDateTime.now();
     }
 
     /**
-     * @deprecated Buyer confirmation is no longer required. Use markAsCompleted() instead.
-     * Kept for backwards compatibility with admin dispute resolution.
+     * Buyer confirms they received the order.
+     * Sets status to DELIVERED. Order auto-completes after 5 days via scheduler,
+     * or immediately when buyer explicitly confirms.
      */
-    @Deprecated
     public void markAsDelivered() {
-        // Treat as COMPLETED directly — no buyer confirmation step
-        this.status = OrderStatus.COMPLETED;
+        if (this.status != OrderStatus.SHIPPED) {
+            throw new IllegalStateException(
+                    "Can only mark SHIPPED orders as delivered. Current status: " + this.status);
+        }
+        this.status = OrderStatus.DELIVERED;
         this.deliveredAt = LocalDateTime.now();
-        this.completedAt = LocalDateTime.now();
     }
 
     public void markAsCompleted() {
@@ -130,8 +132,9 @@ public class Order {
     }
 
     public void markAsDisputed() {
-        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
-            throw new IllegalStateException("Can only dispute PAID or SHIPPED orders");
+        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID
+                && this.status != OrderStatus.DELIVERED) {
+            throw new IllegalStateException("Can only dispute PAID, SHIPPED, or DELIVERED orders. Current status: " + this.status);
         }
         this.status = OrderStatus.DISPUTED;
         this.disputedAt = LocalDateTime.now();
@@ -151,12 +154,14 @@ public class Order {
     }
 
     /**
-     * Auto-complete: mark as COMPLETED directly (no DELIVERED step required).
-     * Triggered by the scheduled job after 5-7 days in SHIPPED status.
+     * Auto-complete: mark as COMPLETED.
+     * Triggered by the scheduled job after 5 days in SHIPPED or DELIVERED status.
      */
     public void autoComplete() {
-        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
-            throw new IllegalStateException("Can only auto-complete SHIPPED or PAID orders");
+        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID
+                && this.status != OrderStatus.DELIVERED) {
+            throw new IllegalStateException(
+                    "Can only auto-complete SHIPPED, DELIVERED, or PAID orders. Current status: " + this.status);
         }
         this.status = OrderStatus.COMPLETED;
         this.autoCompletedAt = LocalDateTime.now();
@@ -166,8 +171,7 @@ public class Order {
     // State check methods
     public boolean isPaid() { return this.status == OrderStatus.PAID; }
     public boolean isShipped() { return this.status == OrderStatus.SHIPPED; }
-    /** @deprecated No longer a separate step — mapped to COMPLETED */
-    @Deprecated public boolean isDelivered() { return this.status == OrderStatus.DELIVERED || this.status == OrderStatus.COMPLETED; }
+    public boolean isDelivered() { return this.status == OrderStatus.DELIVERED; }
     public boolean isCompleted() { return this.status == OrderStatus.COMPLETED; }
     public boolean isDisputed() { return this.status == OrderStatus.DISPUTED; }
     public boolean isRefunded() { return this.status == OrderStatus.REFUNDED; }
@@ -175,12 +179,11 @@ public class Order {
 
     // Permission checks
     public boolean canBeShipped() { return this.status == OrderStatus.PAID; }
-    /** @deprecated Buyer confirmation is no longer required */
-    @Deprecated public boolean canBeMarkedAsDelivered() { return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAID; }
-    public boolean canBeDisputed() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
+    public boolean canBeMarkedAsDelivered() { return this.status == OrderStatus.SHIPPED; }
+    public boolean canBeDisputed() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED; }
     public boolean canBeCancelled() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
-    /** Transfer is allowed from SHIPPED or PAID states (no DELIVERED step) */
     public boolean canBeCompleted() { return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAID || this.status == OrderStatus.DELIVERED; }
-    public boolean canBeRefunded() { return this.status == OrderStatus.DISPUTED || this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
+    public boolean canBeRefunded() { return this.status == OrderStatus.DISPUTED || this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED || this.status == OrderStatus.DELIVERED; }
     public boolean isFinalState() { return this.status == OrderStatus.COMPLETED || this.status == OrderStatus.REFUNDED || this.status == OrderStatus.CANCELLED; }
 }
+

@@ -20,8 +20,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * TransferService handles seller payouts via Paystack Transfer API
- * This service handles manual seller payouts via Paystack Transfer API.
+ * TransferService — manual seller payouts via Paystack Transfer API.
+ * In the direct payment flow, Paystack settles funds to the seller at payment time.
+ * This service is used for admin-initiated manual payouts only.
+ * No platform commission — sellers receive 100% of the order amount.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,16 +33,14 @@ public class TransferService {
     private final TransferRepository transferRepository;
     private final OrderRepository orderRepository;
     private final SellerProfileRepository sellerProfileRepository;
-    private final UserRepository userRepository;
     private final PaystackConfig paystackConfig;
     private final RestTemplate restTemplate;
     private final NotificationService notificationService;
 
-    private static final Double PLATFORM_FEE_PERCENTAGE = 3.0; // 3% platform fee
-
     /**
-     * Initiate transfer to seller.
-     * Seller receives 100% of the order amount — no commission deducted.
+     * Initiate a transfer to the seller for a given order.
+     * Seller receives 100% — no commission deducted.
+     * Accepts orders in any active state: PAID, SHIPPED, DELIVERED, or COMPLETED.
      */
     @Transactional
     public TransferDTO initiateTransfer(Long orderId) {
@@ -50,9 +50,11 @@ public class TransferService {
         Order order = orderRepository.findByIdWithDetails(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found"));
 
-        // 2. Validate order status
-        if (!order.isDelivered()) {
-            throw new BadRequestException("Can only transfer funds for delivered orders");
+        // 2. Validate order status — accept PAID, SHIPPED, DELIVERED, or COMPLETED
+        if (!order.canBeCompleted() && !order.isCompleted()) {
+            throw new BadRequestException(
+                    "Can only transfer funds for PAID, SHIPPED, DELIVERED, or COMPLETED orders. Current status: "
+                    + order.getStatus());
         }
 
         // 3. Check if transfer already exists
@@ -104,13 +106,13 @@ public class TransferService {
             savedTransfer.markAsSuccess(transferCode);
             transferRepository.save(savedTransfer);
 
-            // 10. Update order status to COMPLETED
+            // 10. Mark order as COMPLETED if not already
             order.markAsCompleted();
             orderRepository.save(order);
 
             log.info("✅ Transfer successful! Code: {}, Amount: {} kobo", transferCode, sellerPayoutInKobo);
 
-            // 11. Notify seller about payout (100% of order amount)
+            // 11. Notify seller about payout
             notificationService.sendPayoutNotification(
                     seller.getId(),
                     order.getAmount(),
@@ -128,22 +130,18 @@ public class TransferService {
     }
 
     /**
-     * Call Paystack Transfer API
-     * Transfers money directly to seller's bank account
+     * Call Paystack Transfer API — transfers money to seller's bank account.
      */
+    @SuppressWarnings("unchecked")
     private String callPaystackTransferAPI(String accountNumber, String bankName,
                                            Long amountInKobo, String sellerName, String reason) {
         log.info("Calling Paystack Transfer API - Account: {}, Bank: {}, Amount: {} kobo",
                 accountNumber, bankName, amountInKobo);
 
         try {
-            // 1. Get bank code from bank name
             String bankCode = getBankCode(bankName);
-
-            // 2. Create or get recipient code
             String recipientCode = createTransferRecipient(accountNumber, bankCode, sellerName);
 
-            // 3. Initiate transfer
             Map<String, Object> transferRequest = new HashMap<>();
             transferRequest.put("source", "balance");
             transferRequest.put("amount", amountInKobo);
@@ -155,8 +153,9 @@ public class TransferService {
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(transferRequest, headers);
-
             String url = paystackConfig.getBaseUrl() + "/transfer";
+
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getBody() != null && Boolean.TRUE.equals(response.getBody().get("status"))) {
@@ -179,8 +178,9 @@ public class TransferService {
     }
 
     /**
-     * Create Paystack transfer recipient
+     * Create a Paystack transfer recipient for the seller's bank account.
      */
+    @SuppressWarnings("unchecked")
     private String createTransferRecipient(String accountNumber, String bankCode, String name) {
         log.info("Creating Paystack transfer recipient: {} - {}", accountNumber, bankCode);
 
@@ -197,8 +197,9 @@ public class TransferService {
             headers.set("Authorization", paystackConfig.getAuthorizationHeader());
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(recipientRequest, headers);
-
             String url = paystackConfig.getBaseUrl() + "/transferrecipient";
+
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getBody() != null && Boolean.TRUE.equals(response.getBody().get("status"))) {
@@ -217,10 +218,6 @@ public class TransferService {
         }
     }
 
-    /**
-     * Get bank code from bank name
-     * Uses BankEnum from your existing code
-     */
     private String getBankCode(String bankName) {
         try {
             return com.codewithola.tradelynkapi.Enum.BankEnum.fromName(bankName).getCode();
@@ -230,9 +227,6 @@ public class TransferService {
         }
     }
 
-    /**
-     * Get transfer by ID
-     */
     @Transactional(readOnly = true)
     public TransferDTO getTransferById(Long transferId) {
         Transfer transfer = transferRepository.findByIdWithDetails(transferId)
@@ -240,18 +234,11 @@ public class TransferService {
         return TransferDTO.fromEntity(transfer);
     }
 
-    /**
-     * Get seller's transfer history
-     */
     @Transactional(readOnly = true)
     public Page<TransferDTO> getSellerTransfers(Long sellerId, Pageable pageable) {
-        Page<Transfer> transfers = transferRepository.findBySellerId(sellerId, pageable);
-        return transfers.map(TransferDTO::fromEntity);
+        return transferRepository.findBySellerId(sellerId, pageable).map(TransferDTO::fromEntity);
     }
 
-    /**
-     * Get transfer by order ID
-     */
     @Transactional(readOnly = true)
     public TransferDTO getTransferByOrderId(Long orderId) {
         Transfer transfer = transferRepository.findByOrderId(orderId)
@@ -259,3 +246,4 @@ public class TransferService {
         return TransferDTO.fromEntity(transfer);
     }
 }
+

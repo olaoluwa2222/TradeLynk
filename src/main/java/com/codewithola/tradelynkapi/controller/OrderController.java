@@ -136,9 +136,32 @@ public class OrderController {
     }
 
     /**
+     * ✅ PUT /api/orders/{id}/mark-delivered
+     * Buyer marks order as received ("I Received This").
+     * Sets status to DELIVERED. Order auto-completes after 5 days.
+     * No payout triggered — seller received payment directly from Paystack.
+     */
+    @PutMapping("/{id}/mark-delivered")
+    public ResponseEntity<Map<String, Object>> markAsDelivered(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        log.info("PUT /api/orders/{}/mark-delivered - Buyer: {}", id, userPrincipal.getEmail());
+
+        OrderDTO order = orderService.markAsDelivered(id, userPrincipal.getId());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Order marked as delivered successfully");
+        response.put("data", order);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * PUT /api/orders/{id}/confirm-delivery
-     * Kept for backwards compatibility — buyer action that completes the order directly.
-     * No longer required (orders auto-complete after 5 days), but still accepted.
+     * Kept for backwards compatibility — same as mark-delivered.
+     * Buyer confirms they received the order.
      */
     @PutMapping("/{id}/confirm-delivery")
     public ResponseEntity<Map<String, Object>> confirmDelivery(
@@ -151,7 +174,7 @@ public class OrderController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Order completed successfully.");
+        response.put("message", "Order marked as delivered successfully");
         response.put("data", order);
 
         return ResponseEntity.ok(response);
