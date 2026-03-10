@@ -16,8 +16,9 @@ export interface PaymentInitializeResponse {
 
 // Order status types — simple direct payment flow (no escrow)
 export type OrderStatus =
-  | "PAYMENT_HELD" // Legacy — treated same as PROCESSING
-  | "PROCESSING" // Order placed, payment received
+  | "PAID" // Payment confirmed, awaiting shipment
+  | "PAYMENT_HELD" // Legacy — treated same as PAID
+  | "PROCESSING" // Legacy — treated same as PAID
   | "SHIPPED" // Seller marked as shipped / in transit
   | "DELIVERED" // Delivered (auto or admin)
   | "COMPLETED" // Order complete, seller paid

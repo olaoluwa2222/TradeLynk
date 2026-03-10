@@ -16,7 +16,7 @@ export default function Home() {
   const dashboardHref =
     user?.role === "SELLER" || user?.role === "BOTH" || user?.role === "ADMIN"
       ? "/dashboard/seller"
-      : "/items";
+      : "/dashboard/buyer";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -267,11 +267,11 @@ export default function Home() {
       {/* ============================
           HERO SECTION
           ============================ */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
+      <section className="relative min-h-screen flex items-center overflow-hidden bg-black">
         {/* Background gradient effects */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-[100px]"></div>
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px]"></div>
           <div
             className="absolute inset-0 opacity-[0.04]"
             style={{
@@ -282,117 +282,181 @@ export default function Home() {
           ></div>
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center pt-20">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 mb-8 animate-fade-in-up">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-            <span
-              className="text-white/80 text-xs sm:text-sm font-medium"
-              style={{ fontFamily: "Clash Display", fontWeight: 500 }}
+        {/* Right side image panel (desktop only) */}
+        <div className="absolute right-0 top-0 h-full w-2/5 hidden lg:block overflow-hidden">
+          <Image
+            src="/woman-orange-oversized-jacket-street-style-apparel-rear-view.jpg"
+            alt="Sell fashion on Tradelynk"
+            fill
+            className="object-cover object-center opacity-60"
+            priority
+          />
+          {/* Gradient fade from left */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent"></div>
+          {/* Gradient fade from bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+
+          {/* Floating product card */}
+          <div className="absolute bottom-24 right-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-white max-w-[200px]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span
+                className="text-xs text-green-300 font-semibold"
+                style={{ fontFamily: "Clash Display" }}
+              >
+                New order!
+              </span>
+            </div>
+            <p
+              className="text-sm font-bold"
+              style={{ fontFamily: "Clash Display" }}
             >
-              Built for Instagram Sellers
-            </span>
+              Oversized Jacket
+            </p>
+            <p
+              className="text-xs text-gray-300"
+              style={{ fontFamily: "Clash Display" }}
+            >
+              Buyer just paid ₦18,000
+            </p>
           </div>
 
-          {/* Headline */}
-          <h1
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 animate-fade-in-up delay-100"
-            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
-          >
-            Stop Losing Sales to Slow Replies
-          </h1>
-
-          {/* Subheadline */}
-          <p
-            className="text-lg sm:text-xl text-gray-300 leading-relaxed max-w-2xl mx-auto mb-10 animate-fade-in-up delay-200"
-            style={{ fontFamily: "Clash Display", fontWeight: 400 }}
-          >
-            Tradelynk gives you a professional storefront and an AI Sales
-            Assistant that works 24/7 on WhatsApp — so you never miss a customer
-            again.
-          </p>
-
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-10 animate-fade-in-up delay-300">
-            <Link
-              href="/register"
-              className="px-8 py-4 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 text-base inline-flex items-center justify-center gap-2"
-              style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+          {/* Floating store visits badge */}
+          <div className="absolute top-32 right-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-white">
+            <p
+              className="text-xs text-gray-300 mb-1"
+              style={{ fontFamily: "Clash Display" }}
             >
-              Start Selling Smarter
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </Link>
-            <a
-              href="#how-it-works"
-              className="px-8 py-4 bg-transparent text-white font-semibold rounded-lg border-2 border-white/20 hover:bg-white/10 transition-all duration-300 text-base inline-block"
-              style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              Store visits today
+            </p>
+            <p
+              className="text-2xl font-bold"
+              style={{ fontFamily: "Clash Display" }}
             >
-              See How It Works
-            </a>
+              1,247
+            </p>
+            <p
+              className="text-xs text-green-400"
+              style={{ fontFamily: "Clash Display" }}
+            >
+              ↑ 34% vs yesterday
+            </p>
           </div>
+        </div>
 
-          {/* Trust indicators */}
-          <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-sm text-gray-400 animate-fade-in-up delay-400">
-            <span className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-20 lg:pt-40 lg:pb-32 w-full">
+          <div className="lg:max-w-[58%]">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 mb-8 animate-fade-in-up">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+              <span
+                className="text-white/80 text-xs sm:text-sm font-medium"
+                style={{ fontFamily: "Clash Display", fontWeight: 500 }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Free to start
-            </span>
-            <span className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                Built for Instagram Sellers &#127469;&#127468;
+              </span>
+            </div>
+
+            {/* Headline */}
+            <h1
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 animate-fade-in-up delay-100"
+              style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+            >
+              Stop Losing Sales to Slow Replies
+            </h1>
+
+            {/* Subheadline */}
+            <p
+              className="text-lg sm:text-xl text-gray-300 leading-relaxed max-w-2xl mb-10 animate-fade-in-up delay-200"
+              style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+            >
+              Tradelynk gives you a professional storefront and an AI Sales
+              Assistant that works 24/7 on WhatsApp &mdash; so you never miss a
+              customer again.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-10 animate-fade-in-up delay-300">
+              <Link
+                href="/register"
+                className="px-8 py-4 bg-white text-black font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 text-base inline-flex items-center justify-center gap-2"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              Setup in 5 mins
-            </span>
-            <span className="flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                Start Selling Smarter
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </Link>
+              <a
+                href="#how-it-works"
+                className="px-8 py-4 bg-transparent text-white font-semibold rounded-lg border-2 border-white/20 hover:bg-white/10 transition-all duration-300 text-base inline-block"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              No tech skills needed
-            </span>
+                See How It Works
+              </a>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400 animate-fade-in-up delay-400">
+              <span className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Free to start
+              </span>
+              <span className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Setup in 5 mins
+              </span>
+              <span className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                No tech skills needed
+              </span>
+            </div>
           </div>
         </div>
       </section>
@@ -420,6 +484,72 @@ export default function Home() {
                 </span>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================
+          PRODUCT CATEGORIES SHOWCASE
+          ============================ */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p
+            className="text-center text-sm text-gray-500 mb-8 uppercase tracking-widest font-semibold"
+            style={{ fontFamily: "Clash Display" }}
+          >
+            What Nigerian sellers list on Tradelynk
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                img: "/woman-orange-oversized-jacket-street-style-apparel-rear-view.jpg",
+                label: "Fashion & Clothing",
+                count: "2,400+ items",
+              },
+              {
+                img: "/pasta-spaghetti-with-shrimps-tomato-sauce-served-plate-dark-surface-closeup.jpg",
+                label: "Food & Meals",
+                count: "890+ items",
+              },
+              {
+                img: "/black-friday-assortment-with-shopping-carts.jpg",
+                label: "Electronics & Gadgets",
+                count: "1,100+ items",
+              },
+              {
+                img: "/growtika-mlpsHpUUCHY-unsplash.jpg",
+                label: "Beauty & Skincare",
+                count: "760+ items",
+              },
+            ].map(({ img, label, count }) => (
+              <Link
+                key={label}
+                href="/items"
+                className="group relative rounded-2xl overflow-hidden aspect-[4/5] block"
+              >
+                <Image
+                  src={img}
+                  alt={label}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <p
+                    className="text-white font-bold text-sm"
+                    style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                  >
+                    {label}
+                  </p>
+                  <p
+                    className="text-white/60 text-xs"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
+                    {count}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -836,55 +966,70 @@ export default function Home() {
                 name: "Amaka O.",
                 role: "Clothing Seller",
                 handle: "@amaka_styles",
+                img: "/woman-orange-oversized-jacket-street-style-apparel-rear-view.jpg",
                 text: "I used to spend 6 hours a day replying to DMs. Now my AI assistant handles everything while I focus on sourcing new designs. My sales tripled in the first month!",
               },
               {
                 name: "Blessing K.",
                 role: "Hair and Beauty",
                 handle: "@blessinghair_ng",
+                img: "/growtika-mlpsHpUUCHY-unsplash.jpg",
                 text: "The AI is so professional. Customers cannot even tell it is not me replying. I just share my link and they can see everything without asking me 'price?' for the hundredth time.",
               },
               {
                 name: "David J.",
                 role: "Sneaker Seller",
                 handle: "@djkicks_",
+                img: "/dennis-brendel-YLNMXzXk8zs-unsplash.jpg",
                 text: "I was losing sales every night because I could not reply at 2AM. Now the AI handles late-night customers and I wake up to new orders. Worth every naira.",
               },
             ].map((testimonial, i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl p-7 border border-gray-100 hover:shadow-xl transition-all duration-500"
+                className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-500"
               >
-                <div className="flex gap-1 mb-4">
-                  {[1, 2, 3, 4, 5].map((j) => (
-                    <span key={j} className="text-yellow-400 text-lg">
-                      &#9733;
-                    </span>
-                  ))}
+                {/* Image strip */}
+                <div className="relative h-32 w-full">
+                  <Image
+                    src={testimonial.img}
+                    alt={testimonial.name}
+                    fill
+                    className="object-cover object-top"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white/60"></div>
                 </div>
-                <p
-                  className="text-gray-700 leading-relaxed mb-6 text-sm"
-                  style={{ fontFamily: "Clash Display", fontWeight: 400 }}
-                >
-                  &ldquo;{testimonial.text}&rdquo;
-                </p>
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-                  <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white text-sm font-bold">
-                    {testimonial.name.charAt(0)}
+                <div className="p-7 -mt-6 relative">
+                  <div className="flex gap-1 mb-4">
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <span key={j} className="text-yellow-400 text-lg">
+                        &#9733;
+                      </span>
+                    ))}
                   </div>
-                  <div>
-                    <p
-                      className="text-sm font-semibold text-black"
-                      style={{ fontFamily: "Clash Display", fontWeight: 600 }}
-                    >
-                      {testimonial.name}
-                    </p>
-                    <p
-                      className="text-xs text-gray-500"
-                      style={{ fontFamily: "Clash Display", fontWeight: 400 }}
-                    >
-                      {testimonial.role} - {testimonial.handle}
-                    </p>
+                  <p
+                    className="text-gray-700 leading-relaxed mb-6 text-sm"
+                    style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                  >
+                    &ldquo;{testimonial.text}&rdquo;
+                  </p>
+                  <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
+                    <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {testimonial.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p
+                        className="text-sm font-semibold text-black"
+                        style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                      >
+                        {testimonial.name}
+                      </p>
+                      <p
+                        className="text-xs text-gray-500"
+                        style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                      >
+                        {testimonial.role} &mdash; {testimonial.handle}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1130,10 +1275,18 @@ export default function Home() {
           FINAL CTA
           ============================ */}
       <section className="w-full py-24 relative overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-black"></div>
+        {/* Background image */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[150px]"></div>
+          <Image
+            src="/black-friday-sales-sign-neon-light.jpg"
+            alt="Start selling"
+            fill
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-black/80"></div>
+        </div>
+        <div className="absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-500/20 rounded-full blur-[150px]"></div>
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
@@ -1149,14 +1302,14 @@ export default function Home() {
               className="text-gray-300 text-lg leading-relaxed max-w-2xl mx-auto"
               style={{ fontFamily: "Clash Display", fontWeight: 400 }}
             >
-              Join hundreds of Instagram sellers who use Tradelynk to automate
-              their WhatsApp sales and grow their business on autopilot.
+              Join hundreds of Instagram sellers who use Tradelynk to grow their
+              business on autopilot.
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-linear-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
+                className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-white text-black font-bold rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 text-lg"
                 style={{ fontFamily: "Clash Display", fontWeight: 700 }}
               >
                 Get Started Free
@@ -1168,7 +1321,8 @@ export default function Home() {
               className="text-sm text-gray-500"
               style={{ fontFamily: "Clash Display", fontWeight: 400 }}
             >
-              No credit card required - Free plan available - Setup in 5 minutes
+              No credit card required &mdash; Free plan available &mdash; Setup
+              in 5 minutes
             </p>
           </div>
         </div>

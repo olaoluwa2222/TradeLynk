@@ -50,9 +50,11 @@ function PaymentSuccessContent() {
         return;
       }
 
+      setVerifying(true);
+      setRetryCount(attempt);
+
+      let finished = false;
       try {
-        setVerifying(true);
-        setRetryCount(attempt);
         const response = await paymentsApi.verifyPayment(reference);
 
         if (response.success) {
@@ -64,6 +66,7 @@ function PaymentSuccessContent() {
             amount: response.data?.amount,
             sellerName: response.data?.sellerName,
           });
+          finished = true;
 
           // Clear this reference from pending payments in localStorage
           try {
@@ -100,8 +103,9 @@ function PaymentSuccessContent() {
             `Your payment reference is: ${reference}. ` +
             `Don't worry — your payment is safe. Please visit the Payment Recovery page or contact support.`,
         );
+        finished = true;
       } finally {
-        if (retryCount >= MAX_RETRIES || verification?.success) {
+        if (finished) {
           setVerifying(false);
         }
       }

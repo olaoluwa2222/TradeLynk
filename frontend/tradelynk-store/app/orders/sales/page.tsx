@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -109,11 +109,19 @@ export default function MySalesPage() {
             ? response.data
             : response.data.data || [];
 
-          // Apply filter
+          // Apply filter — PAID filter also catches legacy PAYMENT_HELD / PROCESSING
           const filteredSales =
             filterStatus === "ALL"
               ? salesData
-              : salesData.filter((sale: Sale) => sale.status === filterStatus);
+              : filterStatus === "PAID"
+                ? salesData.filter((sale: Sale) =>
+                    ["PAID", "PAYMENT_HELD", "PROCESSING"].includes(
+                      sale.status,
+                    ),
+                  )
+                : salesData.filter(
+                    (sale: Sale) => sale.status === filterStatus,
+                  );
 
           setSales(filteredSales);
           setTotalPages(response.totalPages || 1);
@@ -126,10 +134,11 @@ export default function MySalesPage() {
           // order.amount is NAIRA — no commission deduction
           setTotalRevenue(completedRevenue);
 
-          // Calculate pending revenue (SHIPPED orders — in transit)
+          // Calculate pending revenue (PAID/SHIPPED orders — funds held until delivery)
           const pendingAmount = salesData
             .filter(
               (sale: Sale) =>
+                sale.status === "PAID" ||
                 sale.status === "PAYMENT_HELD" ||
                 sale.status === "PROCESSING" ||
                 sale.status === "SHIPPED",
@@ -156,25 +165,36 @@ export default function MySalesPage() {
   // Get status badge style
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case "PAID":
+        return {
+          bg: "bg-orange-100",
+          text: "text-orange-800",
+          label: "🔴 Awaiting Shipment",
+        };
       case "PAYMENT_HELD":
       case "PROCESSING":
         return {
-          bg: "bg-blue-100",
-          text: "text-blue-800",
-          label: "📦 New Order",
+          bg: "bg-orange-100",
+          text: "text-orange-800",
+          label: "🔴 Awaiting Shipment",
         };
       case "SHIPPED":
         return {
-          bg: "bg-purple-100",
-          text: "text-purple-800",
+          bg: "bg-blue-100",
+          text: "text-blue-800",
           label: "🚚 Shipped",
         };
       case "DELIVERED":
-      case "COMPLETED":
         return {
           bg: "bg-green-100",
           text: "text-green-800",
           label: "✅ Delivered",
+        };
+      case "COMPLETED":
+        return {
+          bg: "bg-green-100",
+          text: "text-green-800",
+          label: "✅ Completed",
         };
       case "DISPUTED":
         return {
@@ -206,13 +226,22 @@ export default function MySalesPage() {
   // Get payment status for display
   const getPaymentStatus = (status: string) => {
     switch (status) {
+      case "PAID":
+        return {
+          label: "💳 Payment Received — Ship Now!",
+          color: "text-orange-600",
+        };
       case "PAYMENT_HELD":
       case "PROCESSING":
+        return {
+          label: "💳 Payment Received — Ship Now!",
+          color: "text-orange-600",
+        };
       case "SHIPPED":
-        return { label: "💳 Payment Received", color: "text-blue-600" };
+        return { label: "🚚 In Transit", color: "text-blue-600" };
       case "DELIVERED":
       case "COMPLETED":
-        return { label: "✅ Paid Out", color: "text-green-600" };
+        return { label: "✅ Funds Released", color: "text-green-600" };
       case "DISPUTED":
         return { label: "⚠️ Under Review", color: "text-red-600" };
       case "REFUNDED":
@@ -267,7 +296,7 @@ export default function MySalesPage() {
           window.location.reload();
         }, 2000);
       } else {
-        throw new Error(response.message || "Failed to mark as shipped");
+        throw new Error(response.message || "🚚 Mark as Shipped");
       }
     } catch (err: any) {
       console.error("Error marking as shipped:", err);
@@ -411,9 +440,12 @@ export default function MySalesPage() {
                   >
                     {
                       sales.filter((s) =>
-                        ["PAYMENT_HELD", "PROCESSING", "SHIPPED"].includes(
-                          s.status,
-                        ),
+                        [
+                          "PAID",
+                          "PAYMENT_HELD",
+                          "PROCESSING",
+                          "SHIPPED",
+                        ].includes(s.status),
                       ).length
                     }{" "}
                     pending orders
@@ -456,11 +488,52 @@ export default function MySalesPage() {
           </div>
         )}
 
+        {/* Needs Attention Banner */}
+        {(() => {
+          const needsAction = sales.filter(
+            (s) =>
+              s.status === "PAID" ||
+              s.status === "PAYMENT_HELD" ||
+              s.status === "PROCESSING",
+          );
+          if (needsAction.length === 0) return null;
+          return (
+            <div className="mb-6 p-5 bg-orange-50 border-2 border-orange-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl animate-bounce">🔴</span>
+                <div>
+                  <p
+                    className="text-lg font-bold text-orange-800"
+                    style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                  >
+                    {needsAction.length} order
+                    {needsAction.length !== 1 ? "s" : ""} waiting to be shipped!
+                  </p>
+                  <p
+                    className="text-sm text-orange-700"
+                    style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                  >
+                    Pack and ship these orders. Buyers are waiting — fast
+                    shipping builds trust.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setFilterStatus("PAID")}
+                className="shrink-0 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl transition-all text-sm"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
+                View Unshipped Orders
+              </button>
+            </div>
+          );
+        })()}
+
         {/* Filters */}
         <div className="mb-8 flex flex-wrap gap-3">
           {[
             { key: "ALL", label: "All Sales" },
-            { key: "PAYMENT_HELD", label: "📦 New Orders" },
+            { key: "PAID", label: "🔴 Need to Ship" },
             { key: "SHIPPED", label: "🚚 Shipped" },
             { key: "COMPLETED", label: "✅ Delivered" },
             { key: "CANCELLED", label: "❌ Cancelled" },
@@ -713,14 +786,75 @@ export default function MySalesPage() {
                         </div>
                       )}
 
+                      {/* Order Progress Bar */}
+                      <div className="mb-4">
+                        <div className="flex items-center gap-1">
+                          {["Paid", "Shipped", "Delivered", "Done"].map(
+                            (step, idx) => {
+                              const stages = [
+                                "PAID",
+                                "SHIPPED",
+                                "DELIVERED",
+                                "COMPLETED",
+                              ];
+                              const currentIdx = stages.indexOf(
+                                sale.status === "PAYMENT_HELD" ||
+                                  sale.status === "PROCESSING"
+                                  ? "PAID"
+                                  : sale.status,
+                              );
+                              const done = idx <= currentIdx;
+                              const active = idx === currentIdx;
+                              return (
+                                <div
+                                  key={step}
+                                  className="flex items-center flex-1"
+                                >
+                                  <div
+                                    className={`flex flex-col items-center flex-1`}
+                                  >
+                                    <div
+                                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                                        done
+                                          ? active &&
+                                            (sale.status === "PAID" ||
+                                              sale.status === "PAYMENT_HELD")
+                                            ? "bg-orange-500 text-white ring-2 ring-orange-300"
+                                            : "bg-black text-white"
+                                          : "bg-gray-200 text-gray-400"
+                                      }`}
+                                    >
+                                      {done && !active ? "✓" : idx + 1}
+                                    </div>
+                                    <span
+                                      className={`text-xs mt-1 font-medium ${done ? "text-black" : "text-gray-400"}`}
+                                      style={{ fontFamily: "Clash Display" }}
+                                    >
+                                      {step}
+                                    </span>
+                                  </div>
+                                  {idx < 3 && (
+                                    <div
+                                      className={`h-0.5 flex-1 mb-4 ${idx < currentIdx ? "bg-black" : "bg-gray-200"}`}
+                                    ></div>
+                                  )}
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+
                       {/* Actions */}
                       <div className="flex flex-wrap gap-3">
-                        {/* Mark as Shipped button for PAYMENT_HELD or PROCESSING orders */}
-                        {(sale.status === "PAYMENT_HELD" || sale.status === "PROCESSING") && (
+                        {/* Mark as Shipped button for PAID / PAYMENT_HELD / PROCESSING orders */}
+                        {(sale.status === "PAID" ||
+                          sale.status === "PAYMENT_HELD" ||
+                          sale.status === "PROCESSING") && (
                           <button
                             onClick={() => handleMarkAsShipped(sale.id)}
                             disabled={markingShipped === sale.id}
-                            className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl transition-colors text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ring-2 ring-orange-200"
                             style={{
                               fontFamily: "Clash Display",
                               fontWeight: 600,
@@ -732,7 +866,7 @@ export default function MySalesPage() {
                                 Marking...
                               </>
                             ) : (
-                              "📦 Mark as Shipped"
+                              "🚚 Mark as Shipped"
                             )}
                           </button>
                         )}
