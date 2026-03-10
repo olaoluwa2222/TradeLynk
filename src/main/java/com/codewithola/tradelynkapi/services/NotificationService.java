@@ -196,6 +196,43 @@ public class NotificationService {
     }
 
     /**
+     * Send payment received notification to seller (called during payment verification).
+     * A lightweight push-only alert; the full order notification is sent after order creation.
+     */
+    public void sendPaymentReceivedNotification(Long sellerId, Long amount, String itemTitle) {
+        log.info("Sending payment received notification to seller: {}", sellerId);
+
+        try {
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
+            String amountFormatted = String.format("₦%,d", amount);
+
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("💰 Payment Received!")
+                                    .setBody("Payment of " + amountFormatted + " for '" + itemTitle + "' confirmed!")
+                                    .build())
+                            .putData("type", "payment_received")
+                            .putData("amount", String.valueOf(amount))
+                            .putData("itemTitle", itemTitle)
+                            .build();
+
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send payment received notification to seller {}", sellerId, e);
+        }
+    }
+
+    /**
      * Handle Firebase messaging errors
      */
     private void handleFirebaseError(DeviceToken token, FirebaseMessagingException e) {
@@ -315,6 +352,71 @@ public class NotificationService {
     }
 
     /**
+     * ✅ NEW: Send notification to buyer when their order is placed.
+     * "Your order has been placed and is being prepared for delivery."
+     */
+    public void sendBuyerOrderPlacedNotification(Long buyerId, String itemTitle, Long amount) {
+        log.info("Sending order placed notification to buyer: {}", buyerId);
+
+        try {
+            User buyer = userRepository.findById(buyerId)
+                    .orElseThrow(() -> new NotFoundException("Buyer not found"));
+
+            // 1. Push notification
+            List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(buyerId);
+            for (DeviceToken token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getDeviceToken())
+                            .setNotification(Notification.builder()
+                                    .setTitle("✅ Order Placed!")
+                                    .setBody("Your order for '" + itemTitle + "' has been placed successfully!")
+                                    .build())
+                            .putData("type", "order_placed")
+                            .putData("itemTitle", itemTitle)
+                            .build();
+                    firebaseMessaging.send(message);
+                    token.setLastUsedAt(LocalDateTime.now());
+                    deviceTokenRepository.save(token);
+                } catch (FirebaseMessagingException e) {
+                    handleFirebaseError(token, e);
+                }
+            }
+
+            // 2. Email — no escrow/hold language, no "confirm delivery" instruction
+            String subject = "Order Confirmed - " + itemTitle;
+            String body = String.format("""
+                    Hello %s,
+                    
+                    Your order has been placed successfully on TradeLynk!
+                    
+                    📦 Item: %s
+                    💰 Amount: ₦%,d
+                    
+                    Your order is being prepared for delivery. The seller will dispatch it and update the \
+status to Shipped.
+                    
+                    Track your order: %s/dashboard/purchases
+                    
+                    Thank you for shopping on TradeLynk!
+                    
+                    Best regards,
+                    The TradeLynk Team
+                    """,
+                    buyer.getFullName(),
+                    itemTitle,
+                    amount,
+                    frontendUrl
+            );
+            emailService.sendEmail(buyer.getEmail(), subject, body);
+            log.info("✅ Order placed email sent to buyer: {}", buyer.getEmail());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send buyer order placed notification to {}", buyerId, e);
+        }
+    }
+
+    /**
      * ✅ UPDATED: Send notification to seller when buyer confirms delivery
      * Now includes EMAIL notification
      */
@@ -356,17 +458,17 @@ public class NotificationService {
                 }
             }
 
-            // 2. ✅ NEW: Send email notification
-            String subject = "Order Delivered - " + itemTitle;
+            // 2. ✅ Send email notification
+            String subject = "Order Completed - " + itemTitle;
             String body = String.format("""
                     Hello %s,
                     
-                    Good news! The buyer has confirmed delivery of your item.
+                    Your order has been completed!
                     
                     📦 Item: %s
-                    ✅ Status: Delivered
+                    ✅ Status: Completed
                     
-                    The transaction is now complete. Your payment will be processed according to our settlement schedule.
+                    A payout has been initiated to your registered bank account and should arrive within 1-2 business days.
                     
                     View your sales: %s/dashboard/sales
                     
@@ -381,7 +483,7 @@ public class NotificationService {
             );
 
             emailService.sendEmail(seller.getEmail(), subject, body);
-            log.info("✅ Delivery confirmation email sent to seller: {}", seller.getEmail());
+            log.info("✅ Order completion email sent to seller: {}", seller.getEmail());
 
         } catch (Exception e) {
             log.error("❌ Failed to send delivery confirmation to seller {}", sellerId, e);
@@ -654,7 +756,8 @@ public class NotificationService {
     }
 
     /**
-     * ✅ NEW: Send notification when seller receives payout
+     * ✅ NEW: Send notification when seller receives payout.
+     * Seller receives 100% — no platform fee deducted.
      */
     public void sendPayoutNotification(Long sellerId, Long amount, String itemTitle) {
         log.info("Sending payout notification to seller: {}", sellerId);
@@ -664,9 +767,6 @@ public class NotificationService {
                     .orElseThrow(() -> new NotFoundException("Seller not found"));
 
             String amountFormatted = String.format("₦%,d", amount);
-            Long platformFee = (long) (amount * 0.03);
-            Long payout = amount - platformFee;
-            String payoutFormatted = String.format("₦%,d", payout);
 
             // 1. Send push notifications
             List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(sellerId);
@@ -677,10 +777,10 @@ public class NotificationService {
                             .setToken(token.getDeviceToken())
                             .setNotification(Notification.builder()
                                     .setTitle("💸 Payment Released!")
-                                    .setBody("You've received " + payoutFormatted + " for '" + itemTitle + "'")
+                                    .setBody("You've received " + amountFormatted + " for '" + itemTitle + "'")
                                     .build())
                             .putData("type", "payout")
-                            .putData("amount", String.valueOf(payout))
+                            .putData("amount", String.valueOf(amount))
                             .putData("itemTitle", itemTitle)
                             .build();
 
@@ -693,7 +793,7 @@ public class NotificationService {
                 }
             }
 
-            // 2. Send email notification
+            // 2. Send email notification — no platform fee deduction
             String subject = "Payment Received - " + itemTitle;
             String body = String.format("""
                 Hello %s,
@@ -701,8 +801,6 @@ public class NotificationService {
                 Congratulations! Your payment has been released.
                 
                 📦 Item: %s
-                💰 Order Amount: %s
-                🏦 Platform Fee (3%%): ₦%,d
                 ✅ Your Payout: %s
                 
                 The funds have been transferred to your registered bank account and should arrive within 1-2 business days.
@@ -717,8 +815,6 @@ public class NotificationService {
                     seller.getFullName(),
                     itemTitle,
                     amountFormatted,
-                    platformFee,
-                    payoutFormatted,
                     frontendUrl
             );
 

@@ -137,7 +137,8 @@ public class OrderController {
 
     /**
      * PUT /api/orders/{id}/confirm-delivery
-     * Buyer confirms delivery of the item.
+     * Kept for backwards compatibility — buyer action that completes the order directly.
+     * No longer required (orders auto-complete after 5 days), but still accepted.
      */
     @PutMapping("/{id}/confirm-delivery")
     public ResponseEntity<Map<String, Object>> confirmDelivery(
@@ -150,7 +151,7 @@ public class OrderController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "Delivery confirmed successfully.");
+        response.put("message", "Order completed successfully.");
         response.put("data", order);
 
         return ResponseEntity.ok(response);

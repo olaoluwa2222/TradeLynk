@@ -10,8 +10,9 @@ import com.codewithola.tradelynkapi.repositories.ItemRepository;
 import com.codewithola.tradelynkapi.repositories.OrderRepository;
 import com.codewithola.tradelynkapi.repositories.PaymentRepository;
 import com.codewithola.tradelynkapi.repositories.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,9 +25,9 @@ import java.util.List;
  * OrderService — Direct Payment Flow (no escrow).
  * Orders are created with status PAID immediately after payment succeeds.
  * Sellers receive 100% of the payment (Paystack fees handled by Paystack separately).
+ * No buyer confirmation required — orders auto-complete after delivery window.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OrderService {
 
@@ -35,6 +36,22 @@ public class OrderService {
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
     private final NotificationService notificationService;
+    private final TransferService transferService;
+
+    @Autowired
+    public OrderService(OrderRepository orderRepository,
+                        ItemRepository itemRepository,
+                        UserRepository userRepository,
+                        PaymentRepository paymentRepository,
+                        NotificationService notificationService,
+                        @Lazy TransferService transferService) {
+        this.orderRepository = orderRepository;
+        this.itemRepository = itemRepository;
+        this.userRepository = userRepository;
+        this.paymentRepository = paymentRepository;
+        this.notificationService = notificationService;
+        this.transferService = transferService;
+    }
 
     /**
      * Create an order after successful payment.
@@ -100,11 +117,18 @@ public class OrderService {
 
         log.info("✅ Order created. Order ID: {}, Status: PAID", savedOrder.getId());
 
-        // 8. Notify seller about new order
+        // 8. Notify seller about new order — "A buyer has paid. Arrange delivery and mark as Shipped."
         try {
             notificationService.sendNewOrderNotification(sellerId, item.getTitle(), amount);
         } catch (Exception e) {
             log.error("Failed to send new order notification to seller", e);
+        }
+
+        // 9. Notify buyer — "Your order has been placed and is being prepared for delivery."
+        try {
+            notificationService.sendBuyerOrderPlacedNotification(buyerId, item.getTitle(), amount);
+        } catch (Exception e) {
+            log.error("Failed to send order placed notification to buyer", e);
         }
 
         return OrderDTO.fromEntity(savedOrder);
@@ -147,37 +171,34 @@ public class OrderService {
     }
 
     /**
-     * Mark order as delivered (buyer only).
-     * Buyer confirms receipt of the item.
+     * Confirm delivery (buyer action) — no longer required.
+     * Kept as a no-op endpoint for backwards compatibility.
+     * Simply marks the order as COMPLETED and triggers payout.
      */
     @Transactional
     public OrderDTO markAsDelivered(Long orderId, Long buyerId) {
-        log.info("Buyer {} confirming delivery for order {}", buyerId, orderId);
+        log.info("Buyer {} called confirm-delivery for order {} — completing order directly", buyerId, orderId);
 
         Order order = orderRepository.findByIdWithDetails(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         if (!order.getBuyer().getId().equals(buyerId)) {
-            throw new OrderAccessDeniedException("Only the buyer can mark order as delivered");
+            throw new OrderAccessDeniedException("Access denied");
         }
 
-        if (!order.canBeMarkedAsDelivered()) {
-            throw new BadRequestException("Order cannot be marked as delivered. Status: " + order.getStatus());
+        // If already completed, just return
+        if (order.isCompleted() || order.isFinalState()) {
+            log.info("Order {} is already in final state: {}", orderId, order.getStatus());
+            return OrderDTO.fromEntity(order);
         }
 
-        order.markAsDelivered();
+        // Complete the order directly — no DELIVERED intermediate step
+        order.markAsCompleted();
         Order savedOrder = orderRepository.save(order);
+        log.info("✅ Order {} completed via buyer confirm-delivery action", orderId);
 
-        log.info("✅ Order {} marked as delivered", orderId);
-
-        try {
-            notificationService.sendDeliveryConfirmationNotification(
-                    order.getSeller().getId(),
-                    order.getItem().getTitle()
-            );
-        } catch (Exception e) {
-            log.error("Failed to send delivery confirmation notification", e);
-        }
+        // Trigger payout to seller
+        triggerPayoutForOrder(savedOrder);
 
         return OrderDTO.fromEntity(savedOrder);
     }
@@ -235,7 +256,8 @@ public class OrderService {
     }
 
     /**
-     * Auto-complete orders that have been SHIPPED for 5+ days without buyer confirmation.
+     * Auto-complete orders that have been SHIPPED for 5+ days.
+     * Marks as COMPLETED and triggers payout to seller.
      * Called by scheduled job.
      */
     @Transactional
@@ -260,11 +282,15 @@ public class OrderService {
 
                 log.info("Auto-completed order: {}", order.getId());
 
+                // Notify both parties
                 notificationService.sendAutoCompletionNotification(
                         order.getBuyer().getId(),
                         order.getSeller().getId(),
                         order.getItem().getTitle()
                 );
+
+                // Trigger payout to seller
+                triggerPayoutForOrder(order);
 
                 completedCount++;
 
@@ -275,6 +301,21 @@ public class OrderService {
 
         log.info("✅ Auto-completed {} orders", completedCount);
         return completedCount;
+    }
+
+    /**
+     * Trigger Paystack payout to seller for a completed order.
+     * Logs failure and flags for manual review — does NOT block order completion.
+     */
+    private void triggerPayoutForOrder(Order order) {
+        try {
+            transferService.initiateTransfer(order.getId());
+            log.info("✅ Payout triggered for order: {}", order.getId());
+        } catch (Exception e) {
+            log.error("❌ Payout FAILED for order {}. Flagged for manual review. Error: {}",
+                    order.getId(), e.getMessage(), e);
+            // Do NOT throw — order completion must not be blocked by payout failure
+        }
     }
 
     /**

@@ -176,15 +176,16 @@ public class DisputeService {
     }
 
     /**
-     * Release payment to seller via Transfer API
+     * Release payment to seller via Transfer API.
+     * Marks order as COMPLETED directly (no DELIVERED intermediate step required).
      */
     private void releaseToSeller(Order order) {
         log.info("Releasing payment to seller for order {}", order.getId());
 
         try {
-            // Mark order as delivered first (required for transfer)
-            if (!order.isDelivered()) {
-                order.markAsDelivered();
+            // Mark order as completed (no longer requires DELIVERED intermediate step)
+            if (!order.isCompleted()) {
+                order.markAsCompleted();
                 orderRepository.save(order);
             }
 

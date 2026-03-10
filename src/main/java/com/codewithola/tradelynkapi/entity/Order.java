@@ -106,17 +106,24 @@ public class Order {
         this.shippedAt = LocalDateTime.now();
     }
 
+    /**
+     * @deprecated Buyer confirmation is no longer required. Use markAsCompleted() instead.
+     * Kept for backwards compatibility with admin dispute resolution.
+     */
+    @Deprecated
     public void markAsDelivered() {
-        if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
-            throw new IllegalStateException("Can only mark SHIPPED or PAID orders as delivered");
-        }
-        this.status = OrderStatus.DELIVERED;
+        // Treat as COMPLETED directly — no buyer confirmation step
+        this.status = OrderStatus.COMPLETED;
         this.deliveredAt = LocalDateTime.now();
+        this.completedAt = LocalDateTime.now();
     }
 
     public void markAsCompleted() {
-        if (this.status != OrderStatus.DELIVERED) {
-            throw new IllegalStateException("Can only complete DELIVERED orders");
+        if (this.status == OrderStatus.COMPLETED) {
+            return; // already completed — idempotent
+        }
+        if (this.status == OrderStatus.CANCELLED || this.status == OrderStatus.REFUNDED) {
+            throw new IllegalStateException("Cannot complete a cancelled or refunded order");
         }
         this.status = OrderStatus.COMPLETED;
         this.completedAt = LocalDateTime.now();
@@ -143,19 +150,24 @@ public class Order {
         this.cancellationReason = reason;
     }
 
+    /**
+     * Auto-complete: mark as COMPLETED directly (no DELIVERED step required).
+     * Triggered by the scheduled job after 5-7 days in SHIPPED status.
+     */
     public void autoComplete() {
         if (this.status != OrderStatus.SHIPPED && this.status != OrderStatus.PAID) {
             throw new IllegalStateException("Can only auto-complete SHIPPED or PAID orders");
         }
-        this.status = OrderStatus.DELIVERED;
+        this.status = OrderStatus.COMPLETED;
         this.autoCompletedAt = LocalDateTime.now();
-        this.deliveredAt = LocalDateTime.now();
+        this.completedAt = LocalDateTime.now();
     }
 
     // State check methods
     public boolean isPaid() { return this.status == OrderStatus.PAID; }
     public boolean isShipped() { return this.status == OrderStatus.SHIPPED; }
-    public boolean isDelivered() { return this.status == OrderStatus.DELIVERED; }
+    /** @deprecated No longer a separate step — mapped to COMPLETED */
+    @Deprecated public boolean isDelivered() { return this.status == OrderStatus.DELIVERED || this.status == OrderStatus.COMPLETED; }
     public boolean isCompleted() { return this.status == OrderStatus.COMPLETED; }
     public boolean isDisputed() { return this.status == OrderStatus.DISPUTED; }
     public boolean isRefunded() { return this.status == OrderStatus.REFUNDED; }
@@ -163,10 +175,12 @@ public class Order {
 
     // Permission checks
     public boolean canBeShipped() { return this.status == OrderStatus.PAID; }
-    public boolean canBeMarkedAsDelivered() { return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAID; }
+    /** @deprecated Buyer confirmation is no longer required */
+    @Deprecated public boolean canBeMarkedAsDelivered() { return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAID; }
     public boolean canBeDisputed() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
     public boolean canBeCancelled() { return this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
-    public boolean canBeCompleted() { return this.status == OrderStatus.DELIVERED; }
+    /** Transfer is allowed from SHIPPED or PAID states (no DELIVERED step) */
+    public boolean canBeCompleted() { return this.status == OrderStatus.SHIPPED || this.status == OrderStatus.PAID || this.status == OrderStatus.DELIVERED; }
     public boolean canBeRefunded() { return this.status == OrderStatus.DISPUTED || this.status == OrderStatus.PAID || this.status == OrderStatus.SHIPPED; }
     public boolean isFinalState() { return this.status == OrderStatus.COMPLETED || this.status == OrderStatus.REFUNDED || this.status == OrderStatus.CANCELLED; }
 }

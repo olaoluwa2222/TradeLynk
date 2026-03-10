@@ -84,12 +84,12 @@ public class AnalyticsService {
                 .mapToLong(Payment::getAmount)
                 .sum();
 
-        // Calculate average item price
+        // Calculate average item price — Item.price is stored in kobo, convert to Naira
         double averageItemPrice = allItems.stream()
                 .filter(item -> item.getPrice() != null)
                 .mapToLong(Item::getPrice)
                 .average()
-                .orElse(0.0);
+                .orElse(0.0) / 100.0;
 
         // Calculate conversion rate (sales / views)
         double conversionRate = totalViews > 0 ?
@@ -98,13 +98,13 @@ public class AnalyticsService {
         // Get last activity dates
         LocalDateTime lastItemPosted = allItems.stream()
                 .map(Item::getCreatedAt)
-                .max(LocalDateTime::compareTo)
+                .max(Comparator.naturalOrder())
                 .orElse(null);
 
         LocalDateTime lastSale = successfulPayments.stream()
                 .map(Payment::getPaidAt)
                 .filter(Objects::nonNull)
-                .max(LocalDateTime::compareTo)
+                .max(Comparator.naturalOrder())
                 .orElse(null);
 
         // Get total chats (from Firebase)
@@ -309,7 +309,7 @@ public class AnalyticsService {
                         .itemId(item.getId())
                         .title(item.getTitle())
                         .imageUrl(getFirstImageUrl(item))
-                        .price(item.getPrice())
+                        .price(item.getPrice() != null ? item.getPrice() / 100 : null) // kobo → Naira
                         .likeCount(item.getLikeCount())
                         .viewCount(item.getViewCount())
                         .status(item.getStatus().name())
@@ -337,8 +337,8 @@ public class AnalyticsService {
                             .itemId(item.getId())
                             .title(item.getTitle())
                             .imageUrl(getFirstImageUrl(item))
-                            .price(item.getPrice())
-                            .revenue(payment.getAmount())
+                            .price(item.getPrice() != null ? item.getPrice() / 100 : null) // kobo → Naira
+                            .revenue(payment.getAmount()) // already in Naira
                             .status(item.getStatus().name())
                             .build();
                 })
