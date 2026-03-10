@@ -68,6 +68,7 @@ export default function MyOrdersPage() {
   );
   const [actionError, setActionError] = useState<string>("");
   const [actionSuccess, setActionSuccess] = useState<string>("");
+  const [confirmingDelivery, setConfirmingDelivery] = useState<number | null>(null);
   const [pendingPayments, setPendingPayments] = useState<
     Array<{
       reference: string;
@@ -201,6 +202,38 @@ export default function MyOrdersPage() {
     }
   }, [actionError, actionSuccess]);
 
+  // Confirm delivery — buyer confirms they received the item
+  const handleConfirmDelivery = async (orderId: number) => {
+    setConfirmingDelivery(orderId);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      const response = await ordersApi.markAsDelivered(orderId);
+      if (response.success) {
+        setActionSuccess(
+          "Order marked as received! The seller has been notified. You have 3 days to raise a dispute if anything is wrong.",
+        );
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? { ...o, status: "DELIVERED" as OrderStatus, deliveredAt: new Date().toISOString() }
+              : o,
+          ),
+        );
+      } else {
+        throw new Error(response.message || "Failed to confirm delivery");
+      }
+    } catch (err: any) {
+      setActionError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to confirm delivery. Please try again.",
+      );
+    } finally {
+      setConfirmingDelivery(null);
+    }
+  };
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -223,10 +256,14 @@ export default function MyOrdersPage() {
             ? response.data
             : response.data.data || [];
 
-          // Apply filter
+          // Apply filter — PAID matches PAID/PAYMENT_HELD/PROCESSING
           const filteredOrders =
             filterStatus === "ALL"
               ? ordersData
+              : filterStatus === "PAID"
+              ? ordersData.filter((order: Order) =>
+                  ["PAID", "PAYMENT_HELD", "PROCESSING"].includes(order.status)
+                )
               : ordersData.filter(
                   (order: Order) => order.status === filterStatus,
                 );
@@ -252,25 +289,36 @@ export default function MyOrdersPage() {
   // Get status badge style
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case "PAID":
+        return {
+          bg: "bg-amber-100",
+          text: "text-amber-800",
+          label: "⏳ Awaiting Shipment",
+        };
       case "PAYMENT_HELD":
       case "PROCESSING":
         return {
-          bg: "bg-blue-100",
-          text: "text-blue-800",
-          label: "📦 Processing",
+          bg: "bg-amber-100",
+          text: "text-amber-800",
+          label: "⏳ Awaiting Shipment",
         };
       case "SHIPPED":
         return {
-          bg: "bg-purple-100",
-          text: "text-purple-800",
-          label: "🚚 On the way",
+          bg: "bg-blue-100",
+          text: "text-blue-800",
+          label: "🚚 On the Way",
         };
       case "DELIVERED":
+        return {
+          bg: "bg-teal-100",
+          text: "text-teal-800",
+          label: "✅ Received",
+        };
       case "COMPLETED":
         return {
           bg: "bg-green-100",
           text: "text-green-800",
-          label: "✅ Delivered",
+          label: "✅ Completed",
         };
       case "DISPUTED":
         return {
@@ -299,17 +347,19 @@ export default function MyOrdersPage() {
     }
   };
 
-  // Get progress step for order timeline (3-step: Ordered → Shipped → Delivered)
+  // Get progress step for order timeline (4-step: Payment → Shipped → Delivered → Completed)
   const getProgressStep = (status: string): number => {
     switch (status) {
+      case "PAID":
       case "PAYMENT_HELD":
       case "PROCESSING":
         return 1;
       case "SHIPPED":
         return 2;
       case "DELIVERED":
-      case "COMPLETED":
         return 3;
+      case "COMPLETED":
+        return 4;
       case "DISPUTED":
       case "REFUNDED":
       case "CANCELLED":
@@ -458,10 +508,11 @@ export default function MyOrdersPage() {
         <div className="mb-8 flex flex-wrap gap-3">
           {[
             { key: "ALL", label: "All Orders" },
-            { key: "PROCESSING", label: "Processing" },
-            { key: "SHIPPED", label: "On the Way" },
-            { key: "COMPLETED", label: "Delivered" },
-            { key: "CANCELLED", label: "Cancelled" },
+            { key: "PAID", label: "⏳ Awaiting Shipment" },
+            { key: "SHIPPED", label: "🚚 On the Way" },
+            { key: "DELIVERED", label: "✅ Received" },
+            { key: "COMPLETED", label: "🌟 Completed" },
+            { key: "CANCELLED", label: "❌ Cancelled" },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -746,6 +797,56 @@ export default function MyOrdersPage() {
                         </div>
                       </div>
 
+                      {/* Shipped — prompt buyer to confirm receipt */}
+                      {order.status === "SHIPPED" && (
+                        <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div>
+                            <p
+                              className="text-sm font-bold text-blue-800"
+                              style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                            >
+                              📦 Your order is on the way!
+                            </p>
+                            <p
+                              className="text-xs text-blue-600 mt-0.5"
+                              style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                            >
+                              Once you receive it, tap &quot;I Received This&quot;. If you don&apos;t confirm, the order auto-completes in 5 days.
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleConfirmDelivery(order.id)}
+                            disabled={confirmingDelivery === order.id}
+                            className="shrink-0 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                          >
+                            {confirmingDelivery === order.id ? (
+                              <><span className="animate-spin">⏳</span> Confirming...</>
+                            ) : (
+                              <>✅ I Received This</>
+                            )}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Delivered — waiting for auto-complete, show dispute window */}
+                      {order.status === "DELIVERED" && (
+                        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+                          <p
+                            className="text-sm font-bold text-green-800"
+                            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+                          >
+                            ✅ Delivery confirmed!
+                          </p>
+                          <p
+                            className="text-xs text-green-600 mt-0.5"
+                            style={{ fontFamily: "Clash Display", fontWeight: 400 }}
+                          >
+                            The order will complete automatically in a few days. If you have an issue with the item, raise a dispute before then.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Actions */}
                       <div className="flex flex-wrap gap-3">
 
@@ -794,6 +895,17 @@ export default function MyOrdersPage() {
                             <>💬 Message Seller</>
                           )}
                         </button>
+
+                        {/* Raise Dispute — only for SHIPPED or DELIVERED orders */}
+                        {(order.status === "SHIPPED" || order.status === "DELIVERED") && (
+                          <button
+                            onClick={() => setDisputeModalOrder(order)}
+                            className="px-6 py-2 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-semibold"
+                            style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+                          >
+                            ⚠️ Raise a Dispute
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
