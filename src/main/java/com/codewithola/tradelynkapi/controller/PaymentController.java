@@ -7,8 +7,10 @@ import com.codewithola.tradelynkapi.dtos.requests.PaymentMetadata;
 import com.codewithola.tradelynkapi.dtos.response.InitializePaymentResponse;
 import com.codewithola.tradelynkapi.dtos.response.OrderDTO;
 import com.codewithola.tradelynkapi.dtos.response.PaystackVerifyResponse;
+import com.codewithola.tradelynkapi.entity.GuestPayment;
 import com.codewithola.tradelynkapi.entity.Order;
 import com.codewithola.tradelynkapi.entity.Payment;
+import com.codewithola.tradelynkapi.repositories.GuestPaymentRepository;
 import com.codewithola.tradelynkapi.repositories.OrderRepository;
 import com.codewithola.tradelynkapi.repositories.PaymentRepository;
 import com.codewithola.tradelynkapi.security.UserPrincipal;
@@ -38,6 +40,7 @@ public class PaymentController {
 
     private final PaystackService paystackService;
     private final PaymentRepository paymentRepository;
+    private final GuestPaymentRepository guestPaymentRepository;
     private final ObjectMapper objectMapper;
     private final OrderService orderService;
     private final OrderRepository orderRepository;

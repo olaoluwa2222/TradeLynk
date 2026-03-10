@@ -70,7 +70,7 @@ public class PaystackService {
                             seller.getBusinessName() : "Seller-" + seller.getUser().getId())
                     .settlementBank(bank.getCode())
                     .accountNumber(seller.getAccountNumber())
-                    .percentageCharge(PLATFORM_FEE_PERCENTAGE)
+                    .percentageCharge(0.0)  // No platform commission — sellers receive 100%
                     .build();
 
             HttpHeaders headers = new HttpHeaders();
