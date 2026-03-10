@@ -208,10 +208,19 @@ export default function MyOrdersPage() {
     setActionError("");
     setActionSuccess("");
     try {
-      const response = await ordersApi.markAsDelivered(orderId);
+      // Try confirm-delivery first (current direct-payment flow)
+      let response: any;
+      try {
+        response = await ordersApi.confirmDelivery(orderId);
+      } catch (firstErr: any) {
+        // If confirm-delivery fails, fall back to mark-delivered
+        console.warn("confirm-delivery failed, trying mark-delivered:", firstErr?.message);
+        response = await ordersApi.markAsDelivered(orderId);
+      }
+
       if (response.success) {
         setActionSuccess(
-          "Order marked as received! The seller has been notified. You have 3 days to raise a dispute if anything is wrong.",
+          "✅ Order marked as received! The seller has been notified. You have a few days to raise a dispute if anything is wrong.",
         );
         setOrders((prev) =>
           prev.map((o) =>
@@ -224,10 +233,13 @@ export default function MyOrdersPage() {
         throw new Error(response.message || "Failed to confirm delivery");
       }
     } catch (err: any) {
-      setActionError(
+      const backendMsg =
         err.response?.data?.message ||
-          err.message ||
-          "Failed to confirm delivery. Please try again.",
+        err.response?.data?.details ||
+        err.message ||
+        "Failed to confirm delivery.";
+      setActionError(
+        `Could not confirm delivery: ${backendMsg}. Please try again or contact support.`,
       );
     } finally {
       setConfirmingDelivery(null);
