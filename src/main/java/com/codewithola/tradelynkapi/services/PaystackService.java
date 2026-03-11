@@ -55,20 +55,137 @@ public class PaystackService {
     private final SellerProfileRepository sellerProfileRepository;
     private final NotificationService notificationService;
 
+    // ── Bank list cache (refreshed every 24 h) ──────────────────────────
+    private volatile List<Map<String, String>> cachedBankList = null;
+    private volatile long bankListCachedAt = 0L;
+    private static final long BANK_CACHE_TTL_MS = 24 * 60 * 60 * 1000L; // 24 hours
 
     /**
-     * Create a Paystack subaccount for a seller
+     * Fetch the full list of Nigerian banks from Paystack.
+     * Results are cached in memory for 24 hours to avoid hammering the API.
+     * Falls back to a small hardcoded list if the API call fails.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, String>> getBanks() {
+        long now = Instant.now().toEpochMilli();
+        if (cachedBankList != null && (now - bankListCachedAt) < BANK_CACHE_TTL_MS) {
+            return cachedBankList;
+        }
+
+        log.info("Fetching bank list from Paystack API...");
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", paystackConfig.getAuthorizationHeader());
+            HttpEntity<?> entity = new HttpEntity<>(headers);
+
+            String url = paystackConfig.getBaseUrl() + "/bank?country=nigeria&perPage=200&use_cursor=false";
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity,
+                    new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+
+            if (response.getBody() != null && Boolean.TRUE.equals(response.getBody().get("status"))) {
+                List<Map<String, Object>> rawBanks = (List<Map<String, Object>>) response.getBody().get("data");
+                List<Map<String, String>> banks = new ArrayList<>();
+                for (Map<String, Object> b : rawBanks) {
+                    String name = (String) b.get("name");
+                    String code = (String) b.get("code");
+                    if (name != null && code != null) {
+                        Map<String, String> entry = new HashMap<>();
+                        entry.put("name", name);
+                        entry.put("code", code);
+                        banks.add(entry);
+                    }
+                }
+                log.info("Fetched {} banks from Paystack", banks.size());
+                cachedBankList = Collections.unmodifiableList(banks);
+                bankListCachedAt = now;
+                return cachedBankList;
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch bank list from Paystack, using fallback", e);
+        }
+
+        // Fallback hardcoded list (common Nigerian banks)
+        return getFallbackBankList();
+    }
+
+    private List<Map<String, String>> getFallbackBankList() {
+        List<Map<String, String>> banks = new ArrayList<>();
+        String[][] data = {
+            {"Access Bank", "044"},
+            {"Zenith Bank", "057"},
+            {"Guaranty Trust Bank", "058"},
+            {"First Bank of Nigeria", "011"},
+            {"United Bank for Africa", "033"},
+            {"Wema Bank", "035"},
+            {"Sterling Bank", "232"},
+            {"First City Monument Bank", "214"},
+            {"Union Bank", "032"},
+            {"Stanbic IBTC Bank", "221"},
+            {"Ecobank Nigeria", "050"},
+            {"Fidelity Bank", "070"},
+            {"Polaris Bank", "076"},
+            {"Keystone Bank", "082"},
+            {"Jaiz Bank", "301"},
+            {"Providus Bank", "101"},
+            {"Kuda Microfinance Bank", "090267"},
+            {"OPay", "100004"},
+            {"PalmPay", "100033"},
+            {"Moniepoint Microfinance Bank", "50515"},
+            {"ALAT by WEMA", "035A"},
+            {"Opay Digital Services", "304"},
+            {"VFD Microfinance Bank", "566"},
+            {"Carbon", "565"},
+        };
+        for (String[] row : data) {
+            Map<String, String> entry = new HashMap<>();
+            entry.put("name", row[0]);
+            entry.put("code", row[1]);
+            banks.add(entry);
+        }
+        return banks;
+    }
+
+    /**
+     * Resolve a bank code from a bank name using the live Paystack list.
+     * Used as fallback when stored bankCode is null (legacy sellers).
+     */
+    public String resolveBankCode(String bankName) {
+        if (bankName == null) return null;
+        for (Map<String, String> bank : getBanks()) {
+            if (bankName.equalsIgnoreCase(bank.get("name"))) {
+                return bank.get("code");
+            }
+        }
+        // Try BankEnum as last resort
+        try {
+            return com.codewithola.tradelynkapi.Enum.BankEnum.fromName(bankName).getCode();
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    /**
+     * Create a Paystack subaccount for a seller.
+     * Uses seller.getBankCode() if available, otherwise resolves from bank name.
      */
     public String createSubaccount(SellerProfile seller) {
         log.info("Creating Paystack subaccount for seller: {}", seller.getUser().getFullName());
 
         try {
-            BankEnum bank = BankEnum.fromName(seller.getBankName());
+            // Prefer stored bank code; fall back to resolving by name
+            String bankCode = seller.getBankCode();
+            if (bankCode == null || bankCode.isBlank()) {
+                bankCode = resolveBankCode(seller.getBankName());
+            }
+            if (bankCode == null || bankCode.isBlank()) {
+                throw new RuntimeException("Cannot determine bank code for bank: " + seller.getBankName());
+            }
 
             PaystackSubaccountRequest request = PaystackSubaccountRequest.builder()
                     .businessName(seller.getBusinessName() != null ?
                             seller.getBusinessName() : "Seller-" + seller.getUser().getId())
-                    .settlementBank(bank.getCode())
+                    .settlementBank(bankCode)
                     .accountNumber(seller.getAccountNumber())
                     .percentageCharge(0.0)  // No platform commission — sellers receive 100%
                     .build();

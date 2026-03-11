@@ -1,6 +1,5 @@
 package com.codewithola.tradelynkapi.services;
 
-import com.codewithola.tradelynkapi.Enum.BankEnum;
 import com.codewithola.tradelynkapi.dtos.requests.BecomeSellerRequest;
 import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
 import com.codewithola.tradelynkapi.dtos.response.SellerStatusResponse;
@@ -56,12 +55,15 @@ public class SellerActivationService {
         // 5. Validate bank account details
         validateBankAccountDetails(request);
 
-        // 6. Validate bank enum
-        BankEnum bank;
-        try {
-            bank = BankEnum.fromName(request.getBankName());
-        } catch (IllegalArgumentException e) {
-            throw new InvalidBankAccountException("Invalid bank name: " + request.getBankName());
+        // 6. Resolve bank code — prefer what the frontend sent; fall back to Paystack live list
+        String bankCode = request.getBankCode();
+        String bankName = request.getBankName();
+        if (bankCode == null || bankCode.isBlank()) {
+            bankCode = paystackService.resolveBankCode(bankName);
+            if (bankCode == null) {
+                throw new InvalidBankAccountException(
+                        "Unrecognised bank: \"" + bankName + "\". Please select a bank from the list.");
+            }
         }
 
         // 7. Set username on user
@@ -75,7 +77,8 @@ public class SellerActivationService {
                 // Business & bank details
                 .businessName(request.getBusinessName() != null ? request.getBusinessName() : user.getName())
                 .address(request.getAddress())
-                .bankName(bank.getName())
+                .bankName(bankName)
+                .bankCode(bankCode)
                 .accountName(request.getAccountName())
                 .accountNumber(request.getAccountNumber())
 

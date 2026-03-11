@@ -62,6 +62,13 @@ public class SellerProfile {
     private String bankName;
 
     /**
+     * Paystack bank code for the seller's bank (e.g. "058" for GTBank).
+     * Stored at onboarding time so we never need to reverse-lookup by name.
+     */
+    @Column(length = 20)
+    private String bankCode;
+
+    /**
      * Account holder's name (must match bank records)
      */
     @Column(nullable = false, length = 255)

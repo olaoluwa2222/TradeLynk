@@ -36,6 +36,7 @@ public class TransferService {
     private final PaystackConfig paystackConfig;
     private final RestTemplate restTemplate;
     private final NotificationService notificationService;
+    private final PaystackService paystackService;
 
     /**
      * Initiate a transfer to the seller for a given order.
@@ -96,7 +97,7 @@ public class TransferService {
         try {
             String transferCode = callPaystackTransferAPI(
                     sellerProfile.getAccountNumber(),
-                    sellerProfile.getBankName(),
+                    sellerProfile.getBankCode() != null ? sellerProfile.getBankCode() : sellerProfile.getBankName(),
                     sellerPayoutInKobo,
                     seller.getName(),
                     "Payout for order #" + orderId
@@ -131,15 +132,23 @@ public class TransferService {
 
     /**
      * Call Paystack Transfer API — transfers money to seller's bank account.
+     * bankNameOrCode may be a stored bank code (e.g. "058") or a bank name (e.g. "Guaranty Trust Bank").
      */
     @SuppressWarnings("unchecked")
-    private String callPaystackTransferAPI(String accountNumber, String bankName,
+    private String callPaystackTransferAPI(String accountNumber, String bankNameOrCode,
                                            Long amountInKobo, String sellerName, String reason) {
-        log.info("Calling Paystack Transfer API - Account: {}, Bank: {}, Amount: {} kobo",
-                accountNumber, bankName, amountInKobo);
+        log.info("Calling Paystack Transfer API - Account: {}, BankNameOrCode: {}, Amount: {} kobo",
+                accountNumber, bankNameOrCode, amountInKobo);
 
         try {
-            String bankCode = getBankCode(bankName);
+            // If it looks like a numeric code (all digits or alphanumeric short code), use it directly;
+            // otherwise resolve as a name.
+            String bankCode;
+            if (bankNameOrCode != null && bankNameOrCode.matches("^[0-9A-Za-z]{2,10}$")) {
+                bankCode = bankNameOrCode; // already a code
+            } else {
+                bankCode = getBankCode(bankNameOrCode);
+            }
             String recipientCode = createTransferRecipient(accountNumber, bankCode, sellerName);
 
             Map<String, Object> transferRequest = new HashMap<>();
@@ -220,7 +229,13 @@ public class TransferService {
 
     private String getBankCode(String bankName) {
         try {
-            return com.codewithola.tradelynkapi.Enum.BankEnum.fromName(bankName).getCode();
+            String code = paystackService.resolveBankCode(bankName);
+            if (code == null) {
+                throw new BadRequestException("Invalid bank name: " + bankName);
+            }
+            return code;
+        } catch (BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Invalid bank name: {}", bankName);
             throw new BadRequestException("Invalid bank name: " + bankName);

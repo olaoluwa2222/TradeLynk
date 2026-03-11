@@ -1,7 +1,6 @@
 package com.codewithola.tradelynkapi.controller;
 
 
-import com.codewithola.tradelynkapi.Enum.BankEnum;
 import com.codewithola.tradelynkapi.dtos.requests.BecomeSellerRequest;
 import com.codewithola.tradelynkapi.dtos.response.SellerProfileDTO;
 import com.codewithola.tradelynkapi.exception.BadRequestException;
@@ -16,11 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/sellers")
@@ -77,18 +75,13 @@ public class SellerController {
 
     /**
      * GET /api/sellers/banks
-     * Get list of supported banks (public)
+     * Get list of supported banks — fetched dynamically from Paystack API (cached 24h).
      */
     @GetMapping("/banks")
     public ResponseEntity<Map<String, Object>> getSupportedBanks() {
         log.info("GET /api/sellers/banks - Fetching supported banks");
 
-        List<Map<String, String>> banks = Arrays.stream(BankEnum.values())
-                .map(bank -> Map.of(
-                        "code", bank.getCode(),
-                        "name", bank.getName()
-                ))
-                .collect(Collectors.toList());
+        List<Map<String, String>> banks = new ArrayList<>(paystackService.getBanks());
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -100,12 +93,8 @@ public class SellerController {
 
     /**
      * GET /api/sellers/validate-account
-     * Validate bank account (for future Paystack integration)
-     */
-    /**
-     * GET /api/sellers/validate-account
-     * Validate bank account using Paystack API
-     * This allows frontend to verify account details before submission
+     * Validate bank account using Paystack API.
+     * Allows frontend to verify account details before submission.
      */
     @GetMapping("/validate-account")
     public ResponseEntity<Map<String, Object>> validateBankAccount(

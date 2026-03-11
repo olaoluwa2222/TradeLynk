@@ -42,10 +42,17 @@ public class BecomeSellerRequest {
     private String bio;
 
     /**
-     * Bank name (from BankEnum)
+     * Bank name (display name from Paystack bank list)
      */
     @NotBlank(message = "Bank name is required")
     private String bankName;
+
+    /**
+     * Paystack bank code (e.g. "058" for GTBank).
+     * Sent by the frontend after the user picks from the /sellers/banks list.
+     * Optional for backward compatibility — resolved from bankName if missing.
+     */
+    private String bankCode;
 
     /**
      * Account holder's name
