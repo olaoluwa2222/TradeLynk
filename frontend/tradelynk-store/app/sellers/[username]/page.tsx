@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { sellersApi, itemsApi } from "@/lib/api";
+import { sellersApi, itemsApi, collectionsApi } from "@/lib/api";
+import { CartProvider, useCart } from "@/lib/hooks/useCart";
+import CartDrawer from "@/components/CartDrawer";
 import { StorefrontData } from "@/types/seller";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,6 +34,8 @@ import {
   LayoutGrid,
   Plus,
   Tag,
+  ShoppingCart,
+  Filter,
 } from "lucide-react";
 import FeedbackButton from "@/components/FeedbackButton";
 import { StorefrontCollections } from "@/components/collections";
@@ -138,69 +142,72 @@ export default function SellerStorefrontPage() {
   const secondaryColor = storefront.secondaryColor || "#6366F1";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation
-        storefront={storefront}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        theme={theme}
-        primaryColor={primaryColor}
-        scrollY={scrollY}
-        isOwner={isOwner}
-      />
+    <CartProvider>
+      <div className="min-h-screen bg-gray-50">
+        <CartDrawer />
+        <Navigation
+          storefront={storefront}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          theme={theme}
+          primaryColor={primaryColor}
+          scrollY={scrollY}
+          isOwner={isOwner}
+        />
 
-      <main>
-        {activeTab === "home" && (
-          <HomeTab
-            storefront={storefront}
-            theme={theme}
-            primaryColor={primaryColor}
-            secondaryColor={secondaryColor}
-            scrollY={scrollY}
-          />
-        )}
-        {activeTab === "products" && (
-          <ProductsTab
-            storefront={storefront}
-            theme={theme}
-            primaryColor={primaryColor}
-            isOwner={isOwner}
-          />
-        )}
-        {activeTab === "collections" && (
-          <CollectionsTab
-            storefront={storefront}
-            theme={theme}
-            primaryColor={primaryColor}
-          />
-        )}
-        {activeTab === "about" && (
-          <AboutTab
-            storefront={storefront}
-            theme={theme}
-            primaryColor={primaryColor}
-          />
-        )}
-        {activeTab === "contact" && (
-          <ContactTab
-            storefront={storefront}
-            theme={theme}
-            primaryColor={primaryColor}
-            contactForm={contactForm}
-            setContactForm={setContactForm}
-          />
-        )}
-      </main>
+        <main>
+          {activeTab === "home" && (
+            <HomeTab
+              storefront={storefront}
+              theme={theme}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
+              scrollY={scrollY}
+            />
+          )}
+          {activeTab === "products" && (
+            <ProductsTab
+              storefront={storefront}
+              theme={theme}
+              primaryColor={primaryColor}
+              isOwner={isOwner}
+            />
+          )}
+          {activeTab === "collections" && (
+            <CollectionsTab
+              storefront={storefront}
+              theme={theme}
+              primaryColor={primaryColor}
+            />
+          )}
+          {activeTab === "about" && (
+            <AboutTab
+              storefront={storefront}
+              theme={theme}
+              primaryColor={primaryColor}
+            />
+          )}
+          {activeTab === "contact" && (
+            <ContactTab
+              storefront={storefront}
+              theme={theme}
+              primaryColor={primaryColor}
+              contactForm={contactForm}
+              setContactForm={setContactForm}
+            />
+          )}
+        </main>
 
-      <Footer
-        storefront={storefront}
-        primaryColor={primaryColor}
-        theme={theme}
-      />
+        <Footer
+          storefront={storefront}
+          primaryColor={primaryColor}
+          theme={theme}
+        />
 
-      {/* Feedback Button - Visible to store owner */}
-      {isOwner && <FeedbackButton username={username} />}
-    </div>
+        {/* Feedback Button - Visible to store owner */}
+        {isOwner && <FeedbackButton username={username} />}
+      </div>
+    </CartProvider>
   );
 }
 
@@ -218,6 +225,7 @@ function Navigation({
 }: any) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isScrolled = scrollY > 50;
+  const { count, openCart } = useCart();
 
   const getNavBg = () => {
     if (isScrolled) {
@@ -310,7 +318,6 @@ function Navigation({
                 )}
               </div>
             </div>
-
             {/* Desktop Tabs + Settings */}
             <div className="hidden md:flex items-center gap-3">
               <div className="flex items-center gap-1 bg-gray-100/80 backdrop-blur-sm p-1 rounded-full">
@@ -345,36 +352,75 @@ function Navigation({
                   <span>Edit</span>
                 </Link>
               )}
-            </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className={`md:hidden p-2 rounded-lg transition-all ${
-                theme === "product-showcase"
-                  ? "bg-white/10 hover:bg-white/20"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
-              aria-label="Toggle menu"
-            >
-              <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
-                <span
-                  className={`block w-5 h-0.5 transition-all duration-300 ${
-                    theme === "product-showcase" ? "bg-white" : "bg-gray-700"
-                  } ${mobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`}
-                />
-                <span
-                  className={`block w-5 h-0.5 transition-all duration-300 ${
-                    theme === "product-showcase" ? "bg-white" : "bg-gray-700"
-                  } ${mobileMenuOpen ? "opacity-0" : ""}`}
-                />
-                <span
-                  className={`block w-5 h-0.5 transition-all duration-300 ${
-                    theme === "product-showcase" ? "bg-white" : "bg-gray-700"
-                  } ${mobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`}
-                />
-              </div>
-            </button>
+              {/* Cart Button */}
+              <button
+                onClick={openCart}
+                className={`relative flex items-center justify-center w-9 h-9 rounded-full transition-all ${
+                  theme === "product-showcase"
+                    ? "bg-white/10 hover:bg-white/20 text-white"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                }`}
+                aria-label="Open cart"
+              >
+                <ShoppingCart size={18} />
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {count > 9 ? "9+" : count}
+                  </span>
+                )}
+              </button>
+            </div>
+            {/* Mobile Cart + Hamburger */}
+            <div className="md:hidden flex items-center gap-2">
+              {/* Cart button for mobile */}
+              <button
+                onClick={openCart}
+                className={`relative flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+                  theme === "product-showcase"
+                    ? "bg-white/10 hover:bg-white/20 text-white"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                }`}
+                aria-label="Open cart"
+              >
+                <ShoppingCart size={18} />
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {count > 9 ? "9+" : count}
+                  </span>
+                )}
+              </button>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className={`p-2 rounded-lg transition-all ${
+                  theme === "product-showcase"
+                    ? "bg-white/10 hover:bg-white/20"
+                    : "bg-gray-100 hover:bg-gray-200"
+                }`}
+                aria-label="Toggle menu"
+              >
+                <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
+                  <span
+                    className={`block w-5 h-0.5 transition-all duration-300 ${
+                      theme === "product-showcase" ? "bg-white" : "bg-gray-700"
+                    } ${mobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`}
+                  />
+                  <span
+                    className={`block w-5 h-0.5 transition-all duration-300 ${
+                      theme === "product-showcase" ? "bg-white" : "bg-gray-700"
+                    } ${mobileMenuOpen ? "opacity-0" : ""}`}
+                  />
+                  <span
+                    className={`block w-5 h-0.5 transition-all duration-300 ${
+                      theme === "product-showcase" ? "bg-white" : "bg-gray-700"
+                    } ${mobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`}
+                  />
+                </div>
+              </button>
+            </div>{" "}
+            {/* end mobile cart + hamburger wrapper */}
           </div>
         </div>
 
@@ -653,63 +699,6 @@ function HomeTab({
               <span>Browse Products</span>
             </button>
           </div>
-
-          {/* Quick Stats - Floating Cards */}
-          <div
-            className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto animate-fade-in-up"
-            style={{ animationDelay: "0.4s" }}
-          >
-            {[
-              {
-                icon: Package,
-                value: storefront.totalItems || 0,
-                label: "Products",
-              },
-              {
-                icon: Heart,
-                value: storefront.totalLikes || 0,
-                label: "Likes",
-              },
-              {
-                icon: TrendingUp,
-                value: storefront.totalSales || 0,
-                label: "Sales",
-              },
-              { icon: Star, value: "5.0", label: "Rating" },
-            ].map((stat, idx) => (
-              <div
-                key={stat.label}
-                className={`${
-                  hasBanner || isDarkTheme
-                    ? "glass"
-                    : "bg-white/80 backdrop-blur-sm border border-gray-200/50"
-                } rounded-2xl p-4 text-center hover-lift`}
-                style={{ animationDelay: `${0.4 + idx * 0.1}s` }}
-              >
-                <stat.icon
-                  size={20}
-                  className={`mx-auto mb-2 ${
-                    hasBanner || isDarkTheme ? "text-white/70" : "text-gray-500"
-                  }`}
-                />
-                <div
-                  className={`text-2xl font-bold ${
-                    hasBanner || isDarkTheme ? "text-white" : "text-gray-900"
-                  }`}
-                  style={{ fontFamily: "Clash Display" }}
-                >
-                  {stat.value}
-                </div>
-                <div
-                  className={`text-xs ${
-                    hasBanner || isDarkTheme ? "text-white/60" : "text-gray-500"
-                  }`}
-                >
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -827,17 +816,64 @@ function HomeTab({
 }
 
 // ============================================
-// PRODUCTS TAB - Modern grid with filters
+// PRODUCTS TAB - Modern grid with collection filters
 // ============================================
 function ProductsTab({ storefront, theme, primaryColor, isOwner }: any) {
-  const items = storefront.items || [];
+  const allItems = storefront.items || [];
   const [viewMode, setViewMode] = useState<"grid" | "compact">("grid");
+  const [collections, setCollections] = useState<any[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<
+    number | null
+  >(null);
+  const [filteredItems, setFilteredItems] = useState(allItems);
+  const [filterLoading, setFilterLoading] = useState(false);
+
+  // Load seller collections for filter chips
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        const res = await collectionsApi.getSellerCollections(
+          storefront.userId,
+          true,
+        );
+        if (res.success && res.data) setCollections(res.data);
+      } catch {}
+    };
+    if (storefront.userId) loadCollections();
+  }, [storefront.userId]);
+
+  // When a collection chip is selected, filter items
+  const handleCollectionFilter = async (collectionId: number | null) => {
+    setSelectedCollectionId(collectionId);
+    if (collectionId === null) {
+      setFilteredItems(allItems);
+      return;
+    }
+    setFilterLoading(true);
+    try {
+      const res = await collectionsApi.getById(collectionId);
+      if (res.success && res.data) {
+        const collectionItemIds = new Set(
+          (res.data.items || []).map((i: any) => i.id),
+        );
+        setFilteredItems(
+          allItems.filter((item: any) => collectionItemIds.has(item.id)),
+        );
+      }
+    } catch {
+      setFilteredItems(allItems);
+    } finally {
+      setFilterLoading(false);
+    }
+  };
+
+  const displayItems = filteredItems;
 
   return (
     <div className="pt-20 pb-20 px-4 sm:px-6 lg:px-8 min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 fade-in-section">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 fade-in-section">
           <div>
             <h2
               className="text-3xl md:text-4xl font-bold text-gray-900"
@@ -845,7 +881,10 @@ function ProductsTab({ storefront, theme, primaryColor, isOwner }: any) {
             >
               All Products
             </h2>
-            <p className="text-gray-500 mt-1">{items.length} items available</p>
+            <p className="text-gray-500 mt-1">
+              {displayItems.length} items
+              {selectedCollectionId ? " in collection" : " available"}
+            </p>
           </div>
 
           {/* Actions */}
@@ -889,18 +928,82 @@ function ProductsTab({ storefront, theme, primaryColor, isOwner }: any) {
           </div>
         </div>
 
-        {items.length === 0 ? (
+        {/* Collection Filter Chips */}
+        {collections.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-8 fade-in-section">
+            <div className="flex items-center gap-1.5 text-gray-400 mr-1">
+              <Filter size={14} />
+              <span className="text-xs font-medium">Filter:</span>
+            </div>
+            <button
+              onClick={() => handleCollectionFilter(null)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                selectedCollectionId === null
+                  ? "text-white border-transparent shadow-sm"
+                  : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+              style={
+                selectedCollectionId === null
+                  ? { backgroundColor: primaryColor, borderColor: primaryColor }
+                  : {}
+              }
+            >
+              All
+            </button>
+            {collections.map((col: any) => (
+              <button
+                key={col.id}
+                onClick={() => handleCollectionFilter(col.id)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all border ${
+                  selectedCollectionId === col.id
+                    ? "text-white border-transparent shadow-sm"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                }`}
+                style={
+                  selectedCollectionId === col.id
+                    ? {
+                        backgroundColor: primaryColor,
+                        borderColor: primaryColor,
+                      }
+                    : {}
+                }
+              >
+                {col.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filterLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 rounded-full border-2 border-gray-200 border-t-gray-800 animate-spin" />
+          </div>
+        ) : displayItems.length === 0 ? (
           <div className="text-center py-20 fade-in-section">
             <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <ShoppingBag size={32} className="text-gray-400" />
             </div>
-            <p className="text-gray-500 text-lg">No products listed yet</p>
-            <p className="text-gray-400 text-sm mt-2">
-              {isOwner
-                ? "Start adding products to your store!"
-                : "Check back soon!"}
+            <p className="text-gray-500 text-lg">
+              {selectedCollectionId
+                ? "No products in this collection"
+                : "No products listed yet"}
             </p>
-            {isOwner && (
+            <p className="text-gray-400 text-sm mt-2">
+              {selectedCollectionId ? (
+                <button
+                  onClick={() => handleCollectionFilter(null)}
+                  className="text-sm underline"
+                  style={{ color: primaryColor }}
+                >
+                  View all products
+                </button>
+              ) : isOwner ? (
+                "Start adding products to your store!"
+              ) : (
+                "Check back soon!"
+              )}
+            </p>
+            {isOwner && !selectedCollectionId && (
               <Link
                 href="/create-item"
                 className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl font-bold text-white shadow-lg hover:shadow-xl transition-all"
@@ -921,7 +1024,7 @@ function ProductsTab({ storefront, theme, primaryColor, isOwner }: any) {
                 : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
             }`}
           >
-            {items.map((item: any, idx: number) => (
+            {displayItems.map((item: any, idx: number) => (
               <div
                 key={item.id}
                 className="fade-in-section"
@@ -1055,12 +1158,12 @@ function AboutTab({ storefront, theme, primaryColor }: any) {
               label: "Products",
             },
             { icon: Heart, value: storefront.totalLikes || 0, label: "Likes" },
-            { icon: Users, value: storefront.totalSales || 0, label: "Sales" },
             {
-              icon: Calendar,
-              value: new Date(storefront.memberSince).getFullYear(),
-              label: "Joined",
+              icon: TrendingUp,
+              value: storefront.totalSales || 0,
+              label: "Sales",
             },
+            { icon: Star, value: "5.0", label: "Rating" },
           ].map((stat, idx) => (
             <div
               key={stat.label}
@@ -1082,6 +1185,18 @@ function AboutTab({ storefront, theme, primaryColor }: any) {
             </div>
           ))}
         </div>
+
+        {/* Member Since */}
+        {storefront.memberSince && (
+          <p
+            className="text-center text-sm text-gray-400 mb-8 fade-in-section"
+            style={{ transitionDelay: "0.5s" }}
+          >
+            <Calendar size={13} className="inline mr-1 mb-0.5" />
+            Selling on TradeLynk since{" "}
+            {new Date(storefront.memberSince).getFullYear()}
+          </p>
+        )}
 
         {/* Location & Info */}
         {storefront.address && (
@@ -1385,10 +1500,27 @@ function ProductCard({
   compact = false,
   sellerUsername,
 }: any) {
+  const { addItem, isInCart } = useCart();
+  const inCart = isInCart(item.id);
+
   // Add storefront context to the link so the detail page knows to prioritize seller's items
   const itemLink = sellerUsername
     ? `/items/${item.id}?from=storefront&seller=${sellerUsername}`
     : `/items/${item.id}`;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (inCart) return;
+    addItem({
+      itemId: item.id,
+      title: item.title,
+      imageUrl: item.imageUrl || null,
+      sellerName: sellerUsername || "",
+      price: item.price,
+      effectivePrice: item.price,
+    });
+  };
 
   return (
     <Link href={itemLink}>
@@ -1426,10 +1558,21 @@ function ProductCard({
             </span>
           </div>
 
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-            <span className="text-white text-sm font-medium flex items-center gap-1">
-              <Eye size={14} /> View Details
+          {/* Hover Overlay with Add to Cart */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4 gap-3">
+            <button
+              onClick={handleAddToCart}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold shadow-lg transition-all ${
+                inCart
+                  ? "bg-green-500 text-white"
+                  : "bg-white text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              <ShoppingCart size={13} />
+              {inCart ? "Added" : "Add to Cart"}
+            </button>
+            <span className="text-white text-xs font-medium flex items-center gap-1 bg-black/40 px-3 py-2 rounded-xl">
+              <Eye size={13} /> View
             </span>
           </div>
         </div>

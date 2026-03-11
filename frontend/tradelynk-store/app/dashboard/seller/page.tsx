@@ -446,7 +446,10 @@ export default function SellerDashboard() {
       <div className="p-4 sm:p-6 lg:p-8">
         {/* Collections Tab */}
         {activeTab === "collections" && user && (
-          <CollectionManager sellerId={user.userId} sellerUsername="" />
+          <CollectionManager
+            sellerId={user.userId}
+            sellerUsername={sellerUsername || ""}
+          />
         )}
 
         {/* Products Tab */}

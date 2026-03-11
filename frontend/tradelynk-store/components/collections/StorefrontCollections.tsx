@@ -43,6 +43,14 @@ export default function StorefrontCollections({
       let response;
       if (variant === "featured") {
         response = await collectionsApi.getFeaturedCollections(sellerId);
+        // Fallback: if featured endpoint fails or returns nothing, load all active
+        if (
+          !response?.success ||
+          !response?.data ||
+          response.data.length === 0
+        ) {
+          response = await collectionsApi.getSellerCollections(sellerId, true);
+        }
       } else {
         response = await collectionsApi.getSellerCollections(sellerId, true);
       }
