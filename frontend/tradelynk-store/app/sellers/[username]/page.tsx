@@ -702,6 +702,15 @@ function HomeTab({
         </div>
       </section>
 
+      {/* Collections Section — shown before featured products */}
+      <StorefrontCollections
+        sellerId={storefront.userId}
+        sellerUsername={storefront.username}
+        primaryColor={primaryColor}
+        variant="featured"
+        maxItems={4}
+      />
+
       {/* Featured Products Section */}
       {featuredItems.length > 0 && (
         <section
@@ -755,15 +764,6 @@ function HomeTab({
           </div>
         </section>
       )}
-
-      {/* Featured Collections Section */}
-      <StorefrontCollections
-        sellerId={storefront.userId}
-        sellerUsername={storefront.username}
-        primaryColor={primaryColor}
-        variant="featured"
-        maxItems={4}
-      />
 
       {/* About Preview Section */}
       {storefront.bio && (
