@@ -33,6 +33,8 @@ export default function Navbar() {
   const isStorefrontPage = pathname?.startsWith("/sellers/");
   // Hide navbar on homepage (it has its own landing nav)
   const isHomePage = pathname === "/";
+  // Hide navbar on go subdomain landing route
+  const isGoLandingPage = pathname === "/go";
   // Hide navbar on dashboard pages (they have their own sidebar navigation)
   const isDashboardPage = pathname?.startsWith("/dashboard/");
   // Hide navbar on auth pages (they have their own layout)
@@ -202,7 +204,13 @@ export default function Navbar() {
   }, []);
 
   // Don't render navbar on storefront pages, homepage, or dashboard - they have their own navigation
-  if (isStorefrontPage || isHomePage || isDashboardPage || isAuthPage) {
+  if (
+    isStorefrontPage ||
+    isHomePage ||
+    isGoLandingPage ||
+    isDashboardPage ||
+    isAuthPage
+  ) {
     return null;
   }
 

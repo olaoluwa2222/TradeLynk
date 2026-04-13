@@ -79,7 +79,8 @@ export default function BecomeASellerPage() {
                     fontWeight: 700,
                   }}
                 >
-                  Stop Sending Photos.<br />
+                  Stop Sending Photos.
+                  <br />
                   <span className="text-purple-400">Get a Real Store.</span> 🏪
                 </h1>
               </div>
@@ -94,8 +95,11 @@ export default function BecomeASellerPage() {
                   }}
                 >
                   Your own professional mini website at{" "}
-                  <span className="text-purple-400 font-semibold">yourname.tradelynk.app</span>.
-                  Share one link, let customers browse everything you sell, and receive orders directly — no more DM chaos.
+                  <span className="text-purple-400 font-semibold">
+                    yourname.tradelynk.app
+                  </span>
+                  . Share one link, let customers browse everything you sell,
+                  and receive orders directly — no more DM chaos.
                 </p>
               </div>
 
@@ -103,17 +107,25 @@ export default function BecomeASellerPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center">
                   <p className="text-2xl mb-1">🌐</p>
-                  <p className="text-white font-semibold text-sm">Your own link</p>
-                  <p className="text-gray-400 text-xs">yourname.tradelynk.app</p>
+                  <p className="text-white font-semibold text-sm">
+                    Your own link
+                  </p>
+                  <p className="text-gray-400 text-xs">
+                    yourname.tradelynk.app
+                  </p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center">
                   <p className="text-2xl mb-1">🛍️</p>
-                  <p className="text-white font-semibold text-sm">Product catalogue</p>
+                  <p className="text-white font-semibold text-sm">
+                    Product catalogue
+                  </p>
                   <p className="text-gray-400 text-xs">Unlimited listings</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center">
                   <p className="text-2xl mb-1">💸</p>
-                  <p className="text-white font-semibold text-sm">Direct payments</p>
+                  <p className="text-white font-semibold text-sm">
+                    Direct payments
+                  </p>
                   <p className="text-gray-400 text-xs">To your bank · 24h</p>
                 </div>
               </div>
@@ -129,7 +141,9 @@ export default function BecomeASellerPage() {
                   }}
                 >
                   <span>See How It Works</span>
-                  <span className="group-hover:translate-y-1 transition-transform">↓</span>
+                  <span className="group-hover:translate-y-1 transition-transform">
+                    ↓
+                  </span>
                 </a>
                 <a
                   href="#form"
@@ -142,7 +156,6 @@ export default function BecomeASellerPage() {
                   Skip to Setup →
                 </a>
               </div>
-
             </div>
 
             {/* Right Side - Stats Card */}
@@ -290,7 +303,10 @@ export default function BecomeASellerPage() {
           <p className="text-purple-400 font-semibold text-sm tracking-widest uppercase mb-4">
             THE DIFFERENCE
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-12 leading-tight" style={{ fontFamily: "Clash Display", fontWeight: 700 }}>
+          <h2
+            className="text-3xl md:text-4xl font-bold text-white mb-12 leading-tight"
+            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+          >
             Instagram DMs vs. your TradeLynk storefront
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
@@ -298,18 +314,23 @@ export default function BecomeASellerPage() {
             <div className="bg-red-950/40 border border-red-800/40 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-5">
                 <span className="text-2xl">😵</span>
-                <p className="text-red-300 font-bold text-lg">Before TradeLynk</p>
+                <p className="text-red-300 font-bold text-lg">
+                  Before TradeLynk
+                </p>
               </div>
               <ul className="space-y-3">
                 {[
                   "Sending the same photos to every customer over and over",
-                  "\"How much?\" \"Available?\" — same questions, all day",
+                  '"How much?" "Available?" — same questions, all day',
                   "No way for customers to browse what you sell",
                   "Payment via manual bank transfer with no record",
                   "Lose sales when you're offline or asleep",
                   "Customers can't find you easily — no single link to share",
                 ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-red-200 text-sm">
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 text-red-200 text-sm"
+                  >
                     <span className="text-red-500 mt-0.5 shrink-0">✗</span>
                     {item}
                   </li>
@@ -321,7 +342,9 @@ export default function BecomeASellerPage() {
             <div className="bg-green-950/40 border border-green-700/40 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-5">
                 <span className="text-2xl">🚀</span>
-                <p className="text-green-300 font-bold text-lg">With TradeLynk</p>
+                <p className="text-green-300 font-bold text-lg">
+                  With TradeLynk
+                </p>
               </div>
               <ul className="space-y-3">
                 {[
@@ -332,7 +355,10 @@ export default function BecomeASellerPage() {
                   "Your store works 24/7 — even while you sleep",
                   "Professional, branded presence that builds trust instantly",
                 ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-green-200 text-sm">
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 text-green-200 text-sm"
+                  >
                     <span className="text-green-400 mt-0.5 shrink-0">✓</span>
                     {item}
                   </li>
@@ -351,7 +377,10 @@ export default function BecomeASellerPage() {
       </section>
 
       {/* ── STOREFRONT FEATURE SHOWCASE ─────────────────────── */}
-      <section id="storefront-feature" className="w-full bg-white py-20 px-4 sm:px-6 lg:px-8">
+      <section
+        id="storefront-feature"
+        className="w-full bg-white py-20 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-6xl mx-auto">
           {/* Label */}
           <p className="text-purple-600 font-semibold text-sm tracking-widest uppercase mb-3 text-center">
@@ -378,12 +407,19 @@ export default function BecomeASellerPage() {
                   🌐
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                  <h3
+                    className="text-xl font-bold text-black mb-1"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Your own unique link
                   </h3>
                   <p className="text-gray-500 leading-relaxed">
-                    Get <span className="font-semibold text-purple-600">yourname.tradelynk.app</span> — a real web address you can
-                    drop in your Instagram bio, WhatsApp status, or anywhere online.
+                    Get{" "}
+                    <span className="font-semibold text-purple-600">
+                      yourname.tradelynk.app
+                    </span>{" "}
+                    — a real web address you can drop in your Instagram bio,
+                    WhatsApp status, or anywhere online.
                   </p>
                 </div>
               </div>
@@ -394,12 +430,16 @@ export default function BecomeASellerPage() {
                   🛍️
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                  <h3
+                    className="text-xl font-bold text-black mb-1"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Product catalogue — not just photos
                   </h3>
                   <p className="text-gray-500 leading-relaxed">
-                    List unlimited products with prices, descriptions, and photos. Organize
-                    them into collections. Customers can browse everything in one place.
+                    List unlimited products with prices, descriptions, and
+                    photos. Organize them into collections. Customers can browse
+                    everything in one place.
                   </p>
                 </div>
               </div>
@@ -410,12 +450,15 @@ export default function BecomeASellerPage() {
                   🎨
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                  <h3
+                    className="text-xl font-bold text-black mb-1"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Pick your look & theme
                   </h3>
                   <p className="text-gray-500 leading-relaxed">
-                    Choose from multiple storefront themes and brand colours to match your
-                    business personality — no design skills needed.
+                    Choose from multiple storefront themes and brand colours to
+                    match your business personality — no design skills needed.
                   </p>
                 </div>
               </div>
@@ -426,12 +469,16 @@ export default function BecomeASellerPage() {
                   📦
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-1" style={{ fontFamily: "Clash Display" }}>
+                  <h3
+                    className="text-xl font-bold text-black mb-1"
+                    style={{ fontFamily: "Clash Display" }}
+                  >
                     Orders come straight to you
                   </h3>
                   <p className="text-gray-500 leading-relaxed">
-                    Customers order directly on your storefront. You get notified instantly
-                    and receive payment to your bank — no middleman.
+                    Customers order directly on your storefront. You get
+                    notified instantly and receive payment to your bank — no
+                    middleman.
                   </p>
                 </div>
               </div>
@@ -442,7 +489,9 @@ export default function BecomeASellerPage() {
                 style={{ fontFamily: "Clash Display", fontWeight: 700 }}
               >
                 <span>Set Up My Storefront</span>
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
+                <span className="group-hover:translate-x-1 transition-transform">
+                  →
+                </span>
               </a>
             </div>
 
@@ -460,10 +509,23 @@ export default function BecomeASellerPage() {
                     <div className="w-3 h-3 rounded-full bg-green-400"></div>
                   </div>
                   <div className="flex-1 bg-white rounded-md px-4 py-1.5 text-sm text-gray-500 font-medium border border-gray-300 flex items-center gap-2">
-                    <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    <svg
+                      className="w-3.5 h-3.5 text-green-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
                     </svg>
-                    <span className="text-purple-600 font-semibold">adaeze</span>.tradelynk.app
+                    <span className="text-purple-600 font-semibold">
+                      adaeze
+                    </span>
+                    .tradelynk.app
                   </div>
                 </div>
 
@@ -476,31 +538,50 @@ export default function BecomeASellerPage() {
                     </div>
                   </div>
                   <div className="pt-12 px-6 pb-4">
-                    <h4 className="text-lg font-bold text-gray-900">Adaeze Couture</h4>
-                    <p className="text-gray-500 text-sm mb-1">adaeze.tradelynk.app</p>
-                    <p className="text-gray-600 text-sm">Nigerian fashion for the modern woman 🇳🇬</p>
+                    <h4 className="text-lg font-bold text-gray-900">
+                      Adaeze Couture
+                    </h4>
+                    <p className="text-gray-500 text-sm mb-1">
+                      adaeze.tradelynk.app
+                    </p>
+                    <p className="text-gray-600 text-sm">
+                      Nigerian fashion for the modern woman 🇳🇬
+                    </p>
                     <div className="flex gap-2 mt-3">
-                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">✓ Verified Seller</span>
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">⚡ Ships in 24h</span>
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-medium">
+                        ✓ Verified Seller
+                      </span>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                        ⚡ Ships in 24h
+                      </span>
                     </div>
                   </div>
 
                   {/* Product grid */}
                   <div className="px-6 pb-6">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Products</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
+                      Products
+                    </p>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { bg: "bg-orange-200", emoji: "👗", price: "₦8,500" },
                         { bg: "bg-pink-200", emoji: "👜", price: "₦12,000" },
                         { bg: "bg-blue-200", emoji: "👠", price: "₦6,200" },
                       ].map((item, i) => (
-                        <div key={i} className="rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-white">
-                          <div className={`${item.bg} aspect-square flex items-center justify-center text-3xl`}>
+                        <div
+                          key={i}
+                          className="rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-white"
+                        >
+                          <div
+                            className={`${item.bg} aspect-square flex items-center justify-center text-3xl`}
+                          >
                             {item.emoji}
                           </div>
                           <div className="p-2">
                             <div className="h-1.5 bg-gray-200 rounded w-3/4 mb-1.5"></div>
-                            <p className="text-xs font-bold text-gray-800">{item.price}</p>
+                            <p className="text-xs font-bold text-gray-800">
+                              {item.price}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -546,17 +627,26 @@ export default function BecomeASellerPage() {
                 <span className="text-5xl">🏪</span>
               </div>
 
-              <h3 className="text-2xl font-bold text-black mb-4" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+              <h3
+                className="text-2xl font-bold text-black mb-4"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
                 Step 1
               </h3>
 
-              <h4 className="text-xl font-semibold text-black mb-3" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+              <h4
+                className="text-xl font-semibold text-black mb-3"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
                 Create Your Storefront
               </h4>
 
               <p className="text-gray-600 text-sm leading-relaxed">
                 Sign up, choose your store name, and get your personal link at{" "}
-                <span className="text-purple-600 font-semibold">yourname.tradelynk.app</span> — in under 5 minutes.
+                <span className="text-purple-600 font-semibold">
+                  yourname.tradelynk.app
+                </span>{" "}
+                — in under 5 minutes.
               </p>
             </div>
 
@@ -566,17 +656,24 @@ export default function BecomeASellerPage() {
                 <span className="text-5xl">📸</span>
               </div>
 
-              <h3 className="text-2xl font-bold text-black mb-4" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+              <h3
+                className="text-2xl font-bold text-black mb-4"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
                 Step 2
               </h3>
 
-              <h4 className="text-xl font-semibold text-black mb-3" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+              <h4
+                className="text-xl font-semibold text-black mb-3"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
                 Add Your Products
               </h4>
 
               <p className="text-gray-600 text-sm leading-relaxed">
-                Upload photos, set prices, write descriptions, and organise into collections.
-                Your storefront is instantly updated — no tech skills needed.
+                Upload photos, set prices, write descriptions, and organise into
+                collections. Your storefront is instantly updated — no tech
+                skills needed.
               </p>
             </div>
 
@@ -586,17 +683,24 @@ export default function BecomeASellerPage() {
                 <span className="text-5xl">💰</span>
               </div>
 
-              <h3 className="text-2xl font-bold text-black mb-4" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+              <h3
+                className="text-2xl font-bold text-black mb-4"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
                 Step 3
               </h3>
 
-              <h4 className="text-xl font-semibold text-black mb-3" style={{ fontFamily: "Clash Display", fontWeight: 600 }}>
+              <h4
+                className="text-xl font-semibold text-black mb-3"
+                style={{ fontFamily: "Clash Display", fontWeight: 600 }}
+              >
                 Share Your Link & Get Paid
               </h4>
 
               <p className="text-gray-600 text-sm leading-relaxed">
-                Drop your storefront link in your Instagram bio or WhatsApp status. Customers
-                order directly and you get paid to your bank within 24–48 hours.
+                Drop your storefront link in your Instagram bio or WhatsApp
+                status. Customers order directly and you get paid to your bank
+                within 24–48 hours.
               </p>
             </div>
           </div>
@@ -609,9 +713,13 @@ export default function BecomeASellerPage() {
               style={{ fontFamily: "Clash Display", fontWeight: 700 }}
             >
               <span>Start Building My Store</span>
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
+              <span className="group-hover:translate-x-1 transition-transform">
+                →
+              </span>
             </a>
-            <p className="text-gray-400 text-sm mt-3">Free to start · No credit card needed</p>
+            <p className="text-gray-400 text-sm mt-3">
+              Free to start · No credit card needed
+            </p>
           </div>
         </div>
       </section>
@@ -622,12 +730,16 @@ export default function BecomeASellerPage() {
           <p className="text-purple-200 font-semibold text-sm tracking-widest uppercase mb-3">
             READY?
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight" style={{ fontFamily: "Clash Display", fontWeight: 700 }}>
+          <h2
+            className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight"
+            style={{ fontFamily: "Clash Display", fontWeight: 700 }}
+          >
             You're 5 minutes away from your own store.
           </h2>
           <p className="text-purple-100 text-lg mb-8 leading-relaxed">
-            Fill in the form below to claim your storefront link, customise your look,
-            and go live. It's completely free — no credit card, no tech skills needed.
+            Fill in the form below to claim your storefront link, customise your
+            look, and go live. It's completely free — no credit card, no tech
+            skills needed.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-white/80 text-sm font-medium">
             <span>✓ Free forever</span>
@@ -644,7 +756,9 @@ export default function BecomeASellerPage() {
             style={{ fontFamily: "Clash Display", fontWeight: 700 }}
           >
             <span>Set Up My Store Now</span>
-            <span className="group-hover:translate-y-1 transition-transform">↓</span>
+            <span className="group-hover:translate-y-1 transition-transform">
+              ↓
+            </span>
           </a>
         </div>
       </section>
@@ -912,6 +1026,7 @@ function SellerActivationForm({
         businessName: businessName || undefined,
         campusAddress: campusAddress || undefined,
         bankName,
+        bankCode,
         accountNumber,
         accountName,
         agreedToTerms,
@@ -1074,8 +1189,10 @@ function SellerActivationForm({
             }}
           >
             Fill in your details below to claim your storefront at{" "}
-            <span className="text-purple-600 font-semibold">yourname.tradelynk.app</span>.
-            Customers will be able to browse your products and order directly.
+            <span className="text-purple-600 font-semibold">
+              yourname.tradelynk.app
+            </span>
+            . Customers will be able to browse your products and order directly.
           </p>
         </div>
 

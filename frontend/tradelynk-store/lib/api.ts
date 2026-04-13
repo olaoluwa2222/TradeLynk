@@ -19,28 +19,70 @@ const api = axios.create({
 // Token storage utilities
 const TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const COOKIE_TOKEN_KEY = "tl_access_token";
+const COOKIE_REFRESH_KEY = "tl_refresh_token";
+
+// Cookie helpers for cross-subdomain auth sharing
+const getCookieDomain = (): string => {
+  if (typeof window === "undefined") return "";
+  return window.location.hostname.includes("tradelynk.app")
+    ? ".tradelynk.app"
+    : "";
+};
+
+const setCookie = (
+  name: string,
+  value: string,
+  maxAge: number = 86400 * 7,
+): void => {
+  if (typeof document === "undefined") return;
+  const domain = getCookieDomain();
+  const domainPart = domain ? `; domain=${domain}` : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/${domainPart}; SameSite=Lax; max-age=${maxAge}`;
+};
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
+const removeCookie = (name: string): void => {
+  if (typeof document === "undefined") return;
+  const domain = getCookieDomain();
+  const domainPart = domain ? `; domain=${domain}` : "";
+  document.cookie = `${name}=; path=/${domainPart}; max-age=0`;
+};
 
 export const tokenStorage = {
   getAccessToken: (): string | null => {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem(TOKEN_KEY);
+    // Check localStorage first (current origin), then cookie (cross-subdomain fallback)
+    return localStorage.getItem(TOKEN_KEY) || getCookie(COOKIE_TOKEN_KEY);
   },
 
   getRefreshToken: (): string | null => {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
+    return (
+      localStorage.getItem(REFRESH_TOKEN_KEY) || getCookie(COOKIE_REFRESH_KEY)
+    );
   },
 
   setTokens: (accessToken: string, refreshToken: string): void => {
     if (typeof window === "undefined") return;
     localStorage.setItem(TOKEN_KEY, accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    // Also set cross-subdomain cookies so auth works on username.tradelynk.app
+    setCookie(COOKIE_TOKEN_KEY, accessToken);
+    setCookie(COOKIE_REFRESH_KEY, refreshToken);
   },
 
   clearTokens: (): void => {
     if (typeof window === "undefined") return;
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    removeCookie(COOKIE_TOKEN_KEY);
+    removeCookie(COOKIE_REFRESH_KEY);
   },
 };
 
@@ -768,6 +810,7 @@ export const sellersApi = {
     businessName?: string;
     campusAddress?: string;
     bankName: string;
+    bankCode: string;
     accountNumber: string;
     accountName: string;
     agreedToTerms: boolean;

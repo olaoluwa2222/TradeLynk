@@ -11,9 +11,11 @@ import { NextRequest, NextResponse } from "next/server";
  */
 
 const ROOT_DOMAIN = "tradelynk.app";
+const GO_SUBDOMAIN = "go";
 const USE_SUBDOMAINS = true;
 
 const RESERVED_SUBDOMAINS = new Set([
+  GO_SUBDOMAIN,
   "www",
   "api",
   "app",
@@ -132,6 +134,18 @@ export function middleware(request: NextRequest) {
   // ✅ STEP 1: Let Vercel handle www entirely
   if (host === `www.${ROOT_DOMAIN}`) {
     return NextResponse.next();
+  }
+
+  // ✅ STEP 1.5: Serve dedicated go landing page on go.tradelynk.app
+  if (host === `${GO_SUBDOMAIN}.${ROOT_DOMAIN}`) {
+    if (pathname === "/" || pathname === "") {
+      url.pathname = "/go";
+      return NextResponse.rewrite(url);
+    }
+
+    // Keep the go subdomain as a single-page landing destination
+    url.pathname = "/go";
+    return NextResponse.rewrite(url);
   }
 
   // ✅ STEP 2: Handle ROOT domain only
