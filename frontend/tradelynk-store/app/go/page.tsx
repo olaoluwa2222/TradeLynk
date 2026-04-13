@@ -134,13 +134,15 @@ export default function GoLandingPage() {
         <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
           Stop Sending Photos One By One.
           <br />
-          <span className="text-violet-300">Get A Store Link That Sells For You.</span>
+          <span className="text-violet-300">
+            Get A Store Link That Sells For You.
+          </span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base text-white/70 sm:text-lg">
           Right now, you're losing sales to sellers who are faster than you.
           Tradelynk gives you yourname.tradelynk.app — your own store where
-          customers browse, order, and pay. Set up in 5 minutes. Works while
-          you sleep.
+          customers browse, order, and pay. Set up in 5 minutes. Works while you
+          sleep.
         </p>
 
         <div className="mx-auto mt-7 grid max-w-2xl grid-cols-1 gap-2 text-left sm:grid-cols-2">
@@ -359,14 +361,7 @@ export default function GoLandingPage() {
           © 2026 Tradelynk. Built for Nigerian sellers on Instagram and
           WhatsApp.
         </p>
-        <p className="mt-2">
-          <a
-            href="https://tradelynk.app"
-            className="text-violet-300 hover:text-violet-200"
-          >
-            tradelynk.app
-          </a>
-        </p>
+        <p className="mt-2 text-violet-300">go.tradelynk.app</p>
       </footer>
     </div>
   );

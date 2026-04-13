@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/lib/hooks/useOnboarding";
 import SellerWelcomeWizard from "./SellerWelcomeWizard";
@@ -21,7 +22,10 @@ import DesktopSellerCTA from "./DesktopSellerCTA";
 export default function OnboardingManager() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { shouldShowWelcomeWizard } = useOnboarding();
+  const pathname = usePathname();
   const [showWizard, setShowWizard] = useState(false);
+
+  const isGoLandingPage = pathname === "/go";
 
   // Check if we should show the welcome wizard
   useEffect(() => {
@@ -36,6 +40,9 @@ export default function OnboardingManager() {
 
   // Don't render anything while loading
   if (isLoading) return null;
+
+  // Do not show any onboarding CTAs/wizard on the go waitlist landing page.
+  if (isGoLandingPage) return null;
 
   return (
     <>
