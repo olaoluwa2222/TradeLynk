@@ -85,6 +85,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/sellers/banks").permitAll()
                         .requestMatchers(HttpMethod.GET, "/sellers/**").permitAll()
 
+                        // ✅ Waitlist endpoints (public - marketing landing page)
+                        .requestMatchers("/waitlist/**").permitAll()
+                        .requestMatchers("/api/v1/waitlist/**").permitAll()
+
                         // ✅ Documentation
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
