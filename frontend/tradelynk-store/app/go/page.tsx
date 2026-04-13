@@ -76,7 +76,7 @@ function WaitlistForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex gap-2">
         <input
           type="email"
           required
@@ -84,12 +84,12 @@ function WaitlistForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email address"
-          className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-violet-300"
+          className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/40 focus:border-violet-300"
         />
         <button
           type="submit"
           disabled={isBusy}
-          className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-70"
+          className="shrink-0 whitespace-nowrap rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isBusy ? "Joining..." : buttonText}
         </button>
@@ -129,27 +129,50 @@ export default function GoLandingPage() {
       <section className="mx-auto max-w-3xl px-4 pb-14 pt-14 text-center sm:pt-20">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-400/35 bg-violet-500/15 px-3 py-1 text-xs font-semibold text-violet-200">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          Now open for Nigerian sellers
+          🔴 Limited early access — spots filling fast
         </p>
         <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl">
-          Stop Sending Photos.
+          Stop Sending Photos One By One.
           <br />
-          <span className="text-violet-300">Get Your Own Store.</span>
+          <span className="text-violet-300">Get A Store Link That Sells For You.</span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base text-white/70 sm:text-lg">
-          Your professional storefront at yourname.tradelynk.app. Share one
-          link, let customers browse and order directly. No DM chaos, no missed
-          sales.
+          Right now, you're losing sales to sellers who are faster than you.
+          Tradelynk gives you yourname.tradelynk.app — your own store where
+          customers browse, order, and pay. Set up in 5 minutes. Works while
+          you sleep.
         </p>
+
+        <div className="mx-auto mt-7 grid max-w-2xl grid-cols-1 gap-2 text-left sm:grid-cols-2">
+          {[
+            "Upload unlimited products instantly",
+            "Your own link — yourname.tradelynk.app",
+            "Customers order without DMing you",
+            "Payments sent to your bank in 24h",
+            "Your store sells 24/7 while you sleep",
+            "Set up in under 5 minutes — free trial",
+          ].map((pill) => (
+            <div
+              key={pill}
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#121212] px-3 py-2 text-xs text-white/85"
+            >
+              <span className="text-emerald-400">✓</span>
+              <span>{pill}</span>
+            </div>
+          ))}
+        </div>
 
         <div
           id="waitlist"
           className="mx-auto mt-10 max-w-xl rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6"
         >
           <WaitlistForm
-            buttonText="Get Early Access"
-            note="7-day free trial · ₦7,500/month or ₦63,000/year after · No credit card to join"
+            buttonText="Claim My Store →"
+            note="7-day free trial · ₦7,500/mo after · No credit card needed"
           />
+          <p className="mt-3 text-sm text-white/85">
+            ⚡ Sellers on Tradelynk average ₦50,000+ monthly sales
+          </p>
         </div>
       </section>
 
@@ -158,25 +181,25 @@ export default function GoLandingPage() {
           <div>
             <p className="text-2xl font-extrabold text-violet-300">50+</p>
             <p className="text-xs uppercase tracking-wide text-white/60">
-              Active sellers
+              Sellers already live
             </p>
           </div>
           <div>
             <p className="text-2xl font-extrabold text-violet-300">₦50K+</p>
             <p className="text-xs uppercase tracking-wide text-white/60">
-              Avg monthly earnings
+              Average monthly sales
             </p>
           </div>
           <div>
             <p className="text-2xl font-extrabold text-violet-300">1,200+</p>
             <p className="text-xs uppercase tracking-wide text-white/60">
-              Items sold this month
+              Orders placed this month
             </p>
           </div>
           <div>
             <p className="text-2xl font-extrabold text-violet-300">4.8★</p>
             <p className="text-xs uppercase tracking-wide text-white/60">
-              Customer rating
+              Seller satisfaction
             </p>
           </div>
         </div>
@@ -197,7 +220,7 @@ export default function GoLandingPage() {
           <article className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
             <p className="text-2xl">💬</p>
             <h3 className="mt-3 text-base font-bold">
-              Price? Available? Send more pics?
+              You're typing the same answer 100 times a day
             </h3>
             <p className="mt-2 text-sm text-white/65">
               You type the same answers all day instead of growing your
@@ -210,7 +233,9 @@ export default function GoLandingPage() {
           </article>
           <article className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
             <p className="text-2xl">⏰</p>
-            <h3 className="mt-3 text-base font-bold">Customers do not wait</h3>
+            <h3 className="mt-3 text-base font-bold">
+              Slow reply = lost sale. Every single time.
+            </h3>
             <p className="mt-2 text-sm text-white/65">
               Buyers message multiple sellers. First response usually wins.
             </p>
@@ -222,7 +247,7 @@ export default function GoLandingPage() {
           <article className="rounded-2xl border border-white/10 bg-[#1A1A1A] p-5">
             <p className="text-2xl">😴</p>
             <h3 className="mt-3 text-base font-bold">
-              You cannot be online 24/7
+              Your store closes when you sleep. Theirs doesn't.
             </h3>
             <p className="mt-2 text-sm text-white/65">
               Sales opportunities are missed every night while you are offline.
@@ -317,13 +342,14 @@ export default function GoLandingPage() {
       <section className="bg-linear-to-br from-violet-950 via-violet-800 to-violet-600 py-14">
         <div className="mx-auto max-w-3xl px-4 text-center">
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Ready to launch your store link?
+            Your store link is waiting. Claim it free.
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-white/80">
-            Join the waitlist now and get guided setup when your slot opens.
+            Join the waitlist — we'll set up your store personally and make sure
+            your first sale happens within 7 days.
           </p>
           <div className="mx-auto mt-7 max-w-xl rounded-2xl border border-white/25 bg-white/10 p-4">
-            <WaitlistForm buttonText="Join the Waitlist" />
+            <WaitlistForm buttonText="Claim My Store →" />
           </div>
         </div>
       </section>
